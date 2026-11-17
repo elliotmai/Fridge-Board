@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17.3',
+    date: 'November 2026',
+    items: ['The whole board now fits an 8-inch tablet in landscape, instead of switching to the phone layout.'],
+  },
+  {
     version: '2026.11.17.2',
     date: 'November 2026',
     items: [

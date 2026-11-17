@@ -10,5 +10,6 @@ export function useMedia(query) {
   return match;
 }
 
-/** Phones and narrow screens get the stacked layout with links out to each app. */
-export const useIsPhone = () => useMedia('(max-width: 1000px)');
+/** Phones get the stacked layout with links out to each app. Tablets in landscape,
+ *  including an 8-inch Fire (about 853 to 962 points wide), get the full board. */
+export const useIsPhone = () => useMedia('(max-width: 759px)');
