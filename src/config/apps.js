@@ -11,7 +11,7 @@ export const APPS = {
   },
   kitchenhub: {
     name: 'KitchenHub',
-    url: 'https://mykitchenhub.web.app',
+    url: 'https://mykitchenhub.netlify.app',
     paths: { mealPlan: '/meal-plan', shopping: '/shopping-list', inventory: '/inventory', recipe: (id) => `/recipes?recipe=${encodeURIComponent(id)}` },
   },
   learnleaf: {
@@ -27,8 +27,7 @@ export const APPS = {
   znt: {
     name: 'ZNT',
     // ZNT has no URL routes yet (pages are tab state), so every link opens its home.
-    // URL assumed from the Firebase project id; confirm it matches the live site.
-    url: 'https://znt-manager.web.app',
+    url: 'https://zntmanager.netlify.app',
     paths: { home: '/' },
   },
 };
