@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { callApi, setKey, takeKeyFromUrl } from '@/data/api';
 import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
@@ -11,6 +12,7 @@ import { CookMode } from './CookMode';
 import { Farm } from './Farm';
 import { AwayBanner, Header } from './Header';
 import { Meals, Shopping } from './Kitchen';
+import { LockBanner } from './Lock';
 import { RecipeSheet } from './RecipeSheet';
 import { SettingsDrawer } from './SettingsDrawer';
 import { TimerChips } from './timers';
@@ -24,26 +26,35 @@ export function Board() {
   const phone = useIsPhone();
   const [data, setData] = useState(null);
   const [opts, setOpts] = useStored('opts', DEFAULT_OPTS);
-  const [done, setDone] = useStored('done', []);
-  const [bought, setBought] = useStored('bought', []);
+  // Sample-mode ticks live on this device. Live ticks go to the app; `overrides`
+  // shows them straight away until the next refresh brings the app's own answer.
+  const [localDone, setLocalDone] = useStored('done', []);
+  const [localBought, setLocalBought] = useStored('bought', []);
   const [cleared, setCleared] = useStored('cleared', []);
   const [extra, setExtra] = useStored('extra', []);
+  const [overrides, setOverrides] = useState({});
+  const [pendingAdds, setPendingAdds] = useState([]);
   const [folds, setFolds] = useState([]);
   const [peek, setPeek] = useState(null);
   const [drawer, setDrawer] = useState(false);
   const [cook, setCook] = useState(null);
   const [timers, setTimers] = useState({});
 
-  // Load now, then refresh every few minutes and whenever the screen wakes up.
-  useEffect(() => {
-    let alive = true;
-    const load = () => loadBoard().then((d) => alive && setData(d));
-    load();
-    const id = setInterval(load, REFRESH_MS);
-    const vis = () => { if (!document.hidden) load(); };
-    document.addEventListener('visibilitychange', vis);
-    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', vis); };
+  const reload = useCallback(async () => {
+    const d = await loadBoard();
+    setData(d); setOverrides({}); setPendingAdds([]);
+    return d;
   }, []);
+
+  // Load now, then every few minutes and whenever the screen wakes up.
+  useEffect(() => {
+    takeKeyFromUrl();
+    reload();
+    const id = setInterval(reload, REFRESH_MS);
+    const vis = () => { if (!document.hidden) reload(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); };
+  }, [reload]);
 
   const hasTimers = Object.keys(timers).length > 0;
   const tick = useTick(hasTimers ? 1000 : 30000);
@@ -80,27 +91,71 @@ export function Board() {
 
   if (!data) return <div className="fb" />;
 
+  const liveChores = data.status.chores.status === 'live';
+  const liveShop = data.status.shopping.status === 'live';
   const ts = tripState(data.trips, data.home, now, opts);
   const breeding = nextBreeding(data.sessions, ts, now, opts);
   const sitter = opts.sitter || (opts.autoSitter && !!ts.away);
-  const items = data.shopping.concat(extra).filter((i) => !cleared.includes(i.id));
   const fold = (k) => setFolds((f) => toggleIn(f, k));
 
-  const toggleChore = (c) => {
+  const choreKey = (id) => `chore:${id}`, itemKey = (id) => `item:${id}`;
+  const done = liveChores
+    ? data.chores.filter((c) => overrides[choreKey(c.id)] ?? c.done).map((c) => c.id)
+    : localDone;
+  const items = (liveShop ? [...data.shopping, ...pendingAdds] : [...data.shopping, ...extra]).filter((i) => !cleared.includes(i.id));
+  const bought = liveShop
+    ? items.filter((i) => overrides[itemKey(i.id)] ?? i.bought).map((i) => i.id)
+    : localBought;
+
+  /** Tell the app; on failure, put the row back and say so. */
+  const sendLive = async (key, path, body, revertMsg) => {
+    setOverrides((o) => ({ ...o, [key]: Object.values(body)[0] }));
+    const r = await callApi(path, { method: 'POST', body });
+    if (!r.ok) {
+      setOverrides((o) => { const n = { ...o }; delete n[key]; return n; });
+      toast(r.data?.error ? `${revertMsg}: ${r.data.error}` : revertMsg, { type: 'error', duration: 5000 });
+      return false;
+    }
+    return true;
+  };
+
+  const setChore = (c, value) => (liveChores
+    ? sendLive(choreKey(c.id), `/api/chores/${encodeURIComponent(c.id)}`, { done: value }, `Couldn't update ${c.title} in GalaxyFarm`)
+    : setLocalDone((d) => (value ? [...new Set([...d, c.id])] : d.filter((x) => x !== c.id))));
+  const toggleChore = async (c) => {
     const was = done.includes(c.id);
-    setDone((d) => toggleIn(d, c.id));
-    if (!was) toast(`${c.title} ticked off`, { duration: 5000, action: { label: 'Undo', onClick: () => setDone((d) => d.filter((x) => x !== c.id)) } });
+    const okay = await setChore(c, !was);
+    if (!was && okay !== false) toast(`${c.title} ticked off`, { duration: 5000, action: { label: 'Undo', onClick: () => setChore(c, false) } });
   };
-  const toggleItem = (i) => {
+
+  const setItem = (i, value) => (liveShop && !String(i.id).startsWith('pending:')
+    ? sendLive(itemKey(i.id), `/api/shopping/${encodeURIComponent(i.id)}`, { bought: value }, `Couldn't update ${i.name} in KitchenHub`)
+    : setLocalBought((b) => (value ? [...new Set([...b, i.id])] : b.filter((x) => x !== i.id))));
+  const toggleItem = async (i) => {
     const was = bought.includes(i.id);
-    setBought((b) => toggleIn(b, i.id));
-    if (!was) toast(`${i.name} is in the cart`, { duration: 5000, action: { label: 'Undo', onClick: () => setBought((b) => b.filter((x) => x !== i.id)) } });
+    const okay = await setItem(i, !was);
+    if (!was && okay !== false) toast(`${i.name} is in the cart`, { duration: 5000, action: { label: 'Undo', onClick: () => setItem(i, false) } });
   };
-  const addItem = (name, section = 'Added on the fridge') => {
-    const item = { id: `x${Date.now()}`, name, qty: '', section };
-    setExtra((e) => [...e, item]);
-    toast(`${name} added`, { duration: 5000, action: { label: 'Undo', onClick: () => setExtra((e) => e.filter((x) => x.id !== item.id)) } });
+
+  const addItem = async (name, section = 'Added on the fridge') => {
+    if (!liveShop) {
+      const item = { id: `x${Date.now()}`, name, qty: '', section };
+      setExtra((e) => [...e, item]);
+      toast(`${name} added`, { duration: 5000, action: { label: 'Undo', onClick: () => setExtra((e) => e.filter((x) => x.id !== item.id)) } });
+      return;
+    }
+    const temp = { id: `pending:${Date.now()}`, name, qty: '', section, why: '', bought: false };
+    setPendingAdds((p) => [...p, temp]);
+    const r = await callApi('/api/shopping', { method: 'POST', body: { name, section } });
+    if (!r.ok) {
+      setPendingAdds((p) => p.filter((x) => x.id !== temp.id));
+      toast(`Couldn't add ${name} to KitchenHub`, { type: 'error', duration: 5000 });
+      return;
+    }
+    toast(`${name} added to KitchenHub`);
+    reload();
   };
+
   const clearCart = () => {
     const ids = items.filter((i) => bought.includes(i.id)).map((i) => i.id);
     setCleared((c) => [...c, ...ids]); setFolds((f) => f.filter((x) => x !== 'cart'));
@@ -118,12 +173,14 @@ export function Board() {
     if (Date.now() >= timers[key].endsAt) { toggleTimer(key); return; }
     setCook((c) => ({ id: rid, page: +step, seen: [...new Set([...(c?.id === rid ? c.seen : [0]), +step])], gathered: c?.id === rid ? c.gathered : [] }));
   };
-  const reset = () => { setDone([]); setBought([]); setCleared([]); setExtra([]); toast('Ticks and added items cleared'); };
+  const reset = () => { setLocalDone([]); setLocalBought([]); setCleared([]); setExtra([]); toast('Cleared ticks and added items on this device'); };
+  const saveKey = async (k) => { setKey(k); const d = await reload(); if (!d.locked) toast('Board unlocked'); return !d.locked; };
   const peekMeal = peek != null && data.meals.find((m) => m.d === peek && m.type === 'Dinner');
 
   return (
     <div className="fb">
       <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} phone={phone} />
+      {data.locked && <LockBanner reason={data.locked} onSave={saveKey} />}
       <AwayBanner trip={ts.away} />
       <main className="board">
         <Farm chores={data.chores} done={done} onToggle={toggleChore} now={now} folds={folds} onFold={fold} phone={phone} sitter={sitter} status={data.status.chores} />
@@ -137,12 +194,12 @@ export function Board() {
       </main>
 
       {!cook && hasTimers && <div className="board-timers fb-layer"><TimerChips timers={timers} now={tick} onJump={jumpToTimer} /></div>}
-      {peekMeal && <RecipeSheet meal={peekMeal} recipe={data.recipes[peekMeal.recipe]} onClose={() => setPeek(null)} onCook={openCook} phone={phone} />}
-      {cook && (
+      {peekMeal && data.recipes[peekMeal.recipe] && <RecipeSheet meal={peekMeal} recipe={data.recipes[peekMeal.recipe]} onClose={() => setPeek(null)} onCook={openCook} phone={phone} />}
+      {cook && data.recipes[cook.id] && (
         <CookMode cook={cook} recipe={data.recipes[cook.id]} timers={timers} now={tick} onGo={goStep} onClose={closeCook}
           onToggleTimer={toggleTimer} onJump={jumpToTimer} onGather={(n) => setCook((c) => ({ ...c, gathered: toggleIn(c.gathered, n) }))} />
       )}
-      {drawer && <SettingsDrawer opts={opts} setOpts={setOpts} now={now} onClose={() => setDrawer(false)} onReset={reset} />}
+      {drawer && <SettingsDrawer opts={opts} setOpts={setOpts} now={now} onClose={() => setDrawer(false)} onReset={reset} onSaveKey={saveKey} home={data.home} />}
     </div>
   );
 }

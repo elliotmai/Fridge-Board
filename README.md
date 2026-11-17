@@ -18,23 +18,31 @@ App URLs and deep-link paths live in `src/config/apps.js`.
 
 ## Where the data comes from
 
-`netlify/functions/board.mjs` serves `GET /api/board`. It fetches every app on
-the server, so tokens stay in Netlify's environment and never reach the tablet.
-`src/data/sources.js` turns that into what the board shows. A section that isn't
-connected shows sample data labelled **Sample**; one whose app can't be reached
-keeps its last good copy, labelled **Not updating**.
+`netlify/functions/board.mjs` serves `GET /api/board`, and
+`netlify/functions/act.mjs` passes ticks and adds back to the owning app. Both
+run on Netlify, so tokens stay in its environment and never reach the tablet.
+A section that isn't connected shows sample data labelled **Sample**; one whose
+app can't be reached keeps its last good copy, labelled **Not updating**.
 
-| Section | App | Feed | Needs |
+| Section | App | Read | Write |
 | --- | --- | --- | --- |
-| Weather | Open-Meteo | forecast at home | `HOME_LAT`, `HOME_LON` |
-| Tasks | LearnLeaf | `/api/summary`, `/api/subjects` | `LEARNLEAF_TOKEN` |
-| Trips | Wander | `appTrips`, `appTripTravel` | `WANDER_TOKEN`, and those two functions deployed |
-| Next breeding group | ZNT | Firestore `sessions` (public read) | nothing |
-| Chores, housesitter guide | GalaxyFarm | not built yet | a token-scoped read endpoint in GalaxyFarm |
-| Meals, recipes, shopping | KitchenHub | not built yet | a token-scoped read endpoint in KitchenHub |
+| Chores, housesitter guide, home location | GalaxyFarm | `GET /api/board/v1` | `POST /api/board/v1/chores/:id` |
+| Meals, recipe cards, shopping, use soon | KitchenHub | `board` function `GET /` | `POST /shopping`, `POST /shopping/:id` |
+| Tasks | LearnLeaf | `/api/summary`, `/api/subjects` | none |
+| Trips | Wander | `appTrips`, `appTripTravel` | none |
+| Next breeding group | ZNT | Firestore `sessions` (public read) | none |
+| Weather | Open-Meteo | forecast at the GalaxyFarm location | none |
 
-Also set `HOME_TZ` (defaults to `America/Chicago`). Trip destinations are
-geocoded with Open-Meteo to work out how far from home they are.
+### Environment (Netlify → Project configuration → Environment variables)
+
+| Variable | What it is |
+| --- | --- |
+| `BOARD_ACCESS_KEY` | **Required.** Any long random string. Every device enters it once (or opens the board once with `?key=...`). Without it the API refuses, so nobody else can read your data or tick your chores. |
+| `GALAXYFARM_TOKEN` | Fridge Board token minted in GalaxyFarm |
+| `KITCHENHUB_TOKEN` | Token from KitchenHub's `scripts/make-api-token.mjs` |
+| `LEARNLEAF_TOKEN` | Token from LearnLeaf's `scripts/make-api-token.mjs` (add its hash to `apiTokenHashes`) |
+| `WANDER_TOKEN` | Wander → Account → Connected apps |
+| `HOME_LAT`, `HOME_LON`, `HOME_TZ` | Optional. Only used if GalaxyFarm has no location set. |
 
 ## Rules the board follows
 

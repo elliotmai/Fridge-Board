@@ -10,8 +10,8 @@ export function RecipeSheet({ meal, recipe, onClose, onCook, phone }) {
         <div className="grab" />
         <span className="when">{fmt(dayFrom(meal.d), { weekday: 'long' })} dinner</span>
         <h3 id="sheetTitle">{recipe.name}</h3>
-        <span className="sub">{recipe.sub}</span>
-        <div className="facts"><span className="fact">{recipe.time}</span><span className="fact">Serves {recipe.serves}</span><span className="fact">{recipe.cal} calories each</span></div>
+        {recipe.sub && <span className="sub">{recipe.sub}</span>}
+        <div className="facts">{recipe.time && <span className="fact">{recipe.time}</span>}{recipe.serves && <span className="fact">Serves {recipe.serves}</span>}{recipe.cal && <span className="fact">{recipe.cal} calories each</span>}<span className="fact">{recipe.steps.length} steps</span></div>
         <ul>{recipe.ingredients.map((i) => <li key={i}>{i}</li>)}</ul>
         <div className="sheet-actions">
           {phone

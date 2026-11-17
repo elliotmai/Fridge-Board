@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { FEEDBACK_URL } from '@/config/app';
+import { getKey } from '@/data/api';
 import { useTheme } from '@/context/ThemeContext';
 import { md } from '@/lib/dates';
 import { Close } from './Icons';
 
-export function SettingsDrawer({ opts, setOpts, now, onClose, onReset }) {
+export function SettingsDrawer({ opts, setOpts, now, onClose, onReset, onSaveKey, home }) {
   const { theme, setTheme } = useTheme();
+  const [key, setKeyText] = useState(getKey());
+  const [keyMsg, setKeyMsg] = useState('');
   const set = (k) => (e) => setOpts((o) => ({ ...o, [k]: e.target.type === 'checkbox' ? e.target.checked : Math.max(1, +e.target.value || o[k]) }));
   return (
     <aside className="drawer fb-layer" aria-label="Board settings">
@@ -29,8 +33,16 @@ export function SettingsDrawer({ opts, setOpts, now, onClose, onReset }) {
       <label className="field">Theme
         <select value={theme} onChange={(e) => setTheme(e.target.value)}><option value="light">Light</option><option value="dark">Dark</option></select>
       </label>
-      <button className="reset" onClick={onReset}>Clear ticks and added items</button>
-      <p className="hint">The board shows sample data until each app is connected. Ticks and settings stay on this device.</p>
+      <form className="field" onSubmit={async (e) => { e.preventDefault(); setKeyMsg((await onSaveKey(key.trim())) ? 'Saved. The board is unlocked.' : 'That key didn’t work.'); }}>
+        Board key
+        <input type="password" autoComplete="off" value={key} onChange={(e) => setKeyText(e.target.value)} aria-label="Board key" />
+        <small>{keyMsg || 'Matches BOARD_ACCESS_KEY in Netlify. Stored on this device only.'}</small>
+      </form>
+      <p className="hint">
+        {home ? `Home location comes from ${home.from === 'galaxyfarm' ? 'GalaxyFarm settings' : 'the HOME_LAT and HOME_LON settings'}.` : 'Set the farm location in GalaxyFarm settings to turn on weather and the away rule.'}
+        {' '}Sections marked Sample aren’t connected yet. Ticks on connected sections go straight to their app.
+      </p>
+      <button className="reset" onClick={onReset}>Clear ticks and added items on this device</button>
       <a className="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer">Report a bug or request a feature</a>
     </aside>
   );

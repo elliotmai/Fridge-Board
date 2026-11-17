@@ -17,23 +17,23 @@ export function Meals({ meals, recipes, expiring, onCook, onPeek, phone, status 
             <h3>{dinner.name}</h3>
             {r && (
               <>
-                <span className="sub">{r.sub}</span>
-                <div className="facts"><span className="fact">{r.time}</span><span className="fact">Serves {r.serves}</span></div>
+                {r.sub && <span className="sub">{r.sub}</span>}
+                {(r.time || r.serves) && <div className="facts">{r.time && <span className="fact">{r.time}</span>}{r.serves && <span className="fact">Serves {r.serves}</span>}</div>}
                 <button className="go" onClick={() => onCook(dinner.recipe)}><Play />Start cooking</button>
               </>
             )}
           </div>
         )}
-        <div className="sh">Also today</div>
+        {today.some((m) => m.type !== 'Dinner') && <div className="sh">Also today</div>}
         {today.filter((m) => m.type !== 'Dinner').map((m) => (
-          <div className="meal-line" key={m.type}><span>{m.type}</span><span>{m.name}</span></div>
+          <div className="meal-line" key={`${m.type}-${m.name}`}><span>{m.type}</span><span>{m.name}</span></div>
         ))}
         <div className="sh">This week</div>
         <div className="days">
           {[1, 2, 3, 4, 5, 6].map((i) => {
             const m = meals.find((x) => x.d === i && x.type === 'Dinner');
             const d = wd(dayFrom(i));
-            return m?.recipe ? (
+            return m?.recipe && recipes[m.recipe] ? (
               <button className="day" key={i} onClick={() => onPeek(i)}><span className="dn">{d}</span><span className="mn">{m.name}</span><Right /></button>
             ) : (
               <div className={`day ${m ? '' : 'empty'}`} key={i}><span className="dn">{d}</span><span className="mn">{m ? m.name : 'Nothing planned'}</span></div>

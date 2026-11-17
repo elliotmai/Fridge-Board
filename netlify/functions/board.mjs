@@ -7,54 +7,64 @@
  * board falls back for that section alone.
  *
  * Environment (Netlify → Project configuration → Environment variables):
- *   HOME_LAT, HOME_LON     home location: weather, and how far away a trip is
- *   HOME_TZ                IANA zone for dates, e.g. America/Chicago (default)
- *   LEARNLEAF_TOKEN        LearnLeaf API token (scripts/make-api-token.mjs in that repo)
- *   WANDER_TOKEN           Wander app token (Account → Connected apps)
- *   Optional overrides:    LEARNLEAF_URL, WANDER_FUNCTIONS_URL, ZNT_PROJECT_ID, ZNT_API_KEY
+ *   BOARD_ACCESS_KEY   required; see netlify/lib/shared.mjs
+ *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
+ *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
+ *   LEARNLEAF_TOKEN    tasks
+ *   WANDER_TOKEN       trips
+ *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
+ *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, WANDER_FUNCTIONS_URL,
+ *   ZNT_PROJECT_ID, ZNT_API_KEY
  */
+import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
 
-const env = (k, d) => process.env[k] || d;
-const LEARNLEAF_URL = () => env('LEARNLEAF_URL', 'https://learnleaf-organizer.netlify.app');
-const WANDER_URL = () => env('WANDER_FUNCTIONS_URL', 'https://us-central1-wander-f10b1.cloudfunctions.net');
-// ZNT's Firestore rules allow reads of its one user's data, so no key is needed.
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
-const ZNT_KEY = () => env('ZNT_API_KEY', '');
+const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
 const ZNT_USER = 'znt-manager-user';
-
-const TRAVEL_LOOKAHEAD_DAYS = 60; // fetch flights/lodging for trips starting this soon
+const TRAVEL_LOOKAHEAD_DAYS = 60;
 const MAX_TRAVEL_LOOKUPS = 5;
 
-class SourceError extends Error {}
-
-async function getJson(url, init = {}, timeoutMs = 8000) {
-  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new SourceError(`${new URL(url).host} answered ${res.status}`);
-  return res.json();
-}
-
-const tz = () => env('HOME_TZ', 'America/Chicago');
-const dateIn = (d, zone = tz()) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const dateIn = (d, zone) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 
-function home() {
-  const lat = parseFloat(env('HOME_LAT')), lon = parseFloat(env('HOME_LON'));
-  return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+/* ---------------------------------------------------------- GalaxyFarm --- */
+async function galaxyfarm() {
+  const token = env('GALAXYFARM_TOKEN');
+  if (!token) return { status: 'unconfigured', reason: 'Set GALAXYFARM_TOKEN' };
+  const r = await getJson(`${urls.galaxyfarm()}/api/board/v1`, bearer(token));
+  return {
+    status: 'live',
+    data: {
+      property: r.property,
+      chores: r.chores.map((c) => ({ id: c.id, title: c.title, detail: c.detail || '', slot: c.slot, done: !!c.done })),
+      sitter: {
+        contacts: (r.sitter?.contacts || []).map((c) => [c.name, c.role || '', c.phone || '']),
+        notes: (r.sitter?.notes || []).map((n) => [n.safety ? 'safety' : '', n.text]),
+      },
+    },
+  };
+}
+
+/** Home comes from GalaxyFarm's location setting; HOME_* env vars only fill in when it has none. */
+function resolveHome(gf) {
+  const p = gf.status === 'live' ? gf.data.property : null;
+  const lat = Number.isFinite(p?.lat) ? p.lat : parseFloat(env('HOME_LAT'));
+  const lon = Number.isFinite(p?.lon) ? p.lon : parseFloat(env('HOME_LON'));
+  const tz = p?.timezone || env('HOME_TZ', 'America/Chicago');
+  return { home: Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null, tz, from: Number.isFinite(p?.lat) ? 'galaxyfarm' : 'env' };
 }
 
 /* ------------------------------------------------------------ weather --- */
-// WMO weather codes → the four icons the board draws.
 const wmo = (c) => (c === 0 || c === 1 ? 'sun' : c === 2 ? 'partly' : c === 3 || c === 45 || c === 48 ? 'cloud' : 'rain');
 const WMO_TEXT = { 0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
   61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain', 71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
   80: 'Showers', 81: 'Showers', 82: 'Heavy showers', 85: 'Snow showers', 86: 'Snow showers', 95: 'Thunderstorms', 96: 'Thunderstorms', 99: 'Thunderstorms' };
 
-async function weather() {
-  const h = home();
-  if (!h) return { status: 'unconfigured', reason: 'Set HOME_LAT and HOME_LON' };
+async function weather({ home, tz }) {
+  if (!home) return { status: 'unconfigured', reason: 'Set the farm location in GalaxyFarm settings' };
   const q = new URLSearchParams({
-    latitude: h.lat, longitude: h.lon, current: 'temperature_2m,weather_code',
-    daily: 'temperature_2m_max,temperature_2m_min,weather_code', temperature_unit: 'fahrenheit', timezone: tz(), forecast_days: '4',
+    latitude: home.lat, longitude: home.lon, current: 'temperature_2m,weather_code',
+    daily: 'temperature_2m_max,temperature_2m_min,weather_code', temperature_unit: 'fahrenheit', timezone: tz, forecast_days: '4',
   });
   const w = await getJson(`https://api.open-meteo.com/v1/forecast?${q}`);
   return {
@@ -66,20 +76,38 @@ async function weather() {
   };
 }
 
+/* ---------------------------------------------------------- KitchenHub --- */
+async function kitchenhub() {
+  const token = env('KITCHENHUB_TOKEN');
+  if (!token) return { status: 'unconfigured', reason: 'Set KITCHENHUB_TOKEN' };
+  const r = await getJson(`${urls.kitchenhub()}/`, bearer(token));
+  return {
+    status: 'live',
+    data: {
+      today: r.today,
+      meals: r.meals.map((m) => ({ date: m.date, type: m.type, name: m.name, recipe: m.recipeId || null, status: m.status })),
+      recipes: Object.fromEntries(Object.entries(r.recipes || {}).map(([id, x]) => [id, {
+        name: x.name, sub: x.sub || '', time: x.time || '', serves: x.serves ?? null, cal: x.cal ?? null,
+        ingredients: x.ingredients || [], steps: (x.steps || []).map((s, i) => ({ title: s.title || `Step ${i + 1}`, text: s.text || [], uses: s.uses || [], timer: s.timer || undefined })),
+      }])),
+      expiring: r.expiring || [],
+      shopping: (r.shopping || []).map((i) => ({ id: i.id, name: i.name, qty: i.qty || '', section: i.section || 'Other', why: i.why || '', bought: !!i.bought })),
+    },
+  };
+}
+
 /* ----------------------------------------------------------- LearnLeaf --- */
 async function learnleaf() {
   const token = env('LEARNLEAF_TOKEN');
   if (!token) return { status: 'unconfigured', reason: 'Set LEARNLEAF_TOKEN' };
-  const auth = { headers: { authorization: `Bearer ${token}` } };
-  const [summary, subj] = await Promise.all([getJson(`${LEARNLEAF_URL()}/api/summary`, auth), getJson(`${LEARNLEAF_URL()}/api/subjects`, auth)]);
+  const auth = bearer(token);
+  const [summary, subj] = await Promise.all([getJson(`${urls.learnleaf()}/api/summary`, auth), getJson(`${urls.learnleaf()}/api/subjects`, auth)]);
   const tasks = [...summary.overdue, ...summary.dueToday, ...summary.upcoming].map((t) => ({
     id: t.taskId, name: t.taskName, subject: t.taskSubject, due: t.taskDueDate, time: t.taskDueTime || '',
   }));
   const used = new Set(tasks.map((t) => t.subject));
-  const subjects = Object.fromEntries(
-    subj.subjects.filter((s) => used.has(s.subjectId)).map((s) => [s.subjectId, [s.subjectName || 'Subject', s.subjectColor || '#8a8f8c']]),
-  );
-  return { status: 'live', data: { tasks, subjects, today: summary.today } };
+  const subjects = Object.fromEntries(subj.subjects.filter((s) => used.has(s.subjectId)).map((s) => [s.subjectId, [s.subjectName || 'Subject', s.subjectColor || '#8a8f8c']]));
+  return { status: 'live', data: { tasks, subjects } };
 }
 
 /* -------------------------------------------------------------- Wander --- */
@@ -87,35 +115,33 @@ const geoCache = new Map();
 async function geocode(place) {
   if (!place) return null;
   if (geoCache.has(place)) return geoCache.get(place);
-  // "Asheville, NC" → search "Asheville"; Open-Meteo matches on the place name.
   const name = place.split(',')[0].trim();
   const r = await getJson(`https://geocoding-api.open-meteo.com/v1/search?${new URLSearchParams({ name, count: '1' })}`).catch(() => null);
   const hit = r?.results?.[0] ? { lat: r.results[0].latitude, lon: r.results[0].longitude } : null;
   geoCache.set(place, hit);
   return hit;
 }
-
 const clock = (wall) => {
-  // Wander stores wall-clock times like "2026-11-26T06:10" with a separate zone; show them as written.
   const m = /T(\d{2}):(\d{2})/.exec(wall || '');
   if (!m) return '';
   const h = +m[1];
   return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
 };
 
-async function wander() {
+async function wander({ tz }) {
   const token = env('WANDER_TOKEN');
   if (!token) return { status: 'unconfigured', reason: 'Set WANDER_TOKEN' };
-  const auth = { headers: { authorization: `Bearer ${token}` } };
-  const { trips } = await getJson(`${WANDER_URL()}/appTrips`, auth);
-  const today = dateIn(new Date()), horizon = addDays(today, TRAVEL_LOOKAHEAD_DAYS);
+  const auth = bearer(token);
+  const { trips } = await getJson(`${urls.wander()}/appTrips`, auth);
+  const today = dateIn(new Date(), tz), horizon = addDays(today, TRAVEL_LOOKAHEAD_DAYS);
   let lookups = 0;
   const out = await Promise.all(trips.map(async (t) => {
     const trip = { id: t.id, name: t.name, dest: t.destination || '', startDate: t.start_date, endDate: t.end_date };
-    const geo = await geocode(t.destination);
+    // Wander sends coordinates once its appTrips change is deployed; until then, geocode the name.
+    const geo = Number.isFinite(t.lat) && Number.isFinite(t.lon) ? { lat: t.lat, lon: t.lon } : await geocode(t.destination);
     if (geo) Object.assign(trip, geo);
     if (t.start_date && t.start_date <= horizon && lookups++ < MAX_TRAVEL_LOOKUPS) {
-      const travel = await getJson(`${WANDER_URL()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth).catch(() => null);
+      const travel = await getJson(`${urls.wander()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth).catch(() => null);
       if (travel) {
         const legs = travel.legs.filter((l) => l.transport === 'flight' || l.number).slice(0, 3);
         if (legs.length) trip.legs = legs.map((l) => [l.number || l.transport, `${l.from} to ${l.to}`, clock(l.depart_at)]);
@@ -128,7 +154,6 @@ async function wander() {
 }
 
 /* ----------------------------------------------------------------- ZNT --- */
-// Firestore REST values → plain JS.
 function fsValue(v) {
   if ('stringValue' in v) return v.stringValue;
   if ('integerValue' in v) return Number(v.integerValue);
@@ -141,7 +166,7 @@ function fsValue(v) {
   return undefined;
 }
 
-async function znt() {
+async function znt({ tz }) {
   const base = `https://firestore.googleapis.com/v1/projects/${ZNT_PROJECT()}/databases/(default)/documents/users/${ZNT_USER}/sessions`;
   const q = new URLSearchParams({ pageSize: '200' });
   if (ZNT_KEY()) q.set('key', ZNT_KEY());
@@ -150,8 +175,7 @@ async function znt() {
     const f = Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, fsValue(v)]));
     return {
       name: f.name || 'Breeding group',
-      // Stored at local noon on the CIDR day, so the date in the home zone is that day.
-      cidr: f.cidrDate instanceof Date ? dateIn(f.cidrDate) : null,
+      cidr: f.cidrDate instanceof Date ? dateIn(f.cidrDate, tz) : null, // stored at local noon, so this is the CIDR day
       groups: (f.groups || []).map((g) => [g.name || 'Group', Number(g.headCount) || 0]),
       notes: f.notes || '',
     };
@@ -160,24 +184,32 @@ async function znt() {
 }
 
 /* ------------------------------------------------------------- handler --- */
-async function settle(fn) {
+async function settle(name, fn) {
   try { return await fn(); } catch (e) {
-    console.error(`${fn.name} failed:`, e);
+    console.error(`${name} failed:`, e);
     return { status: 'error', reason: e instanceof SourceError ? e.message : 'Could not reach it' };
   }
 }
 
-export default async () => {
-  const [w, ll, wa, z] = await Promise.all([settle(weather), settle(learnleaf), settle(wander), settle(znt)]);
-  const h = home();
-  const body = {
+export default async (req) => {
+  const locked = requireKey(req);
+  if (locked) return locked;
+
+  // GalaxyFarm first: it owns the home location the others need.
+  const gf = await settle('galaxyfarm', galaxyfarm);
+  const where = resolveHome(gf);
+  const [w, kh, ll, wa, z] = await Promise.all([
+    settle('weather', () => weather(where)),
+    settle('kitchenhub', kitchenhub),
+    settle('learnleaf', learnleaf),
+    settle('wander', () => wander(where)),
+    settle('znt', () => znt(where)),
+  ]);
+  return json(200, {
     generatedAt: new Date().toISOString(),
-    home: h ? { ...h, tz: tz() } : null,
-    sources: { weather: w, learnleaf: ll, wander: wa, znt: z },
-  };
-  return new Response(JSON.stringify(body), {
-    headers: { 'content-type': 'application/json', 'cache-control': 'private, max-age=60' },
-  });
+    home: where.home ? { ...where.home, tz: where.tz, from: where.from } : null,
+    sources: { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z },
+  }, { 'cache-control': 'private, no-store' });
 };
 
 export const config = { path: '/api/board' };

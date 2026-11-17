@@ -23,9 +23,9 @@ export function CookMode({ cook, recipe, timers, now, onGo, onClose, onToggleTim
     body = (
       <>
         <div className="main">
-          <span className="stepno">{recipe.time}, serves {recipe.serves}</span>
+          <span className="stepno">{[recipe.time, recipe.serves && `serves ${recipe.serves}`].filter(Boolean).join(', ') || 'Ingredients'}</span>
           <h3>{recipe.name}</h3>
-          <div className="text"><p>{recipe.sub}.</p><p>Gather everything on the right, then start step 1. Tap an ingredient once you have it out.</p></div>
+          <div className="text">{recipe.sub && <p>{recipe.sub}.</p>}<p>Gather everything on the right, then start step 1. Tap an ingredient once you have it out.</p></div>
         </div>
         <aside>
           <h4>Gather {gathered.length} of {recipe.ingredients.length}</h4>

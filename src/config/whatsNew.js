@@ -6,6 +6,16 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17.2',
+    date: 'November 2026',
+    items: [
+      'Chores and the housesitter guide come from GalaxyFarm, and ticking a chore here ticks it there.',
+      'Meals, recipe cards and the shopping list come from KitchenHub. Adding or ticking an item updates KitchenHub.',
+      'Weather and the away rule use the farm location from GalaxyFarm settings.',
+      'The board now asks for its key once on each device, so only your devices can see your data.',
+    ],
+  },
+  {
     version: '2026.11.17.1',
     date: 'November 2026',
     items: [
