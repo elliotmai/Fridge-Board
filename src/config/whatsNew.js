@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17.5',
+    date: 'November 2026',
+    items: ['Meals now lead the kitchen, with a bigger Tonight card. The shopping list sits beside it in a narrower column.'],
+  },
+  {
     version: '2026.11.17.4',
     date: 'November 2026',
     items: [

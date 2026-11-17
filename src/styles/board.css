@@ -83,15 +83,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .away span { opacity: .85; }
 
 /* ---------- zones ---------- */
-.board { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 2.05fr 1.05fr; gap: 12px; }
+.board { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.15fr) minmax(0, 1fr); gap: 12px; }
 .zone { border-radius: var(--r-zone); padding: 18px 18px 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .farm { --c: var(--farm); background: var(--farm-zone); }
 .ahead { --c: var(--ahead); background: var(--ahead-zone); }
-.kitchen { --c: var(--kitchen); background: var(--kitchen-zone); display: grid; grid-template-columns: 1.08fr 1fr; gap: 18px; padding: 18px 18px 0; }
+.kitchen { --c: var(--kitchen); background: var(--kitchen-zone); display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; padding: 18px 18px 0; }
+/* Meals lead the kitchen; shopping is the narrower side list. */
+.kitchen .kcol + .kcol { padding-left: 16px; border-left: 1px solid color-mix(in srgb, var(--kitchen) 18%, transparent); }
+.kitchen .kcol + .kcol .zh h2 { font-size: 18px; }
+.kitchen .kcol + .kcol .lbl { font-size: 15px; }
 .kcol { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .zh { display: flex; align-items: baseline; gap: 12px; }
 .zh h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
-.zh .count { margin-left: auto; font-size: 15px; color: var(--muted); }
+.zh { flex-wrap: wrap; row-gap: 2px; }
+.zh .count { margin-left: auto; font-size: 15px; color: var(--muted); white-space: nowrap; }
 .zh .count b { color: var(--ink); font-weight: 600; }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; margin-inline: -6px; padding: 0 6px 18px; overscroll-behavior: contain; }
 .scroll::-webkit-scrollbar { width: 0; }
@@ -134,7 +139,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 /* meals */
 .tonight { background: var(--surface); border-radius: var(--r-obj); padding: 18px; display: grid; gap: 6px; }
 .tonight .when { font-size: 14px; font-weight: 500; color: var(--kitchen); }
-.tonight h3 { font-size: 27px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; }
+.tonight h3 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; }
 .tonight .sub { font-size: 15px; color: var(--muted); }
 .facts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .fact { font-size: 13px; color: var(--muted); background: var(--kitchen-zone); padding: 4px 10px; border-radius: 99px; }
@@ -352,7 +357,10 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 
   .board { gap: 8px; }
   .zone, .kitchen { border-radius: 16px; padding: 12px 10px 0; gap: 8px; }
-  .kitchen { gap: 12px; }
+  .kitchen { gap: 10px; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .kitchen .kcol + .kcol { padding-left: 10px; }
+  .kitchen .kcol + .kcol .zh h2 { font-size: 15px; }
+  .kitchen .kcol + .kcol .lbl { font-size: 13px; }
   .kcol { gap: 8px; }
   .zh { gap: 8px; }
   .zh h2 { font-size: 17px; }
@@ -376,7 +384,7 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 
   .tonight { padding: 10px 12px; gap: 3px; border-radius: 12px; }
   .tonight .when { font-size: 12px; }
-  .tonight h3 { font-size: 18px; }
+  .tonight h3 { font-size: 21px; }
   .tonight .sub { font-size: 12px; }
   .fact { font-size: 11px; padding: 2px 8px; }
   .go { height: 40px; padding: 0 14px 0 11px; font-size: 14px; margin-top: 6px; gap: 6px; white-space: nowrap; }
@@ -396,7 +404,6 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
   .add button svg { width: 18px; height: 18px; }
   .quick { gap: 4px; }
   .quick button { height: 30px; padding: 0 9px 0 7px; font-size: 12px; }
-  .quick button:nth-child(n+3) { display: none; }
 
   .entry { padding: 8px 4px; gap: 2px; }
   .entry h3 { font-size: 15px; }
@@ -481,5 +488,6 @@ a.entry h3::after { content: ""; }
 }
 @media (max-width: 759px) {
   .board.sitter { grid-template-columns: 1fr; }
+  .kitchen .kcol + .kcol { padding-left: 0; border-left: 0; }
   .away { flex-wrap: wrap; }
 }

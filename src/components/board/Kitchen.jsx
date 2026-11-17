@@ -56,7 +56,7 @@ export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds
   const open = items.filter((i) => !bought.includes(i.id));
   const inCart = items.filter((i) => bought.includes(i.id));
   const names = new Set(items.map((i) => i.name.toLowerCase()));
-  const offers = quick.filter(([n]) => !names.has(n.toLowerCase())).slice(0, 3);
+  const offers = quick.filter(([n]) => !names.has(n.toLowerCase())).slice(0, 2);
   const sections = [...new Set(open.map((i) => i.section))];
   const submit = (e) => { e.preventDefault(); const v = text.trim(); if (!v) return; onAdd(v); setText(''); };
   return (
@@ -80,8 +80,9 @@ export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds
           <div key={s}>
             <div className="sh">{s}</div>
             {open.filter((i) => i.section === s).map((i) => (
-              <CheckRow key={i.id} checked={false} onToggle={() => onToggle(i)} end={i.why && <span className="tag">{i.why}</span>}>
-                {i.name}{i.qty && <span className="qty">{i.qty}</span>}
+              <CheckRow key={i.id} checked={false} onToggle={() => onToggle(i)}>
+                {i.name}
+                {(i.qty || i.why) && <small>{[i.qty, i.why && `for ${i.why}`].filter(Boolean).join(', ')}</small>}
               </CheckRow>
             ))}
           </div>
