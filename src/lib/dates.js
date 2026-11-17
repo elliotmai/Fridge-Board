@@ -9,3 +9,13 @@ export const md = (d) => fmt(d, { weekday: 'short', month: 'short', day: 'numeri
 export const short = (d) => fmt(d, { month: 'short', day: 'numeric' });
 export const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 export const nextWed = (d) => { const x = startOf(d); while (x.getDay() !== 3) x.setDate(x.getDate() + 1); return x; };
+/** Local date as YYYY-MM-DD. */
+export const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+/** YYYY-MM-DD as a local date (midnight), not UTC. */
+export const parseDate = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+/** "21:00" → "9 PM", "09:30" → "9:30 AM". */
+export const clock12 = (hhmm) => {
+  if (!hhmm) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'AM' : 'PM'}`;
+};

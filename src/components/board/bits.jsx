@@ -35,3 +35,15 @@ export function Countdown({ n, now }) {
   if (now) return <span className="countdown now"><b>Now</b></span>;
   return <span className="countdown"><b>{n}</b><span>{n === 1 ? 'day' : 'days'}</span></span>;
 }
+
+/** Small label when a section isn't showing live data. Nothing when it is. */
+export function Freshness({ s }) {
+  if (!s || s.status === 'live') return null;
+  const stale = s.status === 'stale';
+  const when = stale && s.at ? ` Last updated ${new Date(s.at).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.` : '';
+  return (
+    <span className={`fresh ${stale ? 'stale' : ''}`} title={`${s.reason || ''}${when}`.trim()}>
+      {stale ? 'Not updating' : 'Sample'}
+    </span>
+  );
+}

@@ -1,12 +1,13 @@
 import { APPS, appLink } from '@/config/apps';
 import { DAY, fmt, md, wd } from '@/lib/dates';
+import { Freshness } from './bits';
 import { Plane, Sliders, Snow, WX } from './Icons';
 
 const APP_DOTS = { galaxyfarm: 'var(--farm)', kitchenhub: 'var(--kitchen)', learnleaf: 'var(--ahead)', wander: 'var(--ahead)', znt: 'var(--farm)' };
 
-export function Header({ now, weather, sitter, onToggleSitter, onOpenSettings, phone }) {
+export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, onOpenSettings, phone }) {
   const parts = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).match(/^(.*?)\s?([AP]M)?$/i);
-  const W = WX[weather.code];
+  const W = WX[weather.code] ?? WX.cloud;
   const today = weather.days[0];
   return (
     <>
@@ -23,11 +24,12 @@ export function Header({ now, weather, sitter, onToggleSitter, onOpenSettings, p
               <b>{weather.desc}</b>
               <span>High {today.hi}°, low {today.lo}°</span>
               {today.lo <= 34 && <span className="frost-line"><Snow />Frost tonight</span>}
+              <Freshness s={weatherStatus} />
             </span>
           </div>
           <div className="wx-days">
             {weather.days.slice(1).map((d, i) => {
-              const I = WX[d.code];
+              const I = WX[d.code] ?? WX.cloud;
               return <div className="wx-day" key={i}><b>{wd(new Date(now.getTime() + (i + 1) * DAY))}</b><I /><span>{d.hi}° {d.lo}°</span></div>;
             })}
           </div>

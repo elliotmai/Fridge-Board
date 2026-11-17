@@ -18,17 +18,23 @@ App URLs and deep-link paths live in `src/config/apps.js`.
 
 ## Where the data comes from
 
-`src/data/sources.js` is the only place that knows. Today it returns the sample
-data in `src/data/sample.js`. Each section will move to a Netlify function that
-holds that app's token server-side, so nothing secret ships to the tablet:
+`netlify/functions/board.mjs` serves `GET /api/board`. It fetches every app on
+the server, so tokens stay in Netlify's environment and never reach the tablet.
+`src/data/sources.js` turns that into what the board shows. A section that isn't
+connected shows sample data labelled **Sample**; one whose app can't be reached
+keeps its last good copy, labelled **Not updating**.
 
-| Section | App | Feed |
-| --- | --- | --- |
-| Chores, housesitter guide, weather | GalaxyFarm | needs a token-scoped read endpoint |
-| Meals, recipes, shopping | KitchenHub | needs a token-scoped read endpoint |
-| Tasks | LearnLeaf | `GET /api/summary`, `GET /api/subjects` |
-| Trips | Wander | `appTrips`, `appTripTravel` |
-| Next breeding group | ZNT | Firestore `sessions` |
+| Section | App | Feed | Needs |
+| --- | --- | --- | --- |
+| Weather | Open-Meteo | forecast at home | `HOME_LAT`, `HOME_LON` |
+| Tasks | LearnLeaf | `/api/summary`, `/api/subjects` | `LEARNLEAF_TOKEN` |
+| Trips | Wander | `appTrips`, `appTripTravel` | `WANDER_TOKEN`, and those two functions deployed |
+| Next breeding group | ZNT | Firestore `sessions` (public read) | nothing |
+| Chores, housesitter guide | GalaxyFarm | not built yet | a token-scoped read endpoint in GalaxyFarm |
+| Meals, recipes, shopping | KitchenHub | not built yet | a token-scoped read endpoint in KitchenHub |
+
+Also set `HOME_TZ` (defaults to `America/Chicago`). Trip destinations are
+geocoded with Open-Meteo to work out how far from home they are.
 
 ## Rules the board follows
 

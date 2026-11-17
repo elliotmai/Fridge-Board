@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { dayFrom, wd } from '@/lib/dates';
-import { CheckRow, Fold, OpenIn } from './bits';
+import { CheckRow, Fold, Freshness, OpenIn } from './bits';
 import { Play, Plus, Right } from './Icons';
 
-export function Meals({ meals, recipes, expiring, onCook, onPeek, phone }) {
+export function Meals({ meals, recipes, expiring, onCook, onPeek, phone, status }) {
   const today = meals.filter((m) => m.d === 0);
   const dinner = today.find((m) => m.type === 'Dinner');
   const r = dinner?.recipe && recipes[dinner.recipe];
   return (
     <div className="kcol">
-      <div className="zh"><h2>Meals</h2>{phone && <OpenIn app="kitchenhub" path="mealPlan" />}</div>
+      <div className="zh"><h2>Meals</h2><Freshness s={status} />{phone && <OpenIn app="kitchenhub" path="mealPlan" />}</div>
       <div className="scroll" data-scroll>
         {dinner && (
           <div className="tonight">
@@ -51,7 +51,7 @@ export function Meals({ meals, recipes, expiring, onCook, onPeek, phone }) {
   );
 }
 
-export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds, onFold, phone }) {
+export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds, onFold, phone, status }) {
   const [text, setText] = useState('');
   const open = items.filter((i) => !bought.includes(i.id));
   const inCart = items.filter((i) => bought.includes(i.id));
@@ -62,7 +62,7 @@ export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds
   return (
     <div className="kcol">
       <div className="zh">
-        <h2>Shopping</h2><span className="count"><b>{open.length}</b> to get</span>
+        <h2>Shopping</h2><Freshness s={status} /><span className="count"><b>{open.length}</b> to get</span>
         {phone && <OpenIn app="kitchenhub" path="shopping" />}
       </div>
       <form className="add" onSubmit={submit}>

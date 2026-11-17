@@ -1,7 +1,9 @@
+import { dayFrom, iso, nextWed } from '@/lib/dates';
+
 /**
- * Sample content shaped like each app's real records. Dates are "days from
- * today" so the board always looks current. `src/data/sources.js` is where
- * each of these gets swapped for a live feed.
+ * Sample content shaped like each app's real records, used for any section
+ * whose live feed isn't connected yet (it's labelled "Sample" on the board).
+ * Dates are worked out from today so the board always looks current.
  */
 export const HOME = { name: 'Home', lat: 30.628, lon: -96.334 }; // sample location
 
@@ -91,14 +93,9 @@ export const QUICK = [
 // LearnLeaf open tasks. d = due, days from today.
 export const SUBJECTS = { stats: ['Statistics', '#7a5af5'], bio: ['Biology', '#1f9e89'], home: ['Personal', '#d17a00'] };
 export const TASKS = [
-  { name: 'Lab report draft', subject: 'bio', d: -1 },
-  { name: 'Read chapter 7', subject: 'stats', d: 0, time: '9 PM' },
-  { name: 'Pay the vet invoice', subject: 'home', d: 0 },
-  { name: 'Problem set 6', subject: 'stats', d: 2 },
-  { name: 'Group project slides', subject: 'bio', d: 4 },
-  { name: 'Quiz on cell transport', subject: 'bio', d: 6 },
-  { name: 'Renew truck registration', subject: 'home', d: 12 },
-];
+  ['Lab report draft', 'bio', -1], ['Read chapter 7', 'stats', 0, '21:00'], ['Pay the vet invoice', 'home', 0],
+  ['Problem set 6', 'stats', 2], ['Group project slides', 'bio', 4], ['Quiz on cell transport', 'bio', 6], ['Renew truck registration', 'home', 12],
+].map(([name, subject, d, time = ''], i) => ({ id: `t${i}`, name, subject, due: iso(dayFrom(d)), time }));
 
 // Wander trips with destination coordinates.
 export const TRIPS = [
@@ -106,13 +103,13 @@ export const TRIPS = [
   { id: 'thanksgiving', name: 'Thanksgiving', dest: 'Asheville, NC', lat: 35.595, lon: -82.551, start: 9, end: 13, stay: 'Airbnb in Montford',
     legs: [['AA 3521', 'CLL to DFW', '6:10 AM'], ['AA 1184', 'DFW to AVL', '9:45 AM']] },
   { id: 'lisbon', name: 'Lisbon', dest: 'Lisbon, Portugal', lat: 38.72, lon: -9.14, start: 48, end: 57 },
-];
+].map(({ start, end, ...t }) => ({ ...t, startDate: iso(dayFrom(start)), endDate: iso(dayFrom(end)) }));
 
 // ZNT breeding sessions. CIDRs on a Wednesday; Lutalyse +7; breed +9 to +11.
 export const SESSIONS = [
   { name: 'Fall heifers', cidrFrom: 1, groups: [['ZNT', 22], ['Miller', 14], ['Ortiz', 8]], notes: 'Bring extra CIDRs. Miller may add 2.' },
-  { name: 'Spring cows', cidrFrom: 60, groups: [['ZNT', 30]] },
-];
+  { name: 'Spring cows', cidrFrom: 60, groups: [['ZNT', 30]], notes: '' },
+].map(({ cidrFrom, ...s }) => ({ ...s, cidr: iso(nextWed(dayFrom(cidrFrom))) }));
 
 // GalaxyFarm housesitter guide.
 export const SITTER = {

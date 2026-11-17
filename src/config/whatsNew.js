@@ -6,6 +6,14 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17.1',
+    date: 'November 2026',
+    items: [
+      'Weather, LearnLeaf tasks and the next ZNT breeding group are now live.',
+      'Trips go live once Wander is connected. Anything still showing sample data is labelled Sample.',
+    ],
+  },
+  {
     version: '2026.11.17',
     date: 'November 2026',
     items: [

@@ -292,6 +292,11 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
+/* ---------- data freshness ---------- */
+.fresh { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; color: var(--muted); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--muted) 40%, transparent); white-space: nowrap; align-self: center; letter-spacing: 0; }
+.fresh.stale { color: var(--warn); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--warn) 50%, transparent); }
+.wx-desc .fresh { justify-self: start; margin-top: 2px; }
+
 /* ---------- phone: links through to each app ---------- */
 .apps { display: flex; gap: 8px; overflow-x: auto; margin-inline: -16px; padding: 2px 16px 4px; scrollbar-width: none; }
 .apps::-webkit-scrollbar { display: none; }

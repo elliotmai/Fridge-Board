@@ -1,6 +1,6 @@
 import { appLink } from '@/config/apps';
-import { dayFrom, daysBetween, md, plural, short, startOf, wd } from '@/lib/dates';
-import { Countdown, OpenIn } from './bits';
+import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
+import { Countdown, Freshness, OpenIn } from './bits';
 import { Right, Warn } from './Icons';
 
 function Legs({ legs }) {
@@ -32,7 +32,9 @@ function Breeding({ b, now, phone }) {
   return (
     <div className="entry">
       <div className="row"><h3>{b.name}</h3>{until > 0 ? <Countdown n={until} /> : <Countdown now />}</div>
-      <div className="herd"><span><b>{b.head}</b> head</span>{b.groups.map((g) => <span key={g[0]}>{g[0]} {g[1]}</span>)}</div>
+      <div className="herd">
+        {b.groups.length ? <><span><b>{b.head}</b> head</span>{b.groups.map((g) => <span key={g[0]}>{g[0]} {g[1]}</span>)}</> : <span>No groups added yet</span>}
+      </div>
       <div className="track">
         {stops.map((s, i) => (
           <div key={s[0]} className={`stop ${i < next ? 'past' : i === next ? 'next' : ''}`}><i /><b>{s[0]}</b><span>{s[1]}</span></div>
@@ -45,10 +47,13 @@ function Breeding({ b, now, phone }) {
   );
 }
 
-export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone }) {
+const NO_SUBJECT = ['No subject', 'var(--muted)'];
+
+export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone, status }) {
   const today = startOf(now);
   const list = tasks
-    .map((t) => ({ ...t, due: dayFrom(t.d) }))
+    .filter((t) => t.due)
+    .map((t) => ({ ...t, due: parseDate(t.due) }))
     .map((t) => ({ ...t, n: daysBetween(today, t.due) }))
     .filter((t) => t.n <= 7)
     .sort((a, b) => a.n - b.n);
@@ -57,15 +62,15 @@ export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone }) {
     <section className="zone ahead" aria-label="Coming up">
       <div className="zh"><h2>Coming up</h2></div>
       <div className="scroll" data-scroll>
-        <div className="sh">Trips{phone && <OpenIn app="wander" path="trips" />}</div>
+        <div className="sh">Trips<Freshness s={status.trips} />{phone && <OpenIn app="wander" path="trips" />}</div>
         {ts.shown.length ? ts.shown.map((t) => <Trip key={t.id} t={t} phone={phone} />) : <p className="empty-note">No trips in the next {opts.window} days.</p>}
-        {breeding && (<><div className="sh">Next breeding group</div><Breeding b={breeding} now={now} phone={phone} /></>)}
-        <div className="sh">Tasks{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
+        {breeding && (<><div className="sh">Next breeding group<Freshness s={status.breeding} /></div><Breeding b={breeding} now={now} phone={phone} /></>)}
+        <div className="sh">Tasks<Freshness s={status.tasks} />{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
         {list.length ? list.map((t) => (
-          <div key={t.name} className={`task ${t.n < 0 ? 'overdue' : ''}`}>
-            <i style={{ background: subjects[t.subject][1] }} title={subjects[t.subject][0]} />
+          <div key={t.id} className={`task ${t.n < 0 ? 'overdue' : ''}`}>
+            <i style={{ background: (subjects[t.subject] ?? NO_SUBJECT)[1] }} title={(subjects[t.subject] ?? NO_SUBJECT)[0]} />
             <span>{t.name}</span>
-            <em>{t.n < 0 ? 'Overdue' : t.n === 0 ? t.time || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due)}</em>
+            <em>{t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due)}</em>
           </div>
         )) : <p className="empty-note">Nothing due this week.</p>}
       </div>
@@ -73,11 +78,11 @@ export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone }) {
   );
 }
 
-export function SitterPanel({ ts, breeding, sitter, now, phone }) {
+export function SitterPanel({ ts, breeding, sitter, now, phone, status }) {
   const trip = ts.away || ts.shown.find((t) => t.far);
   return (
     <section className="zone ahead" aria-label="While we're away">
-      <div className="zh"><h2>While we&apos;re away</h2>{phone && <OpenIn app="galaxyfarm" path="housesitter" label="Full guide" />}</div>
+      <div className="zh"><h2>While we&apos;re away</h2><Freshness s={status.sitter} />{phone && <OpenIn app="galaxyfarm" path="housesitter" label="Full guide" />}</div>
       <div className="scroll" data-scroll>
         {trip && (
           <div className="entry">
@@ -93,7 +98,7 @@ export function SitterPanel({ ts, breeding, sitter, now, phone }) {
         ))}
         <div className="sh">Good to know</div>
         {sitter.notes.map((n) => <div className={`note ${n[0]}`} key={n[1]}>{n[1]}</div>)}
-        {breeding && (<><div className="sh">Cattle</div><Breeding b={breeding} now={now} phone={phone} /></>)}
+        {breeding && (<><div className="sh">Cattle<Freshness s={status.breeding} /></div><Breeding b={breeding} now={now} phone={phone} /></>)}
       </div>
     </section>
   );

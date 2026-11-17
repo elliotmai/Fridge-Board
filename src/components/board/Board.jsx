@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
-import { loadBoard } from '@/data/sources';
+import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
@@ -34,7 +34,16 @@ export function Board() {
   const [cook, setCook] = useState(null);
   const [timers, setTimers] = useState({});
 
-  useEffect(() => { loadBoard().then(setData); }, []);
+  // Load now, then refresh every few minutes and whenever the screen wakes up.
+  useEffect(() => {
+    let alive = true;
+    const load = () => loadBoard().then((d) => alive && setData(d));
+    load();
+    const id = setInterval(load, REFRESH_MS);
+    const vis = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', vis); };
+  }, []);
 
   const hasTimers = Object.keys(timers).length > 0;
   const tick = useTick(hasTimers ? 1000 : 30000);
@@ -114,17 +123,17 @@ export function Board() {
 
   return (
     <div className="fb">
-      <Header now={now} weather={data.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} phone={phone} />
+      <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} phone={phone} />
       <AwayBanner trip={ts.away} />
       <main className="board">
-        <Farm chores={data.chores} done={done} onToggle={toggleChore} now={now} folds={folds} onFold={fold} phone={phone} sitter={sitter} />
+        <Farm chores={data.chores} done={done} onToggle={toggleChore} now={now} folds={folds} onFold={fold} phone={phone} sitter={sitter} status={data.status.chores} />
         <section className="kitchen zone" aria-label="Kitchen">
-          <Meals meals={data.meals} recipes={data.recipes} expiring={data.expiring} onCook={openCook} onPeek={setPeek} phone={phone} />
-          <Shopping items={items} quick={data.quick} bought={bought} onToggle={toggleItem} onAdd={addItem} onClear={clearCart} folds={folds} onFold={fold} phone={phone} />
+          <Meals meals={data.meals} recipes={data.recipes} expiring={data.expiring} onCook={openCook} onPeek={setPeek} phone={phone} status={data.status.meals} />
+          <Shopping items={items} quick={data.quick} bought={bought} onToggle={toggleItem} onAdd={addItem} onClear={clearCart} folds={folds} onFold={fold} phone={phone} status={data.status.shopping} />
         </section>
         {sitter
-          ? <SitterPanel ts={ts} breeding={breeding} sitter={data.sitter} now={now} phone={phone} />
-          : <ComingUp ts={ts} breeding={breeding} tasks={data.tasks} subjects={data.subjects} now={now} opts={opts} phone={phone} />}
+          ? <SitterPanel ts={ts} breeding={breeding} sitter={data.sitter} now={now} phone={phone} status={data.status} />
+          : <ComingUp ts={ts} breeding={breeding} tasks={data.tasks} subjects={data.subjects} now={now} opts={opts} phone={phone} status={data.status} />}
       </main>
 
       {!cook && hasTimers && <div className="board-timers fb-layer"><TimerChips timers={timers} now={tick} onJump={jumpToTimer} /></div>}

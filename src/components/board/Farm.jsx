@@ -1,10 +1,10 @@
 import { SLOTS } from '@/lib/derive';
-import { CheckRow, Fold, OpenIn } from './bits';
+import { CheckRow, Fold, Freshness, OpenIn } from './bits';
 import { DoneCircle } from './Icons';
 
 const byText = (k, by) => (k === 'owed' ? '' : by === 24 ? 'by bedtime' : `by ${by > 12 ? by - 12 : by} ${by >= 12 ? 'pm' : 'am'}`);
 
-export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter }) {
+export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter, status }) {
   const hour = now.getHours() + now.getMinutes() / 60;
   const total = chores.length;
   const doneItems = chores.filter((c) => done.includes(c.id));
@@ -16,6 +16,7 @@ export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter
     <section className="zone farm" aria-label="Farm chores">
       <div className="zh">
         <h2>Chores</h2>
+        <Freshness s={status} />
         <span className="count"><b>{doneItems.length}</b> of {total} done</span>
         {phone && <OpenIn app="galaxyfarm" path={sitter ? 'housesitter' : 'chores'} />}
       </div>
