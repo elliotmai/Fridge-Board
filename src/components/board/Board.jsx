@@ -104,7 +104,7 @@ export function Board() {
     : localDone;
   const items = (liveShop ? [...data.shopping, ...pendingAdds] : [...data.shopping, ...extra]).filter((i) => !cleared.includes(i.id));
   const bought = liveShop
-    ? items.filter((i) => overrides[itemKey(i.id)] ?? i.bought).map((i) => i.id)
+    ? items.filter((i) => (/^(meal|pending):/.test(String(i.id)) ? localBought.includes(i.id) : overrides[itemKey(i.id)] ?? i.bought)).map((i) => i.id)
     : localBought;
 
   /** Tell the app; on failure, put the row back and say so. */
@@ -128,7 +128,10 @@ export function Board() {
     if (!was && okay !== false) toast(`${c.title} ticked off`, { duration: 5000, action: { label: 'Undo', onClick: () => setChore(c, false) } });
   };
 
-  const setItem = (i, value) => (liveShop && !String(i.id).startsWith('pending:')
+  // KitchenHub has no tick for lines worked out from the meal plan (ids "meal:…"),
+  // so those, like rows still being added, are ticked on this device only.
+  const localOnly = (id) => /^(meal|pending):/.test(String(id));
+  const setItem = (i, value) => (liveShop && !localOnly(i.id)
     ? sendLive(itemKey(i.id), `/api/shopping/${encodeURIComponent(i.id)}`, { bought: value }, `Couldn't update ${i.name} in KitchenHub`)
     : setLocalBought((b) => (value ? [...new Set([...b, i.id])] : b.filter((x) => x !== i.id))));
   const toggleItem = async (i) => {
