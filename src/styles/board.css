@@ -306,6 +306,20 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 .wx-desc .fresh { justify-self: start; margin-top: 2px; }
 
 
+/* ---------- housesitter mode ---------- */
+.board.sitter { grid-template-columns: 1fr 1.35fr 1fr; }
+.away.sitter-only { background: var(--farm); }
+.away-off { margin-left: auto; height: 36px; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--on) 22%, transparent); color: var(--on); font-weight: 500; font-size: 14px; }
+.danger { display: grid; gap: 4px; padding: 10px 12px; margin: 2px 0 6px; border-radius: 12px; background: color-mix(in srgb, var(--late) 12%, var(--surface)); color: var(--ink); font-size: 15px; }
+.danger b { display: flex; align-items: center; gap: 6px; color: var(--late); font-weight: 600; }
+.danger svg { width: 18px; height: 18px; }
+.intro { font-size: 15px; padding: 2px 8px 6px; color: var(--muted); }
+.care-item { display: grid; gap: 1px; padding: 7px 8px; }
+.care-item + .care-item { border-top: 1px solid color-mix(in srgb, var(--c) 18%, transparent); }
+.care-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.care-head b { font-weight: 600; font-size: 16px; }
+.care-item p { font-size: 14px; color: var(--muted); }
+
 /* ---------- small kiosk tablets (Fire HD 8: ~853x533 to 962x601 points) ----------
    Same four columns, tighter type and spacing so the whole board fits one
    landscape screen. Touch targets stay at 40px or more. */
@@ -405,6 +419,13 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
   .note { font-size: 13px; padding: 5px 6px 5px 10px; }
 
   .board-timers { right: 14px; bottom: 14px; }
+  .board.sitter { grid-template-columns: 1fr 1.3fr 1fr; }
+  .away-off { height: 32px; font-size: 13px; }
+  .danger { font-size: 13px; padding: 8px 10px; }
+  .intro { font-size: 13px; padding: 2px 4px 4px; }
+  .care-item { padding: 5px 4px; }
+  .care-head b { font-size: 14px; }
+  .care-item p { font-size: 12px; }
   .board-timers .timer-chip { height: 44px; font-size: 14px; }
 
   .cook { gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
@@ -457,4 +478,8 @@ a.entry h3::after { content: ""; }
   .mode .long { display: none; }
   .mode .short { display: inline; }
   .clock { flex: 1 1 100%; }
+}
+@media (max-width: 759px) {
+  .board.sitter { grid-template-columns: 1fr; }
+  .away { flex-wrap: wrap; }
 }

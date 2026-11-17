@@ -53,9 +53,15 @@ export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, on
   );
 }
 
-export function AwayBanner({ trip }) {
-  if (!trip) return null;
+/** One strip under the header: where you are when away, and that housesitter mode is on. */
+export function AwayBanner({ trip, sitter, onTurnOff }) {
+  if (!trip && !sitter) return null;
   return (
-    <div className="away"><Plane /><strong>Away in {trip.dest}</strong><span>Back {md(trip.endD)}</span></div>
+    <div className={`away ${trip ? '' : 'sitter-only'}`}>
+      {trip && <Plane />}
+      <strong>{trip ? `Away in ${trip.dest}` : 'Housesitter mode'}</strong>
+      <span>{trip ? `Back ${md(trip.endD)}` : 'Meals, shopping and personal tasks are hidden'}{trip && sitter ? '. Housesitter mode is on.' : '.'}</span>
+      {sitter && <button className="away-off" onClick={onTurnOff}>Turn off</button>}
+    </div>
   );
 }

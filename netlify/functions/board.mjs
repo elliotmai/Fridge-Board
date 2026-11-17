@@ -40,6 +40,12 @@ async function galaxyfarm() {
       sitter: {
         contacts: (r.sitter?.contacts || []).map((c) => [c.name, c.role || '', c.phone || '']),
         notes: (r.sitter?.notes || []).map((n) => [n.safety ? 'safety' : '', n.text]),
+        intro: r.sitter?.intro || null,
+        doNotHandle: r.sitter?.doNotHandle || [],
+        care: (r.sitter?.care || []).map((sec) => ({
+          title: sec.title,
+          items: (sec.items || []).map((i) => ({ name: i.name || '', detail: i.detail || '', safety: i.safety ?? null, safetyLabel: i.safetyLabel ?? null })),
+        })),
       },
     },
   };

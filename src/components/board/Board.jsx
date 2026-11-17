@@ -7,7 +7,7 @@ import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
 import { DAY, plural } from '@/lib/dates';
 import { nextBreeding, tripState } from '@/lib/derive';
-import { ComingUp, SitterPanel } from './Ahead';
+import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
 import { Farm } from './Farm';
 import { AwayBanner, Header } from './Header';
@@ -184,13 +184,17 @@ export function Board() {
     <div className="fb">
       <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} phone={phone} />
       {data.locked && <LockBanner reason={data.locked} onSave={saveKey} />}
-      <AwayBanner trip={ts.away} />
-      <main className="board">
+      <AwayBanner trip={ts.away} sitter={sitter} onTurnOff={toggleSitter} />
+      <main className={`board ${sitter ? 'sitter' : ''}`}>
         <Farm chores={data.chores} done={done} onToggle={toggleChore} now={now} folds={folds} onFold={fold} phone={phone} sitter={sitter} status={data.status.chores} />
-        <section className="kitchen zone" aria-label="Kitchen">
-          <Meals meals={data.meals} recipes={data.recipes} expiring={data.expiring} onCook={openCook} onPeek={setPeek} phone={phone} status={data.status.meals} />
-          <Shopping items={items} quick={data.quick} bought={bought} onToggle={toggleItem} onAdd={addItem} onClear={clearCart} folds={folds} onFold={fold} phone={phone} status={data.status.shopping} />
-        </section>
+        {sitter ? (
+          <SitterGuide sitter={data.sitter} phone={phone} status={data.status.sitter} />
+        ) : (
+          <section className="kitchen zone" aria-label="Kitchen">
+            <Meals meals={data.meals} recipes={data.recipes} expiring={data.expiring} onCook={openCook} onPeek={setPeek} phone={phone} status={data.status.meals} />
+            <Shopping items={items} quick={data.quick} bought={bought} onToggle={toggleItem} onAdd={addItem} onClear={clearCart} folds={folds} onFold={fold} phone={phone} status={data.status.shopping} />
+          </section>
+        )}
         {sitter
           ? <SitterPanel ts={ts} breeding={breeding} sitter={data.sitter} now={now} phone={phone} status={data.status} />
           : <ComingUp ts={ts} breeding={breeding} tasks={data.tasks} subjects={data.subjects} now={now} opts={opts} phone={phone} status={data.status} />}

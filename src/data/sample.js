@@ -114,7 +114,23 @@ export const SESSIONS = [
 // GalaxyFarm housesitter guide.
 export const SITTER = {
   contacts: [['Dr. Ana Patel', 'Vet', '(979) 555-0142'], ['Joe next door', 'Can help with the cattle', '(979) 555-0188'], ['Feed store', 'Opens at 7 AM', '(979) 555-0110']],
-  notes: [['safety', "The bull is in pen 2. Don't go in alone."], ['', 'Dogs eat at 6 PM, 2 cups each. Kibble is in the bin by the back door.'], ['', 'Eggs go in the garage fridge. Help yourself.'], ['', 'The back pasture gate code is inside the feed room door.']],
+  notes: [['', 'Eggs go in the garage fridge. Help yourself.'], ['', 'The back pasture gate code is inside the feed room door.']],
+  intro: 'Thanks for looking after the place. Everything you need day to day is on this screen.',
+  doNotHandle: ['Duke (bull) — pen 2, never go in alone'],
+  care: [
+    { title: 'Pens', items: [
+      { name: 'Pen 2', detail: 'Duke the bull · water from the north trough', safety: 4, safetyLabel: 'Stay outside' },
+      { name: 'North pasture', detail: '22 heifers · check the float valve', safety: null, safetyLabel: null },
+      { name: 'Coop', detail: '14 hens · shut the pop door at dusk', safety: null, safetyLabel: null },
+    ] },
+    { title: 'Pets', items: [
+      { name: 'Rex and Penny', detail: 'Dogs · 2 cups each at 6 PM · kibble in the bin by the back door', safety: null, safetyLabel: null },
+    ] },
+    { title: 'Feeding', items: [
+      { name: 'Cubes, heifers', detail: '1 bag in the morning, 1 bag in the evening', safety: null, safetyLabel: null },
+      { name: 'Hay', detail: 'Roll a new bale in when the ring is under a quarter', safety: null, safetyLabel: null },
+    ] },
+  ],
 };
 
 // Sample weather. Live version reads GalaxyFarm's weather service.

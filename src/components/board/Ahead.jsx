@@ -78,26 +78,62 @@ export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone, stat
   );
 }
 
+/** Middle column in housesitter mode: what the place needs from the sitter. */
+export function SitterGuide({ sitter, phone, status }) {
+  const care = sitter.care || [];
+  const empty = !care.length && !sitter.notes.length && !sitter.intro && !(sitter.doNotHandle || []).length;
+  return (
+    <section className="zone farm care" aria-label="The animals">
+      <div className="zh"><h2>The animals</h2><Freshness s={status} />{phone && <OpenIn app="galaxyfarm" path="housesitter" label="Full guide" />}</div>
+      <div className="scroll" data-scroll>
+        {(sitter.doNotHandle || []).length > 0 && (
+          <div className="danger">
+            <b><Warn />Do not handle these alone</b>
+            {sitter.doNotHandle.map((d) => <span key={d}>{d}</span>)}
+          </div>
+        )}
+        {sitter.intro && <p className="intro">{sitter.intro}</p>}
+        {care.map((sec) => (
+          <div key={sec.title}>
+            <div className="sh">{sec.title}</div>
+            {sec.items.map((i, n) => (
+              <div className="care-item" key={`${i.name}-${n}`}>
+                <div className="care-head">
+                  {i.name && <b>{i.name}</b>}
+                  {i.safety != null && i.safety >= 3 && <span className="badge late">{i.safetyLabel || `Safety ${i.safety}`}</span>}
+                </div>
+                {i.detail && <p>{i.detail}</p>}
+              </div>
+            ))}
+          </div>
+        ))}
+        {sitter.notes.length > 0 && <div className="sh">Good to know</div>}
+        {sitter.notes.map((n) => <div className={`note ${n[0]}`} key={n[1]}>{n[1]}</div>)}
+        {empty && <p className="empty-note">Nothing in the housesitter guide yet. Add pens, pets, feeding plans and notes in GalaxyFarm under Housesitter, and they show here.</p>}
+      </div>
+    </section>
+  );
+}
+
+/** Right column in housesitter mode: when we're back, who to call, cattle dates. */
 export function SitterPanel({ ts, breeding, sitter, now, phone, status }) {
   const trip = ts.away || ts.shown.find((t) => t.far);
   return (
     <section className="zone ahead" aria-label="While we're away">
-      <div className="zh"><h2>While we&apos;re away</h2><Freshness s={status.sitter} />{phone && <OpenIn app="galaxyfarm" path="housesitter" label="Full guide" />}</div>
+      <div className="zh"><h2>While we&apos;re away</h2></div>
       <div className="scroll" data-scroll>
-        {trip && (
+        {trip ? (
           <div className="entry">
             <p>{trip.current ? "We're back" : 'We leave'}</p>
             <span className="back-big">{md(trip.current ? trip.endD : trip.startD)}</span>
             <p>{trip.dest}</p>
             <Legs legs={trip.legs} />
           </div>
-        )}
-        <div className="sh">Who to call</div>
-        {sitter.contacts.map((c) => (
-          <div className="contact" key={c[0]}><div>{c[0]}<small>{c[1]}</small></div><span className="num">{c[2]}</span></div>
-        ))}
-        <div className="sh">Good to know</div>
-        {sitter.notes.map((n) => <div className={`note ${n[0]}`} key={n[1]}>{n[1]}</div>)}
+        ) : <p className="empty-note">No trip in Wander right now.</p>}
+        <div className="sh">Who to call<Freshness s={status.sitter} /></div>
+        {sitter.contacts.length ? sitter.contacts.map((c) => (
+          <div className="contact" key={c[0]}><div>{c[0]}<small>{c[1]}</small></div><span className="num">{c[2] || 'No number saved'}</span></div>
+        )) : <p className="empty-note">Tag contacts as emergency or vet in GalaxyFarm to list them here.</p>}
         {breeding && (<><div className="sh">Cattle<Freshness s={status.breeding} /></div><Breeding b={breeding} now={now} phone={phone} /></>)}
       </div>
     </section>

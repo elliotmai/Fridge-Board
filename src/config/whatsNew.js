@@ -6,6 +6,14 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17.4',
+    date: 'November 2026',
+    items: [
+      'Housesitter mode now turns the whole board over to the sitter: chores, the animals, who to call and when you are back.',
+      'Your meals, shopping list and personal tasks are hidden while it is on. A banner says so, with a button to turn it off.',
+    ],
+  },
+  {
     version: '2026.11.17.3',
     date: 'November 2026',
     items: ['The whole board now fits an 8-inch tablet in landscape, instead of switching to the phone layout.'],
