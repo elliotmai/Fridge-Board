@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+# Netlify's secret scan flags any env var value it finds in the code. These
+# three aren't secrets, and HOME_TZ's usual value is the function's default,
+# so leave them out. The tokens are still scanned.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "HOME_LAT,HOME_LON,HOME_TZ"
+
 # Single-page app: send every path to index.html.
 [[redirects]]
   from = "/*"
