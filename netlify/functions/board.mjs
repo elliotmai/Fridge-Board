@@ -17,9 +17,9 @@
 const env = (k, d) => process.env[k] || d;
 const LEARNLEAF_URL = () => env('LEARNLEAF_URL', 'https://learnleaf-organizer.netlify.app');
 const WANDER_URL = () => env('WANDER_FUNCTIONS_URL', 'https://us-central1-wander-f10b1.cloudfunctions.net');
-// ZNT's web config is public (it ships in that app's bundle) and its rules allow reads.
+// ZNT's Firestore rules allow reads of its one user's data, so no key is needed.
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
-const ZNT_KEY = () => env('ZNT_API_KEY', 'AIzaSyAJXsSJDEZN7R-y5XHNGtmwuq4hSfNq7kk');
+const ZNT_KEY = () => env('ZNT_API_KEY', '');
 const ZNT_USER = 'znt-manager-user';
 
 const TRAVEL_LOOKAHEAD_DAYS = 60; // fetch flights/lodging for trips starting this soon
@@ -143,7 +143,9 @@ function fsValue(v) {
 
 async function znt() {
   const base = `https://firestore.googleapis.com/v1/projects/${ZNT_PROJECT()}/databases/(default)/documents/users/${ZNT_USER}/sessions`;
-  const r = await getJson(`${base}?key=${ZNT_KEY()}&pageSize=200`);
+  const q = new URLSearchParams({ pageSize: '200' });
+  if (ZNT_KEY()) q.set('key', ZNT_KEY());
+  const r = await getJson(`${base}?${q}`);
   const sessions = (r.documents || []).map((d) => {
     const f = Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, fsValue(v)]));
     return {
