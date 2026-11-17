@@ -39,7 +39,9 @@ async function galaxyfarm() {
       chores: r.chores.map((c) => ({ id: c.id, title: c.title, detail: c.detail || '', slot: c.slot, done: !!c.done })),
       sitter: {
         contacts: (r.sitter?.contacts || []).map((c) => [c.name, c.role || '', c.phone || '']),
-        notes: (r.sitter?.notes || []).map((n) => [n.safety ? 'safety' : '', n.text]),
+        // `notes` is GalaxyFarm's older flat list. Once it sends `care`, the same things
+        // (do-not-handle, risky pens, intro, written sections) arrive structured, so skip it.
+        notes: Array.isArray(r.sitter?.care) ? [] : (r.sitter?.notes || []).map((n) => [n.safety ? 'safety' : '', n.text]),
         intro: r.sitter?.intro || null,
         doNotHandle: r.sitter?.doNotHandle || [],
         care: (r.sitter?.care || []).map((sec) => ({
