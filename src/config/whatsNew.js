@@ -9,7 +9,8 @@ export const WHATS_NEW = [
     version: '2026.11.18.1',
     date: 'November 2026',
     items: [
-      'Travel lists your own flights, drives and stays on each trip, with dates and times.',
+      'Travel shows all your upcoming trips, and lists only your own flights, drives and stays on each one.',
+      'You only count as away, with the banner and housesitter mode, when a trip is outside your radius.',
       'Your trips further out than a month now show in a short Later list, so the next one is never hidden.',
     ],
   },

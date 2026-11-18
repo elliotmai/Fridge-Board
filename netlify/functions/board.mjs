@@ -11,7 +11,7 @@
  *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
  *   LEARNLEAF_TOKEN    tasks
- *   WANDER_TOKEN       trips (only the owner's own travel)
+ *   WANDER_TOKEN       trips (each with only the owner's own legs and stays)
  *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
  *                      appTripTravel marks legs with `mine`
  *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
@@ -150,25 +150,27 @@ function isMine(item) {
   return !!me && (item.traveler_names || []).some((n) => String(n).trim().toLowerCase() === me);
 }
 
-/** Only the owner's own travel: trips they fly, drive or stay on, with only their legs. */
+/**
+ * Every upcoming trip the owner is on. Each carries only the owner's own
+ * travel (`items`: their legs and stays); other travellers' flights are left
+ * out. Whether a trip counts as "away" is decided by distance on the board.
+ */
 async function wander({ tz }) {
   const token = env('WANDER_TOKEN');
   if (!token) return { status: 'unconfigured', reason: 'Set WANDER_TOKEN' };
   const auth = bearer(token);
   const { trips } = await getJson(`${urls.wander()}/appTrips`, auth);
   const today = dateIn(new Date(), tz), horizon = addDays(today, TRAVEL_LOOKAHEAD_DAYS);
-  const soon = trips.filter((t) => t.start_date && t.end_date && t.start_date <= horizon).slice(0, MAX_TRAVEL_LOOKUPS);
-  const out = await Promise.all(soon.map(async (t) => {
-    const travel = await getJson(`${urls.wander()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth);
-    const myLegs = travel.legs.filter(isMine);
-    const myStays = travel.accommodations.filter(isMine);
-    if (!myLegs.length && !myStays.length) return null; // someone else's trip, or no travel at all
-    const trip = { id: t.id, name: t.name, dest: t.destination || '', startDate: t.start_date, endDate: t.end_date };
+  let lookups = 0;
+  const out = await Promise.all(trips.filter((t) => t.start_date && t.end_date).map(async (t) => {
+    const trip = { id: t.id, name: t.name, dest: t.destination || '', startDate: t.start_date, endDate: t.end_date, items: [] };
     const geo = Number.isFinite(t.lat) && Number.isFinite(t.lon) ? { lat: t.lat, lon: t.lon } : await geocode(t.destination);
     if (geo) Object.assign(trip, geo);
-    // The owner's itinerary for this trip: every leg and stay they're on, by date.
+    if (t.start_date > horizon || lookups++ >= MAX_TRAVEL_LOOKUPS) return trip;
+    const travel = await getJson(`${urls.wander()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth).catch(() => null);
+    if (!travel) return trip;
     trip.items = [
-      ...myLegs.map((l) => ({
+      ...travel.legs.filter(isMine).map((l) => ({
         kind: l.transport || 'other',
         title: l.number || '',
         route: [l.from, l.to].filter(Boolean).join(' to '),
@@ -176,7 +178,7 @@ async function wander({ tz }) {
         time: clock(l.depart_at),
         arrive: clock(l.arrive_at),
       })),
-      ...myStays.map((a) => ({
+      ...travel.accommodations.filter(isMine).map((a) => ({
         kind: 'stay',
         title: a.name || 'Stay',
         date: String(a.check_in || '').slice(0, 10),
@@ -185,7 +187,7 @@ async function wander({ tz }) {
     ].filter((i) => i.date).sort((x, y) => (x.date + (x.time ? '1' : '0')).localeCompare(y.date + (y.time ? '1' : '0')));
     return trip;
   }));
-  return { status: 'live', data: { trips: out.filter(Boolean) } };
+  return { status: 'live', data: { trips: out } };
 }
 
 /* ----------------------------------------------------------------- ZNT --- */
