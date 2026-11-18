@@ -11,7 +11,9 @@
  *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
  *   LEARNLEAF_TOKEN    tasks
- *   WANDER_TOKEN       trips
+ *   WANDER_TOKEN       trips (only the owner's own travel)
+ *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
+ *                      appTripTravel marks legs with `mine`
  *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
  *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, WANDER_FUNCTIONS_URL,
  *   ZNT_PROJECT_ID, ZNT_API_KEY
@@ -21,8 +23,10 @@ import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../li
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
 const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
 const ZNT_USER = 'znt-manager-user';
-const TRAVEL_LOOKAHEAD_DAYS = 60;
-const MAX_TRAVEL_LOOKUPS = 5;
+// Travel is looked up for every trip starting this soon (or under way): it decides
+// which trips are the owner's own, so a trip without a lookup can't be shown.
+const TRAVEL_LOOKAHEAD_DAYS = 130;
+const MAX_TRAVEL_LOOKUPS = 12;
 
 const dateIn = (d, zone) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -136,29 +140,38 @@ const clock = (wall) => {
   return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
 };
 
+/**
+ * Is this leg or stay the owner's? Wander marks it with `mine` (appTripTravel);
+ * until that is deployed, match WANDER_TRAVELER_NAME against the traveller names.
+ */
+function isMine(item) {
+  if (typeof item.mine === 'boolean') return item.mine;
+  const me = env('WANDER_TRAVELER_NAME', '').trim().toLowerCase();
+  return !!me && (item.traveler_names || []).some((n) => String(n).trim().toLowerCase() === me);
+}
+
+/** Only the owner's own travel: trips they fly, drive or stay on, with only their legs. */
 async function wander({ tz }) {
   const token = env('WANDER_TOKEN');
   if (!token) return { status: 'unconfigured', reason: 'Set WANDER_TOKEN' };
   const auth = bearer(token);
   const { trips } = await getJson(`${urls.wander()}/appTrips`, auth);
   const today = dateIn(new Date(), tz), horizon = addDays(today, TRAVEL_LOOKAHEAD_DAYS);
-  let lookups = 0;
-  const out = await Promise.all(trips.map(async (t) => {
+  const soon = trips.filter((t) => t.start_date && t.end_date && t.start_date <= horizon).slice(0, MAX_TRAVEL_LOOKUPS);
+  const out = await Promise.all(soon.map(async (t) => {
+    const travel = await getJson(`${urls.wander()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth);
+    const myLegs = travel.legs.filter(isMine);
+    const myStays = travel.accommodations.filter(isMine);
+    if (!myLegs.length && !myStays.length) return null; // someone else's trip, or no travel at all
     const trip = { id: t.id, name: t.name, dest: t.destination || '', startDate: t.start_date, endDate: t.end_date };
-    // Wander sends coordinates once its appTrips change is deployed; until then, geocode the name.
     const geo = Number.isFinite(t.lat) && Number.isFinite(t.lon) ? { lat: t.lat, lon: t.lon } : await geocode(t.destination);
     if (geo) Object.assign(trip, geo);
-    if (t.start_date && t.start_date <= horizon && lookups++ < MAX_TRAVEL_LOOKUPS) {
-      const travel = await getJson(`${urls.wander()}/appTripTravel?trip=${encodeURIComponent(t.id)}`, auth).catch(() => null);
-      if (travel) {
-        const legs = travel.legs.filter((l) => l.transport === 'flight' || l.number).slice(0, 3);
-        if (legs.length) trip.legs = legs.map((l) => [l.number || l.transport, `${l.from} to ${l.to}`, clock(l.depart_at)]);
-        if (travel.accommodations[0]?.name) trip.stay = travel.accommodations[0].name;
-      }
-    }
+    const legs = myLegs.slice(0, 3);
+    if (legs.length) trip.legs = legs.map((l) => [l.number || l.transport, `${l.from} to ${l.to}`, clock(l.depart_at)]);
+    if (myStays[0]?.name) trip.stay = myStays[0].name;
     return trip;
   }));
-  return { status: 'live', data: { trips: out.filter((t) => t.startDate && t.endDate) } };
+  return { status: 'live', data: { trips: out.filter(Boolean) } };
 }
 
 /* ----------------------------------------------------------------- ZNT --- */

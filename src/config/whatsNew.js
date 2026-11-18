@@ -6,6 +6,14 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.18',
+    date: 'November 2026',
+    items: [
+      'Coming up is now in three parts, Tasks, Travel and Breeding, and each scrolls on its own.',
+      'Travel only shows trips you are flying or staying on, with only your own flights. Other people\'s trips no longer switch on the away banner or housesitter mode.',
+    ],
+  },
+  {
     version: '2026.11.17.5',
     date: 'November 2026',
     items: ['Meals now lead the kitchen, with a bigger Tonight card. The shopping list sits beside it in a narrower column.'],

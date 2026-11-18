@@ -311,6 +311,14 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 .wx-desc .fresh { justify-self: start; margin-top: 2px; }
 
 
+/* ---------- Coming up: three parts, each scrolling on its own ---------- */
+.zone.stacked { padding-bottom: 14px; gap: 6px; }
+.part { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.part.is-empty { flex: 0 0 auto; }
+.part + .part { border-top: 1px solid color-mix(in srgb, var(--c) 22%, transparent); padding-top: 8px; }
+.part > .sh { margin: 0 0 2px; }
+.part > .scroll { padding-bottom: 4px; }
+
 /* ---------- housesitter mode ---------- */
 .board.sitter { grid-template-columns: 1fr 1.35fr 1fr; }
 .away.sitter-only { background: var(--farm); }
@@ -426,6 +434,8 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
   .note { font-size: 13px; padding: 5px 6px 5px 10px; }
 
   .board-timers { right: 14px; bottom: 14px; }
+  .zone.stacked { padding-bottom: 10px; gap: 4px; }
+  .part + .part { padding-top: 6px; }
   .board.sitter { grid-template-columns: 1fr 1.3fr 1fr; }
   .away-off { height: 32px; font-size: 13px; }
   .danger { font-size: 13px; padding: 8px 10px; }
@@ -488,6 +498,7 @@ a.entry h3::after { content: ""; }
 }
 @media (max-width: 759px) {
   .board.sitter { grid-template-columns: 1fr; }
+  .part { flex: none; }
   .kitchen .kcol + .kcol { padding-left: 0; border-left: 0; }
   .away { flex-wrap: wrap; }
 }

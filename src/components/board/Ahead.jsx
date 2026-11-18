@@ -59,20 +59,31 @@ export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone, stat
     .sort((a, b) => a.n - b.n);
   const over = list.filter((t) => t.n < 0).length;
   return (
-    <section className="zone ahead" aria-label="Coming up">
+    <section className="zone ahead stacked" aria-label="Coming up">
       <div className="zh"><h2>Coming up</h2></div>
-      <div className="scroll" data-scroll>
-        <div className="sh">Trips<Freshness s={status.trips} />{phone && <OpenIn app="wander" path="trips" />}</div>
-        {ts.shown.length ? ts.shown.map((t) => <Trip key={t.id} t={t} phone={phone} />) : <p className="empty-note">No trips in the next {opts.window} days.</p>}
-        {breeding && (<><div className="sh">Next breeding group<Freshness s={status.breeding} /></div><Breeding b={breeding} now={now} phone={phone} /></>)}
+      <div className={`part ${list.length ? '' : 'is-empty'}`}>
         <div className="sh">Tasks<Freshness s={status.tasks} />{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
-        {list.length ? list.map((t) => (
-          <div key={t.id} className={`task ${t.n < 0 ? 'overdue' : ''}`}>
-            <i style={{ background: (subjects[t.subject] ?? NO_SUBJECT)[1] }} title={(subjects[t.subject] ?? NO_SUBJECT)[0]} />
-            <span>{t.name}</span>
-            <em>{t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due)}</em>
-          </div>
-        )) : <p className="empty-note">Nothing due this week.</p>}
+        <div className="scroll" data-scroll>
+          {list.length ? list.map((t) => (
+            <div key={t.id} className={`task ${t.n < 0 ? 'overdue' : ''}`}>
+              <i style={{ background: (subjects[t.subject] ?? NO_SUBJECT)[1] }} title={(subjects[t.subject] ?? NO_SUBJECT)[0]} />
+              <span>{t.name}</span>
+              <em>{t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due)}</em>
+            </div>
+          )) : <p className="empty-note">Nothing due this week.</p>}
+        </div>
+      </div>
+      <div className={`part ${ts.shown.length ? '' : 'is-empty'}`}>
+        <div className="sh">Travel<Freshness s={status.trips} />{phone && <OpenIn app="wander" path="trips" />}</div>
+        <div className="scroll" data-scroll>
+          {ts.shown.length ? ts.shown.map((t) => <Trip key={t.id} t={t} phone={phone} />) : <p className="empty-note">No travel in the next {opts.window} days.</p>}
+        </div>
+      </div>
+      <div className={`part ${breeding ? '' : 'is-empty'}`}>
+        <div className="sh">Breeding<Freshness s={status.breeding} /></div>
+        <div className="scroll" data-scroll>
+          {breeding ? <Breeding b={breeding} now={now} phone={phone} /> : <p className="empty-note">No breeding group in the next {opts.breedWindow} days.</p>}
+        </div>
       </div>
     </section>
   );
