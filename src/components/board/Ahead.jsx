@@ -27,17 +27,29 @@ function Trip({ t, phone }) {
 
 function Breeding({ b, now, phone }) {
   const today = startOf(now), until = daysBetween(today, b.cidr);
-  const stops = [['CIDRs in', md(b.cidr), b.cidr], ['Lutalyse', md(b.lut), b.lut], ['Breed', `${wd(b.b1)} to ${wd(b.b2)} ${short(b.b2)}`, b.b2]];
-  const next = stops.findIndex((s) => s[2] >= today);
+  // Each step spans days: CIDRs are in until Lutalyse, Lutalyse runs until
+  // breeding starts, then the breeding window. Done = past its last day;
+  // now = today falls inside it. Done and now are highlighted; what's ahead is muted.
+  const dayBefore = (d) => { const x = new Date(d); x.setDate(x.getDate() - 1); return x; };
+  const stops = [
+    ['CIDRs in', md(b.cidr), b.cidr, dayBefore(b.lut)],
+    ['Lutalyse', md(b.lut), b.lut, dayBefore(b.b1)],
+    ['Breed', `${wd(b.b1)} to ${wd(b.b2)} ${short(b.b2)}`, b.b1, b.b2],
+  ].map(([label, when, start, end]) => ({ label, when, state: today > end ? 'done' : today >= start ? 'now' : 'ahead' }));
+  const reached = stops.filter((s) => s.state !== 'ahead').length;
   return (
     <div className="entry">
       <div className="row"><h3>{b.name}</h3>{until > 0 ? <Countdown n={until} /> : <Countdown now />}</div>
       <div className="herd">
         {b.groups.length ? <><span><b>{b.head}</b> head</span>{b.groups.map((g) => <span key={g[0]}>{g[0]} {g[1]}</span>)}</> : <span>No groups added yet</span>}
       </div>
-      <div className="track">
-        {stops.map((s, i) => (
-          <div key={s[0]} className={`stop ${i < next ? 'past' : i === next ? 'next' : ''}`}><i /><b>{s[0]}</b><span>{s[1]}</span></div>
+      <div className="track" style={{ '--reached': Math.max(0, reached - 1) / 2 }}>
+        {stops.map((s) => (
+          <div key={s.label} className={`stop ${s.state}`}>
+            <i />
+            <b>{s.label}{s.state === 'now' && <span className="badge now">Now</span>}</b>
+            <span>{s.when}</span>
+          </div>
         ))}
       </div>
       {b.clash.map((c) => <div className="clash" key={c}><Warn /><span>{c}</span></div>)}
