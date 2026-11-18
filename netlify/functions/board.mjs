@@ -25,8 +25,8 @@ const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no 
 const ZNT_USER = 'znt-manager-user';
 // Travel is looked up for every trip starting this soon (or under way): it decides
 // which trips are the owner's own, so a trip without a lookup can't be shown.
-const TRAVEL_LOOKAHEAD_DAYS = 130;
-const MAX_TRAVEL_LOOKUPS = 12;
+const TRAVEL_LOOKAHEAD_DAYS = 400;
+const MAX_TRAVEL_LOOKUPS = 15;
 
 const dateIn = (d, zone) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -166,9 +166,23 @@ async function wander({ tz }) {
     const trip = { id: t.id, name: t.name, dest: t.destination || '', startDate: t.start_date, endDate: t.end_date };
     const geo = Number.isFinite(t.lat) && Number.isFinite(t.lon) ? { lat: t.lat, lon: t.lon } : await geocode(t.destination);
     if (geo) Object.assign(trip, geo);
-    const legs = myLegs.slice(0, 3);
-    if (legs.length) trip.legs = legs.map((l) => [l.number || l.transport, `${l.from} to ${l.to}`, clock(l.depart_at)]);
-    if (myStays[0]?.name) trip.stay = myStays[0].name;
+    // The owner's itinerary for this trip: every leg and stay they're on, by date.
+    trip.items = [
+      ...myLegs.map((l) => ({
+        kind: l.transport || 'other',
+        title: l.number || '',
+        route: [l.from, l.to].filter(Boolean).join(' to '),
+        date: (l.depart_at || '').slice(0, 10),
+        time: clock(l.depart_at),
+        arrive: clock(l.arrive_at),
+      })),
+      ...myStays.map((a) => ({
+        kind: 'stay',
+        title: a.name || 'Stay',
+        date: String(a.check_in || '').slice(0, 10),
+        until: String(a.check_out || '').slice(0, 10),
+      })),
+    ].filter((i) => i.date).sort((x, y) => (x.date + (x.time ? '1' : '0')).localeCompare(y.date + (y.time ? '1' : '0')));
     return trip;
   }));
   return { status: 'live', data: { trips: out.filter(Boolean) } };

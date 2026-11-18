@@ -99,11 +99,21 @@ export const TASKS = [
 
 // Wander trips with destination coordinates.
 export const TRIPS = [
-  { id: 'lake-weekend', name: 'Lake weekend', dest: 'Lake Somerville', lat: 30.33, lon: -96.55, start: 3, end: 4, stay: 'Cabin 6, Birch Creek' },
-  { id: 'thanksgiving', name: 'Thanksgiving', dest: 'Asheville, NC', lat: 35.595, lon: -82.551, start: 9, end: 13, stay: 'Airbnb in Montford',
-    legs: [['AA 3521', 'CLL to DFW', '6:10 AM'], ['AA 1184', 'DFW to AVL', '9:45 AM']] },
-  { id: 'lisbon', name: 'Lisbon', dest: 'Lisbon, Portugal', lat: 38.72, lon: -9.14, start: 48, end: 57 },
-].map(({ start, end, ...t }) => ({ ...t, startDate: iso(dayFrom(start)), endDate: iso(dayFrom(end)) }));
+  { id: 'lake-weekend', name: 'Lake weekend', dest: 'Lake Somerville', lat: 30.33, lon: -96.55, start: 3, end: 4,
+    items: [{ kind: 'drive', title: '', route: 'Home to Lake Somerville', d: 3, time: '9:00 AM' }, { kind: 'stay', title: 'Cabin 6, Birch Creek', d: 3, untilD: 4 }] },
+  { id: 'thanksgiving', name: 'Thanksgiving', dest: 'Asheville, NC', lat: 35.595, lon: -82.551, start: 9, end: 13,
+    items: [
+      { kind: 'flight', title: 'AA 3521', route: 'CLL to DFW', d: 9, time: '6:10 AM', arrive: '7:05 AM' },
+      { kind: 'flight', title: 'AA 1184', route: 'DFW to AVL', d: 9, time: '9:45 AM', arrive: '1:20 PM' },
+      { kind: 'stay', title: 'Airbnb in Montford', d: 9, untilD: 13 },
+    ] },
+  { id: 'lisbon', name: 'Lisbon', dest: 'Lisbon, Portugal', lat: 38.72, lon: -9.14, start: 48, end: 57, items: [{ kind: 'stay', title: 'Hotel in Alfama', d: 48, untilD: 57 }] },
+].map(({ start, end, items = [], ...t }) => ({
+  ...t,
+  startDate: iso(dayFrom(start)),
+  endDate: iso(dayFrom(end)),
+  items: items.map(({ d, untilD, ...i }) => ({ ...i, date: iso(dayFrom(d)), ...(untilD != null ? { until: iso(dayFrom(untilD)) } : {}) })),
+}));
 
 // ZNT breeding sessions. CIDRs on a Wednesday; Lutalyse +7; breed +9 to +11.
 export const SESSIONS = [

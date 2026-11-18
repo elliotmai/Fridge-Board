@@ -316,6 +316,20 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 .wx-desc .fresh { justify-self: start; margin-top: 2px; }
 
 
+/* ---------- your itinerary on a trip ---------- */
+.itinerary { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.itinerary li { display: flex; gap: 8px; align-items: flex-start; }
+.itinerary svg { width: 16px; height: 16px; color: var(--c); margin-top: 2px; }
+.it-main { display: grid; min-width: 0; }
+.it-main b { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.it-main small { font-size: 12px; color: var(--muted); }
+.later { display: grid; gap: 2px; padding: 8px 4px 0; border-top: 1px dashed color-mix(in srgb, var(--c) 25%, transparent); margin-top: 4px; }
+.later-h { font-size: 12px; font-weight: 600; color: var(--muted); }
+.later-row { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; padding: 3px 0; font-size: 14px; }
+.later-row span { display: grid; min-width: 0; }
+.later-row small { font-size: 12px; color: var(--muted); }
+.later-row em { font-style: normal; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
 /* ---------- Coming up: three parts, each scrolling on its own ---------- */
 .zone.stacked { padding-bottom: 14px; gap: 6px; }
 .part { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
@@ -440,6 +454,11 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 
   .board-timers { right: 14px; bottom: 14px; }
   .zone.stacked { padding-bottom: 10px; gap: 4px; }
+  .itinerary { gap: 4px; margin-top: 4px; }
+  .itinerary svg { width: 14px; height: 14px; }
+  .it-main b { font-size: 12px; }
+  .it-main small, .later-row small, .later-row em, .later-h { font-size: 11px; }
+  .later-row { font-size: 12px; }
   .part + .part { padding-top: 6px; }
   .board.sitter { grid-template-columns: 1fr 1.3fr 1fr; }
   .away-off { height: 32px; font-size: 13px; }

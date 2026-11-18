@@ -12,6 +12,10 @@ export const Timer = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><cir
 export const Plane = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V8.5l-8 5v2l8-2.5V18l-2 1.5V21l3.5-1 3.5 1v-1.5L13 18v-5z" /></svg>);
 export const Warn = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2.2"><path d="M12 3.5l9.5 16.5h-19z" /><path d="M12 10v4.5M12 17.5v.01" /></svg>);
 export const Snow = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" /></svg>);
+export const Bed = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5" /><circle cx="7" cy="11" r="1.6" /></svg>);
+export const Car = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M5 16h14v-4l-2-5H7l-2 5v4z" /><path d="M5 12h14" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>);
+export const Train = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><rect x="6" y="3" width="12" height="13" rx="3" /><path d="M6 10h12M9 20l-1.5 2M15 20l1.5 2M9 16l-1 4h8l-1-4" /></svg>);
+export const Pin = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></svg>);
 export const Sliders = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>);
 
 export const WX = {

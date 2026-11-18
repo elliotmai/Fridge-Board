@@ -1,11 +1,35 @@
 import { appLink } from '@/config/apps';
 import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
 import { Countdown, Freshness, OpenIn } from './bits';
-import { Right, Warn } from './Icons';
+import { Bed, Car, Pin, Plane, Right, Train, Warn } from './Icons';
 
-function Legs({ legs }) {
-  if (!legs) return null;
-  return <div className="legs">{legs.map((l) => <span key={l[0]}>{l[0]}&nbsp;&nbsp; {l[1]}&nbsp;&nbsp; {l[2]}</span>)}</div>;
+const KIND_ICON = { flight: Plane, plane: Plane, stay: Bed, drive: Car, car: Car, train: Train, rail: Train };
+const KIND_LABEL = { flight: 'Flight', drive: 'Drive', car: 'Drive', train: 'Train', bus: 'Bus', ferry: 'Ferry', stay: 'Stay', other: 'Travel' };
+const dayLabel = (iso) => (iso ? `${wd(parseDate(iso))} ${short(parseDate(iso))}` : '');
+
+/** Your own flights, drives and stays on a trip, in date order. */
+function Itinerary({ items }) {
+  if (!items?.length) return null;
+  return (
+    <ul className="itinerary">
+      {items.map((i, n) => {
+        const Icon = KIND_ICON[i.kind] || Pin;
+        return (
+          <li key={`${i.kind}-${i.date}-${n}`}>
+            <Icon />
+            <span className="it-main">
+              <b>{i.kind === 'stay' ? i.title : [i.title || KIND_LABEL[i.kind] || 'Travel', i.route].filter(Boolean).join('  ')}</b>
+              <small>
+                {i.kind === 'stay'
+                  ? `${dayLabel(i.date)}${i.until ? ` to ${dayLabel(i.until)}` : ''}`
+                  : [dayLabel(i.date), i.time && `${i.time}${i.arrive ? ` to ${i.arrive}` : ''}`].filter(Boolean).join(', ')}
+              </small>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function Trip({ t, phone }) {
@@ -16,8 +40,7 @@ function Trip({ t, phone }) {
       <p>{t.dest}</p>
       <div className="line"><span>{wd(t.startD)} {short(t.startD)} to {wd(t.endD)} {short(t.endD)}</span><span>{plural(nights, 'night')}</span></div>
       {t.current && !t.far && <p>Close to home, so the board stays as it is.</p>}
-      <Legs legs={t.legs} />
-      {t.stay && <p>{t.stay}</p>}
+      <Itinerary items={t.items} />
     </>
   );
   return phone
@@ -85,10 +108,21 @@ export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone, stat
           )) : <p className="empty-note">Nothing due this week.</p>}
         </div>
       </div>
-      <div className={`part ${ts.shown.length ? '' : 'is-empty'}`}>
+      <div className={`part ${ts.shown.length || ts.later.length ? '' : 'is-empty'}`}>
         <div className="sh">Travel<Freshness s={status.trips} />{phone && <OpenIn app="wander" path="trips" />}</div>
         <div className="scroll" data-scroll>
           {ts.shown.length ? ts.shown.map((t) => <Trip key={t.id} t={t} phone={phone} />) : <p className="empty-note">No travel in the next {opts.window} days.</p>}
+          {ts.later.length > 0 && (
+            <div className="later">
+              <span className="later-h">Later</span>
+              {ts.later.slice(0, 4).map((t) => (
+                <div className="later-row" key={t.id}>
+                  <span>{t.name}<small>{t.dest}, {dayLabel(t.startDate)}</small></span>
+                  <em>{t.until} days</em>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className={`part ${breeding ? '' : 'is-empty'}`}>
@@ -150,7 +184,7 @@ export function SitterPanel({ ts, breeding, sitter, now, phone, status }) {
             <p>{trip.current ? "We're back" : 'We leave'}</p>
             <span className="back-big">{md(trip.current ? trip.endD : trip.startD)}</span>
             <p>{trip.dest}</p>
-            <Legs legs={trip.legs} />
+            <Itinerary items={trip.items} />
           </div>
         ) : <p className="empty-note">No trip in Wander right now.</p>}
         <div className="sh">Who to call<Freshness s={status.sitter} /></div>

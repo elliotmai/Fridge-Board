@@ -17,8 +17,11 @@ export function tripState(trips, home, now, opts) {
     const startD = parseDate(t.startDate), endD = parseDate(t.endDate), dist = miles(home, t);
     return { ...t, startD, endD, dist, far: dist > opts.awayMiles, current: today >= startD && today <= endD, until: daysBetween(today, startD) };
   });
-  const shown = all.filter((t) => t.current || (t.until >= 0 && t.until <= opts.window)).sort((a, b) => a.startD - b.startD);
-  return { all, shown, away: all.find((t) => t.current && t.far) || null };
+  const byStart = (a, b) => a.startD - b.startD;
+  const shown = all.filter((t) => t.current || (t.until >= 0 && t.until <= opts.window)).sort(byStart);
+  // Further out than the window: listed briefly so the next trip is never invisible.
+  const later = all.filter((t) => t.until > opts.window).sort(byStart);
+  return { all, shown, later, away: all.find((t) => t.current && t.far) || null };
 }
 
 /** The next breeding session, only if its CIDRs go in within the window (or it's under way). */
