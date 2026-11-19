@@ -1,7 +1,7 @@
 import { appLink } from '@/config/apps';
 import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
 import { Countdown, Freshness, OpenIn } from './bits';
-import { Bed, Car, Pin, Plane, Right, Tick, Train, Warn } from './Icons';
+import { Bed, Car, Cow, Pin, Plane, Right, Tick, Train, Warn } from './Icons';
 
 const KIND_ICON = { flight: Plane, plane: Plane, stay: Bed, drive: Car, car: Car, train: Train, rail: Train };
 const KIND_LABEL = { flight: 'Flight', drive: 'Drive', car: 'Drive', train: 'Train', bus: 'Bus', ferry: 'Ferry', stay: 'Stay', other: 'Travel' };
@@ -30,22 +30,6 @@ function Itinerary({ items }) {
       })}
     </ul>
   );
-}
-
-function Trip({ t, phone }) {
-  const nights = daysBetween(t.startD, t.endD);
-  const body = (
-    <>
-      <div className="row"><h3>{t.name}</h3><Countdown n={t.until} now={t.current} /></div>
-      <p>{t.dest}</p>
-      <div className="line"><span>{wd(t.startD)} {short(t.startD)} to {wd(t.endD)} {short(t.endD)}</span><span>{plural(nights, 'night')}</span></div>
-      {t.current && !t.far && <p>Close to home, so the board stays as it is.</p>}
-      <Itinerary items={t.items} />
-    </>
-  );
-  return phone
-    ? <a className="entry" href={appLink('wander', 'trip', t.id)} target="_blank" rel="noopener noreferrer">{body}</a>
-    : <div className="entry">{body}</div>;
 }
 
 function Breeding({ b, now, phone }) {
@@ -82,13 +66,13 @@ function Breeding({ b, now, phone }) {
   );
 }
 
-const MAX_UNDATED = 5;
+const MAX_ANYTIME = 5;
 const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).replace(':00', '').replace(/\s/g, '').toLowerCase();
 const dayName = (d, n) => (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${wd(d)} ${short(d)}`);
+const SOURCES = [['tasks', 'LearnLeaf'], ['gtasks', 'Google'], ['trips', 'Wander'], ['breeding', 'ZNT']];
 
-/** One to-do row: tick box, name, where it's from, when it's due. */
-function Todo({ t, done, onToggle }) {
-  const when = t.n == null ? '' : t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due);
+/** One to-do row: tick box, name, where it's from, and when it's due. */
+function Todo({ t, done, onToggle, when }) {
   return (
     <button className={`todo ${t.n != null && t.n < 0 ? 'overdue' : ''} ${done ? 'is-done' : ''}`} role="checkbox" aria-checked={done} onClick={() => onToggle(t)}>
       <span className="tbox" aria-hidden="true"><Tick /></span>
@@ -98,65 +82,109 @@ function Todo({ t, done, onToggle }) {
   );
 }
 
-export function ComingUp({ ts, breeding, todos, todoDone, onToggleTodo, agenda, hiddenEvents, now, opts, phone, status }) {
-  const dated = todos.filter((t) => t.n != null);
-  const undated = todos.filter((t) => t.n == null);
-  const over = dated.filter((t) => t.n < 0 && !todoDone.includes(t.key)).length;
-  const todoStatus = [status.tasks, status.gtasks].find((x) => x && x.status !== 'live') || status.tasks;
+/** A non-task line: time or icon on the left, what it is on the right. */
+function Line({ left, icon: Icon, tone, title, sub, children }) {
   return (
-    <section className="zone ahead stacked" aria-label="Coming up">
-      <div className="zh"><h2>Coming up</h2></div>
-      <div className={`part ${todos.length ? '' : 'is-empty'}`}>
-        <div className="sh">To do<Freshness s={todoStatus} />{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
-        <div className="scroll" data-scroll>
-          {todos.length ? (
-            <>
-              {dated.map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} />)}
-              {undated.length > 0 && <span className="later-h">No date</span>}
-              {undated.slice(0, MAX_UNDATED).map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} />)}
-              {undated.length > MAX_UNDATED && <p className="empty-note">And {undated.length - MAX_UNDATED} more in Google Tasks.</p>}
-            </>
-          ) : <p className="empty-note">Nothing due this week.</p>}
-        </div>
+    <div className={`tl-line ${tone || ''}`}>
+      <em>{Icon ? <Icon /> : left}</em>
+      <span><b>{title}</b>{sub && <small>{sub}</small>}{children}</span>
+    </div>
+  );
+}
+
+function Item({ i, todoDone, onToggle }) {
+  const t = i.trip, b = i.breeding;
+  switch (i.kind) {
+    case 'task': return <Todo t={i.task} done={todoDone.includes(i.task.key)} onToggle={onToggle} when={i.task.time ? clock12(i.task.time) : ''} />;
+    case 'event': return <Line left={i.event.allDay ? 'All day' : i.continued ? 'cont.' : timeOf(i.event.start)} title={i.event.title} sub={!i.continued && i.event.location} />;
+    case 'trip-start': return <Line icon={Plane} tone="trip" title={`Leave for ${t.name}`} sub={`${t.dest}, ${plural(daysBetween(parseDate(t.startDate), parseDate(t.endDate)), 'night')}${t.far ? '' : '. Close to home'}`} />;
+    case 'trip-now': return <Line icon={Plane} tone="trip" title={`Away: ${t.name}`} sub={`${t.dest}, back ${md(parseDate(t.endDate))}`} />;
+    case 'trip-end': return <Line icon={Plane} tone="trip" title={`Back from ${t.name}`} />;
+    case 'leg': {
+      const l = i.leg;
+      return <Line icon={KIND_ICON[l.kind] || Pin} tone="trip" title={[l.title || KIND_LABEL[l.kind] || 'Travel', l.route].filter(Boolean).join('  ')} sub={[l.time, l.arrive && `to ${l.arrive}`].filter(Boolean).join(' ')} />;
+    }
+    case 'stay': return <Line icon={Bed} tone="trip" title={i.leg.title || 'Stay'} sub={i.leg.until ? `Check in, until ${dayLabel(i.leg.until)}` : 'Check in'} />;
+    case 'breed': return (
+      <Line icon={Cow} tone="breed" title={`${b.name}: ${i.label}`} sub={i.step === 'cidr' && b.groups.length ? `${b.head} head: ${b.groups.map((g) => `${g[0]} ${g[1]}`).join(', ')}` : ''}>
+        {i.step === 'cidr' && b.clash.map((c) => <span className="clash" key={c}><Warn />{c}</span>)}
+        {i.step === 'cidr' && b.notes && <small>{b.notes}</small>}
+      </Line>
+    );
+    default: return null;
+  }
+}
+
+/** One label naming the sources that aren't live, e.g. "Sample: Google, ZNT". */
+function SourceNotes({ status }) {
+  const off = [];
+  for (const [k, label] of SOURCES) {
+    const st = status[k];
+    if (st && st.status !== 'live' && !off.some((o) => o.label === label)) off.push({ label, st });
+  }
+  if (!off.length) return null;
+  const sample = off.filter((o) => o.st.status !== 'stale'), stale = off.filter((o) => o.st.status === 'stale');
+  const title = off.map((o) => `${o.label}: ${o.st.reason || o.st.status}`).join('\n');
+  return (
+    <>
+      {sample.length > 0 && <span className="fresh" title={title}>Sample: {sample.map((o) => o.label).join(', ')}</span>}
+      {stale.length > 0 && <span className="fresh stale" title={title}>Not updating: {stale.map((o) => o.label).join(', ')}</span>}
+    </>
+  );
+}
+
+/**
+ * Coming up: to-dos, calendar, travel and breeding in one list by day
+ * (src/lib/agenda.js `timeline`). Trips that are also on the calendar show once.
+ */
+export function ComingUp({ tl, todoDone, onToggleTodo, hiddenEvents, phone, status }) {
+  const empty = !tl.overdue.length && !tl.days.length && !tl.later.length && !tl.anytime.length;
+  return (
+    <section className="zone ahead" aria-label="Coming up">
+      <div className="zh">
+        <h2>Coming up</h2>
+        <SourceNotes status={status} />
+        {phone && <span className="zh-links"><OpenIn app="learnleaf" path="tasks" /><OpenIn app="wander" path="trips" /></span>}
       </div>
-      <div className={`part ${agenda.length ? '' : 'is-empty'}`}>
-        <div className="sh">Calendar<Freshness s={status.calendar} />{hiddenEvents > 0 && <span className="by" title="Events that are a Wander trip, or its flights and stays, show under Travel instead.">{hiddenEvents} under Travel</span>}</div>
-        <div className="scroll" data-scroll>
-          {agenda.length ? agenda.map((d) => (
-            <div className="cal-day" key={d.n}>
-              <span className={`cal-date ${d.n === 0 ? 'is-today' : ''}`}>{dayName(d.date, d.n)}</span>
-              {d.events.map((e) => (
-                <div className="cal-ev" key={`${e.id}-${d.n}`}>
-                  <em>{e.allDay ? (e.continued ? 'cont.' : 'All day') : e.continued ? 'cont.' : timeOf(e.start)}</em>
-                  <span>{e.title}{e.location && !e.continued && <small>{e.location}</small>}</span>
-                </div>
-              ))}
-            </div>
-          )) : <p className="empty-note">Nothing on the calendar this week.</p>}
-        </div>
-      </div>
-      <div className={`part ${ts.shown.length || ts.later.length ? '' : 'is-empty'}`}>
-        <div className="sh">Travel<Freshness s={status.trips} />{phone && <OpenIn app="wander" path="trips" />}</div>
-        <div className="scroll" data-scroll>
-          {ts.shown.length ? ts.shown.map((t) => <Trip key={t.id} t={t} phone={phone} />) : <p className="empty-note">No travel in the next {opts.window} days.</p>}
-          {ts.later.length > 0 && (
-            <div className="later">
-              <span className="later-h">Later</span>
-              {ts.later.slice(0, 4).map((t) => (
-                <div className="later-row" key={t.id}>
-                  <span>{t.name}<small>{t.dest}, {dayLabel(t.startDate)}</small></span>
-                  <em>{t.until} days</em>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={`part ${breeding ? '' : 'is-empty'}`}>
-        <div className="sh">Breeding<Freshness s={status.breeding} /></div>
-        <div className="scroll" data-scroll>
-          {breeding ? <Breeding b={breeding} now={now} phone={phone} /> : <p className="empty-note">No breeding group in the next {opts.breedWindow} days.</p>}
-        </div>
+      <div className="scroll" data-scroll>
+        {tl.overdue.length > 0 && (
+          <div className="tl-day">
+            <span className="tl-date late">Overdue</span>
+            {tl.overdue.map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} when={wd(t.due)} />)}
+          </div>
+        )}
+        {tl.days.map((d) => (
+          <div className="tl-day" key={d.n}>
+            <span className={`tl-date ${d.n === 0 ? 'is-today' : ''}`}>
+              {dayName(d.date, d.n)}
+              {d.away && <span className="tl-away"><Plane />{d.away}</span>}
+            </span>
+            {d.items.map((i) => <Item key={i.key} i={i} todoDone={todoDone} onToggle={onToggleTodo} />)}
+          </div>
+        ))}
+        {tl.later.length > 0 && (
+          <div className="tl-day">
+            <span className="tl-date">Later</span>
+            {tl.later.slice(0, 4).map((l) => (
+              <div className="later-row" key={l.key}>
+                <span>{l.kind === 'trip' ? l.trip.name : `${l.breeding.name}: CIDRs in`}<small>{l.kind === 'trip' ? `${l.trip.dest}, ${dayLabel(l.trip.startDate)}` : md(l.breeding.cidr)}</small></span>
+                <em>{l.n} days</em>
+              </div>
+            ))}
+          </div>
+        )}
+        {tl.anytime.length > 0 && (
+          <div className="tl-day">
+            <span className="tl-date">Anytime</span>
+            {tl.anytime.slice(0, MAX_ANYTIME).map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} />)}
+            {tl.anytime.length > MAX_ANYTIME && <p className="empty-note">And {tl.anytime.length - MAX_ANYTIME} more in Google Tasks.</p>}
+          </div>
+        )}
+        {empty && <p className="empty-note">Nothing coming up in the next two weeks.</p>}
+        {/Sign in|Confirm/.test(status.calendar?.reason || '') && status.calendar.status === 'sample' && (
+          <p className="tl-foot">{status.calendar.reason.replace('this', 'your own calendar and Google Tasks')}. The ones above are samples.</p>
+        )}
+        {hiddenEvents > 0 && <p className="tl-foot">{plural(hiddenEvents, 'calendar event')} matched a Wander trip, so {hiddenEvents === 1 ? 'it shows' : 'they show'} as the trip.</p>}
       </div>
     </section>
   );

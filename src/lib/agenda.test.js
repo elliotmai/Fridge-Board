@@ -72,3 +72,58 @@ test('agenda groups by day, multi-day events on each day, all-day first', () => 
   assert.deepEqual(days.map((d) => [d.n, d.events.map((e) => e.id)]), [[0, ['c']], [1, ['a', 'b']], [2, ['a']]]);
   assert.equal(days[2].events[0].continued, true);
 });
+
+import { minutesOf, timeline } from './agenda.js';
+
+test('times in the forms the apps use', () => {
+  assert.equal(minutesOf('6:10 AM'), 370);
+  assert.equal(minutesOf('9 pm'), 1260);
+  assert.equal(minutesOf('21:00'), 1260);
+  assert.equal(minutesOf('12:30 AM'), 30);
+  assert.equal(minutesOf(''), null);
+});
+
+test('one timeline: trips, legs, breeding, events and tasks by day', () => {
+  const todos = mergeTodos({
+    learnleaf: [{ id: 'old', name: 'Lab report', due: day(-2) }, { id: 'rd', name: 'Read ch 7', due: day(0), time: '21:00' }],
+    google: [{ id: 'g', list: 'L', title: 'Fix gate', due: null }],
+  }, NOW);
+  const timed = { ...thanksgiving, far: true, items: thanksgiving.items.map((i) => (i.kind === 'flight' ? { ...i, time: '6:10 AM' } : i)) };
+  const trips = [timed, { id: 'lis', name: 'Lisbon', dest: 'Lisbon, Portugal', startDate: day(40), endDate: day(48), items: [] }];
+  const breeding = { name: 'Fall heifers', cidr: new Date(2026, 10, 20), lut: new Date(2026, 10, 27), b1: new Date(2026, 10, 29), b2: new Date(2026, 11, 1), head: 30, groups: [], clash: [] };
+  const events = [{ id: 'den', title: 'Dentist', allDay: false, start: at(0, 15), end: at(0, 16) }];
+  const tl = timeline({ todos, events, trips, breeding }, NOW, { horizon: 14 });
+
+  assert.deepEqual(tl.overdue.map((t) => t.key), ['ll:old']);
+  assert.deepEqual(tl.anytime.map((t) => t.key), ['g:L:g']);
+  const d0 = tl.days.find((d) => d.n === 0);
+  assert.deepEqual(d0.items.map((i) => i.kind), ['event', 'task']); // 3 pm dentist, then the 9 pm task
+  assert.deepEqual(tl.days.find((d) => d.n === 1).items.map((i) => i.label), ['CIDRs in']);
+  const leave = tl.days.find((d) => d.n === 7);
+  assert.deepEqual(leave.items.map((i) => i.kind), ['trip-start', 'stay', 'leg']);
+  assert.equal(leave.away, 'Asheville');
+  assert.equal(tl.days.find((d) => d.n === 11).items.at(-1).kind, 'trip-end');
+  assert.deepEqual(tl.later.map((l) => [l.key, l.n]), [['trip:lis', 40]]);
+});
+
+test('a breeding run or trip starting inside two weeks is shown whole', () => {
+  const b = { name: 'Fall', cidr: new Date(2026, 10, 30), lut: new Date(2026, 11, 7), b1: new Date(2026, 11, 9), b2: new Date(2026, 11, 11), groups: [], clash: [] };
+  const trip = { id: 'x', name: 'Long', dest: 'Far', startDate: day(12), endDate: day(20), items: [] };
+  const tl = timeline({ breeding: b, trips: [trip] }, NOW, { horizon: 14 });
+  const kinds = tl.days.flatMap((d) => d.items.map((i) => i.label || i.kind));
+  assert.deepEqual(kinds, ['CIDRs in', 'trip-start', 'Lutalyse', 'Breeding starts', 'trip-end', 'Breeding ends']);
+});
+
+test('breeding past the horizon goes to Later; finished trips are gone', () => {
+  const b = { name: 'Spring', cidr: new Date(2026, 11, 30), lut: new Date(2027, 0, 6), b1: new Date(2027, 0, 8), b2: new Date(2027, 0, 10), groups: [], clash: [] };
+  const past = { id: 'p', name: 'Past', dest: 'X', startDate: day(-5), endDate: day(-1), items: [] };
+  const tl = timeline({ trips: [past], breeding: b }, NOW, { horizon: 14 });
+  assert.equal(tl.days.length, 0);
+  assert.deepEqual(tl.later.map((l) => l.kind), ['breed']);
+});
+
+test('a trip already under way shows on today', () => {
+  const now = { id: 'n', name: 'Lake', dest: 'Lake Somerville', startDate: day(-1), endDate: day(1), far: false, items: [] };
+  const tl = timeline({ trips: [now] }, NOW);
+  assert.deepEqual(tl.days.map((d) => [d.n, d.items.map((i) => i.kind)]), [[0, ['trip-now']], [1, ['trip-end']]]);
+});

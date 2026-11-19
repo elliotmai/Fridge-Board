@@ -112,3 +112,90 @@ export function agendaDays(events, now, days = WEEK) {
   }
   return out;
 }
+
+/* ------------------------------------------------------------ timeline --- */
+
+/** "6:10 AM", "18:30", "9 pm" → minutes after midnight, or null. */
+export function minutesOf(t) {
+  const m = /^\s*(\d{1,2})(?::(\d{2}))?\s*([ap])?\.?m?\.?\s*$/i.exec(String(t || ''));
+  if (!m) return null;
+  let h = +m[1] % 24;
+  const min = +(m[2] || 0);
+  if (m[3]) h = (h % 12) + (/p/i.test(m[3]) ? 12 : 0);
+  return h * 60 + min;
+}
+const minutesOfIso = (iso) => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+const plusDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+
+/**
+ * Everything coming up, in one list: tasks, calendar events, trips and the
+ * next breeding group, grouped by day.
+ *
+ *   overdue   tasks past due
+ *   days      [{ date, n, away, items }] from today for `horizon` days (longer if a
+ *             trip or breeding run starting inside it runs past), days with nothing left out
+ *   later     trips and breeding beyond the horizon (within their own windows)
+ *   anytime   tasks with no date
+ *
+ * Item kinds: task, event, trip-start, trip-now (under way), trip-end, leg, stay, breed. Within a day:
+ * all-day things first (trips, breeding, all-day events), then by time, then
+ * untimed tasks.
+ */
+export function timeline({ todos = [], events = [], trips = [], breeding = null }, now, { horizon = 14 } = {}) {
+  const today = startOf(now);
+  // Two weeks, stretched so a trip or breeding run that starts inside it is shown whole.
+  let end = plusDays(today, horizon - 1);
+  const firstEnd = end;
+  for (const t of trips) { const s = parseDate(t.startDate), f = parseDate(t.endDate); if (s <= firstEnd && f > end) end = f; }
+  if (breeding && breeding.cidr <= firstEnd && breeding.b2 > end) end = startOf(breeding.b2);
+  const items = [];
+  const put = (date, item) => { if (date >= today && date <= end) items.push({ ...item, date: startOf(date) }); };
+
+  for (const t of todos) if (t.n != null && t.n >= 0) put(t.due, { kind: 'task', key: t.key, at: minutesOf(t.time), task: t });
+
+  for (const e of events) {
+    const { first, last } = eventDays(e);
+    for (let d = new Date(Math.max(first, today)); d <= last && d <= end; d = plusDays(d, 1)) {
+      const continued = daysBetween(first, d) > 0;
+      put(d, { kind: 'event', key: `ev:${e.id}:${daysBetween(today, d)}`, at: e.allDay || continued ? -1 : minutesOfIso(e.start), event: e, continued });
+    }
+  }
+
+  const later = [];
+  const away = new Map(); // day number → destination
+  for (const t of trips) {
+    const s = parseDate(t.startDate), f = parseDate(t.endDate);
+    if (f < today) continue;
+    if (s > firstEnd) { later.push({ kind: 'trip', key: `trip:${t.id}`, date: s, n: daysBetween(today, s), trip: t }); continue; }
+    if (s < today) put(today, { kind: 'trip-now', key: `tn:${t.id}`, at: -2, trip: t });
+    else put(s, { kind: 'trip-start', key: `ts:${t.id}`, at: -2, trip: t });
+    if (daysBetween(s, f) > 0) put(f, { kind: 'trip-end', key: `te:${t.id}`, at: 24 * 60, trip: t });
+    if (t.far) for (let d = new Date(Math.max(s, today)); d <= f && d <= end; d = plusDays(d, 1)) away.set(daysBetween(today, d), (t.dest || t.name).split(',')[0]);
+    (t.items || []).forEach((i, n) => {
+      if (!i.date) return;
+      const kind = i.kind === 'stay' ? 'stay' : 'leg';
+      put(parseDate(i.date), { kind, key: `it:${t.id}:${n}`, at: kind === 'stay' ? -1 : minutesOf(i.time) ?? -1, leg: i, trip: t });
+    });
+  }
+
+  if (breeding) {
+    const b = breeding;
+    const steps = [['CIDRs in', b.cidr, 'cidr'], ['Lutalyse', b.lut, 'lut'], ['Breeding starts', b.b1, 'b1'], ['Breeding ends', b.b2, 'b2']];
+    if (b.cidr > firstEnd) later.push({ kind: 'breed', key: 'breed', date: b.cidr, n: daysBetween(today, b.cidr), breeding: b });
+    else for (const [label, date, step] of steps) put(date, { kind: 'breed', key: `br:${step}`, at: -1, label, step, breeding: b });
+  }
+
+  const rank = (i) => (i.at == null ? 1e6 : i.at);
+  const days = [];
+  for (let n = 0; n <= daysBetween(today, end); n++) {
+    const date = plusDays(today, n);
+    const its = items.filter((i) => daysBetween(today, i.date) === n).sort((a, b) => rank(a) - rank(b));
+    if (its.length) days.push({ date, n, away: away.get(n) || null, items: its });
+  }
+  return {
+    overdue: todos.filter((t) => t.n != null && t.n < 0),
+    days,
+    later: later.sort((a, b) => a.n - b.n),
+    anytime: todos.filter((t) => t.n == null),
+  };
+}

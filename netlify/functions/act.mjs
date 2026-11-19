@@ -6,10 +6,12 @@
  *   POST /api/shopping/:id   { bought }   → KitchenHub POST /shopping/:id
  *   POST /api/todos/learnleaf/:id     { done } → LearnLeaf PATCH /api/tasks/:id
  *   POST /api/todos/google/:list/:id  { done } → Our Den POST /api/board/google/tasks/:list/:id
+ *                                    (as the signed-in Hive user, with a pass)
  *
  * Same board key as /api/board; the app tokens never leave this function.
  */
 import { bearer, env, json, requireKey, urls } from '../lib/shared.mjs';
+import { hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
@@ -39,10 +41,10 @@ export default async (req, context) => {
         if (!token) return json(503, { error: 'LearnLeaf is not connected' });
         return await forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, token, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH' });
       }
-      const key = env('OURDEN_BOARD_KEY');
-      if (!key) return json(503, { error: 'Google Tasks is not connected' });
+      let headers;
+      try { headers = passHeader(await hiveUser(req), 'ourden'); } catch (e) { return json(401, { error: e.message }); }
       const list = context.params?.list;
-      return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers: { 'x-board-key': key } });
+      return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
     if (path.startsWith('/api/chores/')) {
       const token = env('GALAXYFARM_TOKEN');

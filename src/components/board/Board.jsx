@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { USER_CHANGED } from '@/hive/account';
 import { callApi, setKey, takeKeyFromUrl } from '@/data/api';
 import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
 import { DAY, plural } from '@/lib/dates';
-import { agendaDays, dedupeEvents, mergeTodos } from '@/lib/agenda';
+import { dedupeEvents, mergeTodos, timeline } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
 import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
@@ -56,7 +57,8 @@ export function Board({ onHome }) {
     const id = setInterval(reload, REFRESH_MS);
     const vis = () => { if (!document.hidden) reload(); };
     document.addEventListener('visibilitychange', vis);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); };
+    window.addEventListener(USER_CHANGED, reload);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); window.removeEventListener(USER_CHANGED, reload); };
   }, [reload]);
 
   const hasTimers = Object.keys(timers).length > 0;
@@ -200,9 +202,10 @@ export function Board({ onHome }) {
     if (!was && okay !== false) toast(`${t.name} done`, { duration: 5000, action: { label: 'Undo', onClick: () => setTodo(t, false) } });
   };
 
-  // Calendar: events that are really a Wander trip show under Travel instead.
+  // Coming up: tasks, calendar, trips and breeding in one list by day. Calendar
+  // events that are really a Wander trip show once, as the trip.
   const { shown: calEvents, hidden: tripEvents } = dedupeEvents(data.events, data.trips);
-  const agenda = agendaDays(calEvents, now, 7);
+  const tl = timeline({ todos, events: calEvents, trips: ts.all, breeding }, now, { horizon: 14 });
 
   const peekMeal = peek != null && data.meals.find((m) => m.d === peek && m.type === 'Dinner');
 
@@ -223,7 +226,7 @@ export function Board({ onHome }) {
         )}
         {sitter
           ? <SitterPanel ts={ts} breeding={breeding} sitter={data.sitter} now={now} phone={phone} status={data.status} />
-          : <ComingUp ts={ts} breeding={breeding} todos={todos} todoDone={todoDone} onToggleTodo={toggleTodo} agenda={agenda} hiddenEvents={tripEvents.length} now={now} opts={opts} phone={phone} status={data.status} />}
+          : <ComingUp tl={tl} todoDone={todoDone} onToggleTodo={toggleTodo} hiddenEvents={tripEvents.length} phone={phone} status={data.status} />}
       </main>
 
       {!cook && hasTimers && <div className="board-timers fb-layer"><TimerChips timers={timers} now={tick} onJump={jumpToTimer} /></div>}

@@ -7,7 +7,7 @@ import { CATALOG, appIds } from '@/config/catalog';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
-import { accountsOn, useHiveUser } from './account';
+import { accountsOn, USER_CHANGED, useHiveUser } from './account';
 import { AccountSheet } from './AccountSheet';
 import { announce, startBridge } from './bridge';
 import { Home } from './Home';
@@ -66,6 +66,7 @@ export function Hive() {
     if (!ready) return;
     if (firstAnnounce.current) { firstAnnounce.current = false; return; } // frames say hello themselves
     announce(!!user?.verified);
+    window.dispatchEvent(new Event(USER_CHANGED)); // the board and widgets reload as the new person
   }, [user?.verified, ready]);
   const account = { on: accountsOn, ready, user, open: () => setSheet('account') };
 

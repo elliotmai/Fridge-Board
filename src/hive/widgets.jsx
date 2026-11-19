@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { takeKeyFromUrl } from '@/data/api';
+import { USER_CHANGED } from './account';
 import { Freshness } from '@/components/board/bits';
 import { WX } from '@/components/board/Icons';
 import { DAY, daysBetween, fmt, plural, startOf, wd } from '@/lib/dates';
@@ -18,7 +19,8 @@ export function useBoardData() {
     const id = setInterval(load, REFRESH_MS);
     const vis = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', vis);
-    return () => { live = false; clearInterval(id); document.removeEventListener('visibilitychange', vis); };
+    window.addEventListener(USER_CHANGED, load);
+    return () => { live = false; clearInterval(id); document.removeEventListener('visibilitychange', vis); window.removeEventListener(USER_CHANGED, load); };
   }, []);
   return data;
 }

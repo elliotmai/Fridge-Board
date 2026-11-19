@@ -17,6 +17,7 @@ export const Car = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path 
 export const Train = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><rect x="6" y="3" width="12" height="13" rx="3" /><path d="M6 10h12M9 20l-1.5 2M15 20l1.5 2M9 16l-1 4h8l-1-4" /></svg>);
 export const Pin = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></svg>);
 export const HomeIcon = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><rect x="4" y="4" width="6" height="6" rx="1.6" /><rect x="14" y="4" width="6" height="6" rx="1.6" /><rect x="4" y="14" width="6" height="6" rx="1.6" /><rect x="14" y="14" width="6" height="6" rx="1.6" /></svg>);
+export const Cow = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M6 8.5C4 8.5 3 7 3 5.5c1.6 0 2.6.5 3.3 1.3M18 8.5c2 0 3-1.5 3-3-1.6 0-2.6.5-3.3 1.3" /><path d="M6.5 7.5h11l-.6 8.2a3 3 0 0 1-3 2.8h-3.8a3 3 0 0 1-3-2.8z" /></svg>);
 export const Sliders = () => (<svg viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>);
 
 export const WX = {

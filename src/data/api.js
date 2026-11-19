@@ -1,4 +1,5 @@
 import { APP_KEY } from '@/config/app';
+import { idToken } from '@/hive/account';
 
 /*
  * The board key (BOARD_ACCESS_KEY on the server) lives on each device. It can be
@@ -19,12 +20,21 @@ export function takeKeyFromUrl() {
   window.history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
 }
 
-/** Calls one of the board's own /api routes with the key. Never throws. */
+/**
+ * Calls one of the board's own /api routes with the key, and as the signed-in
+ * Hive user when there is one (for things that are personal, like Google).
+ * Never throws.
+ */
 export async function callApi(path, { method = 'GET', body } = {}) {
   try {
+    const hive = await idToken();
     const res = await fetch(path, {
       method,
-      headers: { accept: 'application/json', 'x-board-key': getKey(), ...(body ? { 'content-type': 'application/json' } : {}) },
+      headers: {
+        accept: 'application/json', 'x-board-key': getKey(),
+        ...(hive ? { authorization: `Bearer ${hive}` } : {}),
+        ...(body ? { 'content-type': 'application/json' } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     const isJson = (res.headers.get('content-type') || '').includes('json');

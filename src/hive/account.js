@@ -111,6 +111,26 @@ export async function signOut() {
 }
 
 /**
+ * The signed-in Hive user's ID token, for the board's own API to act as them
+ * (src/data/api.js). Null when sign-in is off, nobody is signed in, or their
+ * email isn't confirmed yet. Waits for a saved sign-in to load first.
+ */
+export async function idToken() {
+  if (!accountsOn) return null;
+  try {
+    const { auth } = await firebase();
+    await auth.authStateReady();
+    const u = auth.currentUser;
+    return u && u.emailVerified ? await u.getIdToken() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fired on window when the Hive user signs in, out, or confirms their email. */
+export const USER_CHANGED = 'hive:user-changed';
+
+/**
  * A two-minute pass for one app, from /api/hive/pass. Null when signed out.
  * Throws with a readable message when the server says no.
  */

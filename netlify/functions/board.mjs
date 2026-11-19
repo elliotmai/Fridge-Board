@@ -11,8 +11,9 @@
  *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
  *   LEARNLEAF_TOKEN    tasks
- *   OURDEN_BOARD_KEY   Google Calendar and Google Tasks, through the Google link
- *                      in Our Den (same value as OURDEN_BOARD_KEY on Our Den)
+ *   Google Calendar and Google Tasks need no setting here: they're fetched as
+ *   the signed-in Hive user (Authorization header), with a pass for Our Den.
+ *   Needs Hive sign-in set up (VITE_HIVE_FIREBASE_PROJECT_ID, HIVE_SIGNING_KEY).
  *   WANDER_TOKEN       trips (each with only the owner's own legs and stays)
  *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
  *                      appTripTravel marks legs with `mine`
@@ -21,6 +22,7 @@
  *   ZNT_PROJECT_ID, ZNT_API_KEY
  */
 import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
+import { hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
 const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
@@ -112,13 +114,14 @@ async function kitchenhub() {
 
 /* ----------------------------------------------------------- LearnLeaf --- */
 /* ------------------------------------------------- Google, via Our Den --- */
-// Our Den already holds a Google link (Calendar read-only + Tasks); its
-// /api/board/google answers with the next two weeks of events and open tasks.
-async function google(where) {
-  const key = env('OURDEN_BOARD_KEY');
-  if (!key) return { status: 'unconfigured', reason: 'Set OURDEN_BOARD_KEY' };
+// Our Den already holds each person's Google link (Calendar read-only + Tasks);
+// its /api/board/google answers, for whoever the pass names, with the next two
+// weeks of events and open tasks. No one's email or key lives in this site.
+async function google(where, user) {
+  let headers;
+  try { headers = passHeader(user, 'ourden'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
   const tz = where.tz || 'UTC';
-  const d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers: { 'x-board-key': key } }, 12000);
+  const d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000);
   return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
 }
 
@@ -246,7 +249,7 @@ export default async (req) => {
   if (locked) return locked;
 
   // GalaxyFarm first: it owns the home location the others need.
-  const gf = await settle('galaxyfarm', galaxyfarm);
+  const [gf, user] = await Promise.all([settle('galaxyfarm', galaxyfarm), hiveUser(req)]);
   const where = resolveHome(gf);
   const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
@@ -254,7 +257,7 @@ export default async (req) => {
     settle('learnleaf', learnleaf),
     settle('wander', () => wander(where)),
     settle('znt', () => znt(where)),
-    settle('google', () => google(where)),
+    settle('google', () => google(where, user)),
   ]);
   return json(200, {
     generatedAt: new Date().toISOString(),

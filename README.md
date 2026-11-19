@@ -136,10 +136,24 @@ app can't be reached keeps its last good copy, labelled **Not updating**.
 | Chores, housesitter guide, home location | GalaxyFarm | `GET /api/board/v1` | `POST /api/board/v1/chores/:id` |
 | Meals, recipe cards, shopping, use soon | KitchenHub | `board` function `GET /` | `POST /shopping`, `POST /shopping/:id` |
 | To do (with Google Tasks) | LearnLeaf | `/api/summary`, `/api/subjects` | `PATCH /api/tasks/:id` (`taskStatus`) |
-| Calendar, To do | Our Den (your Google link there) | `GET /api/board/google` | `POST /api/board/google/tasks/:list/:id` |
+| Calendar, To do | Our Den (each person's Google link there), as the signed-in Hive user | `GET /api/board/google` | `POST /api/board/google/tasks/:list/:id` |
 | Trips | Wander | `appTrips`, `appTripTravel` | none |
 | Next breeding group | ZNT | Firestore `sessions` (public read) | none |
 | Weather | Open-Meteo | forecast at the GalaxyFarm location | none |
+
+### What goes in Netlify, and what doesn't
+
+Netlify's settings belong to the site: every deploy, and everyone who uses
+Hive, gets them. So they hold only the app's own setup, never anything about a
+person. Personal things come from **who is signed in to Hive**: the board sends
+the Hive user's sign-in with each request, and the server asks other apps for
+that person with a Hive pass (`netlify/lib/hiveUser.mjs`). Calendar and Google
+Tasks work this way already: sign in to Hive on the fridge with your email,
+and it shows your Google, through the link you made in Our Den.
+
+The app tokens below (`GALAXYFARM_TOKEN`, `KITCHENHUB_TOKEN`,
+`LEARNLEAF_TOKEN`, `WANDER_TOKEN`) are still personal settings from before
+Hive sign-in. They move to passes app by app.
 
 ### Environment (Netlify → Project configuration → Environment variables)
 
@@ -150,7 +164,6 @@ app can't be reached keeps its last good copy, labelled **Not updating**.
 | `KITCHENHUB_TOKEN` | Token from KitchenHub's `scripts/make-api-token.mjs` |
 | `LEARNLEAF_TOKEN` | Token from LearnLeaf's `scripts/make-api-token.mjs` (add its hash to `apiTokenHashes`) |
 | `WANDER_TOKEN` | Wander → Account → Connected apps |
-| `OURDEN_BOARD_KEY` | Any long random string. The same value goes on Our Den as `OURDEN_BOARD_KEY`; see Our Den's README, "Fridge Board feed". Turns on Calendar and Google Tasks. |
 | `HOME_LAT`, `HOME_LON`, `HOME_TZ` | Optional. Only used if GalaxyFarm has no location set. |
 
 ## Rules the board follows
