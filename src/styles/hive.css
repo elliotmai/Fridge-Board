@@ -80,49 +80,118 @@ body { background: var(--bg); }
 .folder-icon .badge { top: -6px; right: -6px; }
 
 /* ---------- widgets ---------- */
-.widget-wrap { height: 100%; width: 100%; align-content: stretch; }
+.widget-wrap { height: 100%; width: 100%; min-height: 0; align-content: stretch; grid-template-rows: minmax(0, 1fr); overflow: hidden; border-radius: 22px; }
+.tile-widget { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
 .widget {
-  width: 100%; height: 100%; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px;
+  width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px;
   background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-radius: 22px; padding: 12px 14px 13px;
+  border-radius: 22px; padding: 10px 12px 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 28px rgba(0, 0, 0, .08);
-  transition: transform .3s cubic-bezier(.2, .9, .22, 1.2);
-  /* Never spill into the next row: clip, and fit the content to the space (below). */
-  overflow: hidden; container-type: size;
+  /* Never spill into the next row. Nothing is clipped inside, though: lists scroll. */
+  overflow: hidden; container-type: inline-size;
 }
-/* A widget's content adapts to how much room its slot really has. */
-@container (max-height: 180px) { .w-days { display: none; } .w-today { grid-template-columns: 1fr auto; } }
-@container (max-height: 150px) { .w-list li:nth-child(n + 3) { display: none; } .w-next { display: none; } .w-big { font-size: 26px; } }
-@container (max-height: 118px) { .w-list, .w-sub + .w-sub { display: none; } .widget-head .fresh { display: none; } }
-@container (max-width: 150px) { .w-today { grid-template-columns: 1fr; } .w-wx { display: none; } }
-.widget-wrap:active .widget { transform: scale(.97); }
-.widget-head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .01em; min-height: 18px; }
+.widget-head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .01em; min-height: 22px; width: 100%; text-align: left; border-radius: 8px; flex: none; }
+.widget-head > span { flex: none; }
+.size-s .widget-head .widget-go { display: none; }
+/* No room for "Sample" in a small widget: a dot says it, the title says why. */
+.size-s .widget-head .fresh { font-size: 0; width: 9px; height: 9px; padding: 0; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.size-s .widget-head .fresh.stale { box-shadow: none; background: var(--warn); }
+.size-s .w-link { flex-direction: column; gap: 0; }
+.size-s .w-when { min-width: 0; font-size: 11px; }
 .widget-head > i { width: 8px; height: 8px; border-radius: 50%; background: var(--tint); flex: none; }
-.widget-head .fresh { margin-left: auto; font-size: 11px; }
-.widget-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 3px; overflow: hidden; width: 100%; border-radius: 12px; text-align: left; }
+.widget-head .fresh { margin-left: auto; font-size: 11px; min-width: 0; text-align: right; line-height: 1.15; }
+.widget-head .widget-go { width: 14px; height: 14px; flex: none; opacity: .55; margin-left: auto; }
+.widget-head .fresh + .widget-go { margin-left: 2px; }
+.widget-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; cursor: default; }
 .widget-wait { color: var(--muted); font-size: 14px; }
+.w-empty { margin: auto 0; }
 .w-big { font-size: 30px; font-weight: 600; letter-spacing: -.03em; line-height: 1.05; }
-.w-big small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
-.w-mid { font-size: 15.5px; font-weight: 500; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.w-sub { font-size: 12.5px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.w-warn { color: var(--late); font-weight: 500; }
-.w-next { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
-.w-list { list-style: none; margin: auto 0 0; padding: 0; font-size: 13px; line-height: 1.4; }
-.size-l .w-list { margin-top: 6px; font-size: 14px; line-height: 1.55; }
-.w-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.w-list li::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--tint); margin: 0 7px 2px 1px; vertical-align: middle; }
-.w-cal b { font-weight: 600; margin-right: 4px; }
-.w-today { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 12px; height: 100%; }
-.w-today .w-big { font-size: 36px; }
-.size-s .w-today { grid-template-columns: 1fr; gap: 4px; }
-.size-s .w-today .w-big { font-size: 26px; }
-.size-s .w-days { display: none; }
-.w-days { grid-column: 1 / -1; align-self: end; display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 8px; }
-.w-day { display: grid; justify-items: center; gap: 2px; font-size: 12.5px; color: var(--muted); }
-.w-day b { color: var(--ink); font-weight: 500; }
-.w-day svg { width: 22px; height: 22px; }
-.w-wx { display: flex; align-items: center; gap: 10px; text-align: right; }
-.w-wx > svg { width: 44px; height: 44px; }
+.w-mid { font-size: 15.5px; font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
+.w-sub { font-size: 12.5px; color: var(--muted); line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
+.w-warn, .w-text small.w-warn { color: var(--late); font-weight: 500; }
+.w-count { font-size: 13px; color: var(--muted); line-height: 1.2; flex: none; }
+.w-count b { font-size: 20px; color: var(--ink); font-weight: 600; letter-spacing: -.02em; margin-right: 2px; }
+
+/* Lists scroll inside the widget; a fade says there's more, and goes at the end. */
+.w-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none;
+  margin: 0 -4px; padding: 0 4px 2px; border-radius: 10px;
+  --fade-top: 10px; --fade-end: 22px;
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-end)), transparent);
+}
+.w-scroll::-webkit-scrollbar { display: none; }
+.w-scroll.at-top { --fade-top: 0px; }
+.w-scroll.at-end { --fade-end: 0px; }
+.w-scroll:focus-visible, .w-scroll-x:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.still .w-scroll, .still .w-scroll-x { overflow: hidden; }
+
+.w-list { list-style: none; margin: 0; padding: 0; font-size: 13.5px; line-height: 1.3; }
+.w-list > li + li { border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.w-check, .w-link { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px 0; text-align: left; border-radius: 8px; }
+.w-check:active, .w-link:active { background: color-mix(in srgb, var(--tint) 10%, transparent); }
+.w-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.w-text small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.w-box { flex: none; width: 19px; height: 19px; margin-top: -1px; border-radius: 50%; border: 1.8px solid color-mix(in srgb, var(--tint) 70%, var(--muted)); display: grid; place-items: center; transition: background .18s, border-color .18s, transform .18s cubic-bezier(.2, .9, .22, 1.4); }
+.w-box svg { width: 13px; height: 13px; stroke-width: 3; color: #fff; }
+.w-check:active .w-box { transform: scale(.85); }
+.is-done .w-box { background: var(--tint); border-color: var(--tint); }
+.is-done .w-text { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.w-when { flex: none; min-width: 58px; font-size: 12px; font-weight: 600; color: var(--muted); padding-top: 1px; }
+.w-tonight .w-when { color: var(--tint); }
+.w-tonight .w-text { font-weight: 600; }
+.w-daygroup h4 { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tint); position: sticky; top: 0; background: color-mix(in srgb, var(--surface) 92%, transparent); padding: 2px 0; z-index: 1; }
+.w-daygroup:first-child h4 { margin-top: 0; }
+.w-steps li { display: flex; gap: 8px; padding: 5px 0; }
+.w-steps .is-done { color: var(--muted); text-decoration: line-through; }
+.w-scroll > p { margin: 6px 0 0; }
+
+.w-add { flex: none; display: flex; gap: 6px; align-items: center; }
+.w-add input { flex: 1; min-width: 0; font: inherit; font-size: 13.5px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg, var(--surface)) 70%, transparent); color: var(--ink); }
+.w-add button { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: #fff; }
+.w-add button:disabled { opacity: .4; }
+.w-add svg { width: 16px; height: 16px; }
+
+/* Weather: now, then hours or days that scroll sideways. */
+.w-today { display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none; }
+.w-today::-webkit-scrollbar { display: none; }
+.w-now { display: flex; align-items: center; gap: 10px; flex: none; }
+.w-now > div:first-child { flex: 1; min-width: 0; }
+.w-now > svg { width: 40px; height: 40px; flex: none; }
+.w-clock { display: grid; text-align: right; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.w-clock b { font-size: 15px; color: var(--ink); font-weight: 600; }
+.w-tabs { display: flex; gap: 2px; flex: none; align-self: flex-start; padding: 2px; border-radius: 99px; background: color-mix(in srgb, var(--line) 45%, transparent); }
+/* A narrow medium widget (small phones): the sky is in the strip; skip the words. */
+@container (max-width: 300px) { .w-desc { display: none; } }
+.w-gap { flex: 0 0 1px; margin: 6px 6px; background: var(--line); }
+.w-tabs button { font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; color: var(--muted); }
+.w-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.w-scroll-x {
+  flex: none; display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x;
+  scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; align-items: stretch;
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.w-scroll-x::-webkit-scrollbar { display: none; }
+.w-cell { flex: 0 0 46px; display: grid; justify-items: center; align-content: center; gap: 1px; scroll-snap-align: start; font-size: 12px; color: var(--muted); }
+.w-cell b { color: var(--ink); font-weight: 600; font-size: 13.5px; }
+.w-cell svg { width: 20px; height: 20px; }
+.size-m .w-now .w-big { font-size: 28px; }
+.w-cell small { font-size: 11px; white-space: nowrap; line-height: 1.2; }
+.w-cell b { line-height: 1.2; }
+.w-rain { color: var(--ahead); }
+.w-days { flex: 1 0 72px; }
+.w-days li { display: grid; grid-template-columns: 52px 22px 30px 30px 1fr 30px; align-items: center; gap: 6px; padding: 5px 0; font-size: 13px; }
+.w-days li svg { width: 20px; height: 20px; }
+.w-days li .w-lo { color: var(--muted); text-align: right; }
+.w-days li .w-rain { font-size: 11px; }
+.w-range { position: relative; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--line) 80%, transparent); }
+.w-range i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: linear-gradient(to right, #6aa8d8, #f0b54a); }
+.size-s .w-now .w-big { font-size: 26px; }
+.size-s .w-now > svg { width: 32px; height: 32px; }
+.size-s .w-cell { flex-basis: 40px; }
+.size-s .w-cell svg { width: 18px; height: 18px; }
+.widget-wrap:active .widget:not(:has(.w-act:active, .w-scroll:active, .w-scroll-x:active, input:focus)) { transform: scale(.97); }
+.widget { transition: transform .3s cubic-bezier(.2, .9, .22, 1.2); }
 
 /* ---------- editing ---------- */
 .editing .tile { touch-action: none; }
@@ -315,7 +384,6 @@ body { background: var(--bg); }
 .confirm h3 { margin: 0; font-size: 18px; }
 .confirm p { margin: 0; line-height: 1.45; }
 .confirm-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.w-cal b { font-weight: 600; margin-right: 4px; }
 
 /* ---------- folder bloom ---------- */
 .folder-scrim { place-items: center; backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); background: rgba(0, 0, 0, .14); }

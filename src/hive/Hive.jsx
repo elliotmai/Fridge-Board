@@ -19,7 +19,8 @@ import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } 
 import { DEFAULT_LOOK, WALLPAPERS } from './look';
 import { AddSheet, AppFrame, FolderView, HiveSettings } from './Sheets';
 import { Spotlight } from './Spotlight';
-import { useBoardData, widgetIds } from './widgets';
+import { WidgetActions } from './live';
+import { useLiveBoard, widgetIds } from './widgets';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -89,13 +90,13 @@ export function Hive() {
   }, [user?.verified, ready]);
   const account = { on: accountsOn, ready, user, open: () => setSheet('account') };
 
-  const data = useBoardData();
+  const { data, act } = useLiveBoard();
   const now = new Date(useTick(30000));
 
   // Badges: what's waiting in each app, from the same feed as the widgets.
   const badges = useMemo(() => {
     if (!data) return {};
-    const due = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects }, now).filter((t) => t.n != null && t.n <= 0).length;
+    const due = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects }, now).filter((t) => t.n != null && t.n <= 0 && !data.todosDone?.includes(t.key)).length;
     const chores = data.chores.filter((c) => !c.done).length;
     return {
       board: chores,
@@ -203,12 +204,14 @@ export function Hive() {
 
       <div className="hive-view home-view" hidden={!!view} style={{ '--wall': wall.css }}>
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
+        <WidgetActions.Provider value={act}>
         <Home layout={layout} setLayout={setLayout} data={data} now={now} look={look} badges={badges} dark={wallDark}
           editing={editing} setEditing={setEditing} onOpen={open}
           onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
           onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
           onEditIcon={setIconEdit} onAddToHome={(id) => setLayout(addApp(layout, id))}
           onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: on || undefined } }))} account={account} />
+        </WidgetActions.Provider>
       </div>
 
       {!view && folderItem?.k === 'folder' && (

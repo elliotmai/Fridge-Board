@@ -40,6 +40,7 @@ export const UI = {
   grid: () => <svg viewBox="0 0 24 24" {...L}><rect x="4" y="4" width="6" height="6" rx="1.6" /><rect x="14" y="4" width="6" height="6" rx="1.6" /><rect x="4" y="14" width="6" height="6" rx="1.6" /><rect x="14" y="14" width="6" height="6" rx="1.6" /></svg>,
   palette: () => <svg viewBox="0 0 24 24" {...L}><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.3-1.2-1.6-1.2-2.8 0-1 .8-1.6 1.8-1.6h2.1a4 4 0 0 0 4-4C20.5 6.6 16.7 3.5 12 3.5z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7.5" r="1" /><circle cx="14.5" cy="7.5" r="1" /></svg>,
   arrow: () => <svg viewBox="0 0 24 24" {...L}><path d="M7 17L17 7M9 7h8v8" /></svg>,
+  chevron: () => <svg viewBox="0 0 24 24" {...L} className="widget-go" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>,
   check: () => <svg viewBox="0 0 24 24" {...L}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
   folder: () => <svg viewBox="0 0 24 24" {...L}><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z" /></svg>,
   size: () => <svg viewBox="0 0 24 24" {...L}><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M4 12h16M12 12v8" /></svg>,

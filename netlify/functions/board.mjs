@@ -85,14 +85,29 @@ async function weather({ home, tz }) {
   if (!home) return { status: 'unconfigured', reason: 'Set the farm location in GalaxyFarm settings' };
   const q = new URLSearchParams({
     latitude: home.lat, longitude: home.lon, current: 'temperature_2m,weather_code',
-    daily: 'temperature_2m_max,temperature_2m_min,weather_code', temperature_unit: 'fahrenheit', timezone: tz, forecast_days: '4',
+    daily: 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max',
+    hourly: 'temperature_2m,weather_code,precipitation_probability',
+    temperature_unit: 'fahrenheit', timezone: tz, forecast_days: '10',
   });
   const w = await getJson(`https://api.open-meteo.com/v1/forecast?${q}`);
   return {
     status: 'live',
     data: {
       now: Math.round(w.current.temperature_2m), code: wmo(w.current.weather_code), desc: WMO_TEXT[w.current.weather_code] ?? 'Mixed',
-      days: w.daily.time.map((_, i) => ({ hi: Math.round(w.daily.temperature_2m_max[i]), lo: Math.round(w.daily.temperature_2m_min[i]), code: wmo(w.daily.weather_code[i]) })),
+      days: w.daily.time.map((date, i) => ({
+        date, hi: Math.round(w.daily.temperature_2m_max[i]), lo: Math.round(w.daily.temperature_2m_min[i]),
+        code: wmo(w.daily.weather_code[i]), rain: w.daily.precipitation_probability_max?.[i] ?? null,
+      })),
+      // The next 24 hours from now, in the farm's time zone (times are local "YYYY-MM-DDTHH:00").
+      hours: (() => {
+        const t = w.hourly?.time || [];
+        const nowLocal = (w.current.time || '').slice(0, 13);
+        const start = Math.max(0, t.findIndex((x) => x.slice(0, 13) >= nowLocal));
+        return t.slice(start, start + 24).map((time, k) => ({
+          time, temp: Math.round(w.hourly.temperature_2m[start + k]), code: wmo(w.hourly.weather_code[start + k]),
+          rain: w.hourly.precipitation_probability?.[start + k] ?? null,
+        }));
+      })(),
     },
   };
 }

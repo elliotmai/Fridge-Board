@@ -125,6 +125,8 @@ export function Home({
     window.addEventListener('pointercancel', cancel);
     press.current = {
       key: item?.key ?? null, item, zone, el, id: e.pointerId, x0: e.clientX, y0: e.clientY, r,
+      // Inside a widget's list or forecast: moving the finger scrolls that, not the page.
+      inScroll: !!e.target.closest?.('.w-scroll, .w-scroll-x, .w-today, .w-add'),
       dragging: false, armed: false, mergeKey: null, mergeTimer: null, edgeTimer: null, sig: null,
       off: () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); },
       hold: setTimeout(() => {
@@ -155,6 +157,7 @@ export function Home({
     if (!p.dragging) {
       if (Math.hypot(dx, dy) <= SLOP) return;
       if (p.key && p.zone !== 'library' && (editingRef.current || p.armed)) { startDrag(p, e); return; }
+      if (p.inScroll) { suppress.current = true; end(); return; } // scrolling inside a widget
       // Swipe down (not sideways, not while editing) opens search.
       if (!editingRef.current && !p.armed && look.search && dy > 0 && Math.abs(dx) < dy * 0.7) {
         clearTimeout(p.hold);
@@ -250,15 +253,17 @@ export function Home({
     end();
   };
 
-  const activate = (item, el) => {
+  const activate = (item, el, to) => {
     if (suppress.current) { suppress.current = false; return; }
     if (item.k === 'folder') return onOpenFolder(item.key, el?.querySelector('.icon'));
     if (editing) return;
     if (item.k === 'widget') {
       // A widget opens the app that owns what it shows, at the right page.
+      // `to` is one thing in it: a recipe, a trip, a calendar day.
       const def = WIDGETS[item.w];
-      if (def.url) { window.open(def.url, '_blank', 'noopener'); return; }
-      return onOpen(def.app, el?.querySelector('.widget'), def.path);
+      const url = to?.url || (!to?.path && def.url);
+      if (url) { window.open(url, '_blank', 'noopener'); return; }
+      return onOpen(def.app, el?.querySelector('.widget'), to?.path || def.path);
     }
     onOpen(item.key, el?.querySelector('.icon'));
   };
@@ -292,7 +297,7 @@ export function Home({
           <div className="tile-btn widget-wrap" tabIndex={editing ? 0 : -1} onKeyDown={(e) => onKeyDown(e, item, zone, index)}
             onClickCapture={(e) => { if (suppress.current || editing) { e.stopPropagation(); suppress.current = false; } }}>
             <Widget w={item.w} size={item.size} data={data} now={now} color={appLook(WIDGETS[item.w].app, custom).color}
-              onOpen={() => activate(item, document.querySelector(`.page-grid [data-key="${CSS.escape(item.key)}"]`))} />
+              onOpen={(to) => activate(item, document.querySelector(`.page-grid [data-key="${CSS.escape(item.key)}"]`), to)} />
           </div>
         ) : (
           <button className="tile-btn" onClick={(e) => activate(item, e.currentTarget)} onKeyDown={(e) => onKeyDown(e, item, zone, index)}
@@ -414,7 +419,7 @@ export function Home({
         <ContextMenu rect={menu.rect} actions={menuActions(menu)} onClose={() => setMenu(null)}
           title={menu.item.k === 'app' ? appLook(menu.item.key, custom).name : null}
           preview={menu.item.k === 'widget'
-            ? <Widget w={menu.item.w} size={menu.item.size} data={data} now={now} color={appLook(WIDGETS[menu.item.w].app, custom).color} onOpen={() => {}} />
+            ? <Widget w={menu.item.w} size={menu.item.size} data={data} now={now} color={appLook(WIDGETS[menu.item.w].app, custom).color} onOpen={() => {}} still />
             : menu.item.k === 'folder' ? <FolderIcon apps={menu.item.apps} custom={custom} /> : <AppIcon id={menu.item.key} custom={custom} badge={badgeOf(menu.item)} />} />
       )}
     </div>

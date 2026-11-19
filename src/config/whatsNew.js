@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19.5',
+    date: 'November 2026',
+    items: [
+      'Widgets are interactive: tick off chores, shopping and to-dos right on the home screen, and add to the shopping list from a medium or large Shopping widget. Ticks go straight to the app they belong to, with Undo.',
+      'Scroll inside widgets: the forecast hour by hour or 10 days ahead, two weeks of calendar, the week’s dinners, every upcoming trip. Nothing is cut off any more.',
+      'Tap a dinner for its recipe, a trip for its plan, or an event for that day in Google Calendar. Tap a widget’s title to open its app.',
+    ],
+  },
+  {
     version: '2026.11.19.4',
     date: 'November 2026',
     items: [

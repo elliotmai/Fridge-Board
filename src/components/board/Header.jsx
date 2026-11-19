@@ -28,7 +28,7 @@ export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, on
             </span>
           </div>
           <div className="wx-days">
-            {weather.days.slice(1).map((d, i) => {
+            {weather.days.slice(1, 4).map((d, i) => {
               const I = WX[d.code] ?? WX.cloud;
               return <div className="wx-day" key={i}><b>{wd(new Date(now.getTime() + (i + 1) * DAY))}</b><I /><span>{d.hi}° {d.lo}°</span></div>;
             })}

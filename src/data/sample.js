@@ -144,9 +144,20 @@ export const SITTER = {
 };
 
 // Sample weather. Live version reads GalaxyFarm's weather service.
+const DAYS10 = [[66, 33, 'sun', 0], [61, 41, 'cloud', 20], [54, 44, 'rain', 80], [63, 39, 'sun', 10], [68, 45, 'partly', 10], [71, 50, 'sun', 0], [64, 48, 'rain', 60], [59, 40, 'cloud', 30], [62, 38, 'sun', 0], [65, 42, 'partly', 10]];
+const HOURS = (() => {
+  const out = [], base = new Date(); base.setMinutes(0, 0, 0);
+  for (let k = 0; k < 24; k++) {
+    const d = new Date(base.getTime() + k * 3600e3), h = d.getHours();
+    const temp = Math.round(46 + 14 * Math.sin(((h - 9) / 24) * 2 * Math.PI));
+    out.push({ time: `${iso(d)}T${String(h).padStart(2, '0')}:00`, temp, code: h >= 7 && h <= 17 ? (k > 14 ? 'cloud' : 'partly') : 'cloud', rain: k > 16 ? 30 : 0 });
+  }
+  return out;
+})();
 export const WEATHER = {
   now: 57, code: 'partly', desc: 'Partly cloudy',
-  days: [{ hi: 66, lo: 33, code: 'sun' }, { hi: 61, lo: 41, code: 'cloud' }, { hi: 54, lo: 44, code: 'rain' }, { hi: 63, lo: 39, code: 'sun' }],
+  days: DAYS10.map(([hi, lo, code, rain], i) => ({ date: iso(dayFrom(i)), hi, lo, code, rain })),
+  hours: HOURS,
 };
 
 // Google Calendar via Our Den. The first three duplicate the Thanksgiving trip
