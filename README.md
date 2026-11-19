@@ -54,7 +54,7 @@ household, only you, or by invite). Board deep links stay in `src/config/apps.js
 | Property Care | landlord-property-maintenance.netlify.app | Anyone | |
 | Our Den | ourden.netlify.app | By invite | Opens in its own tab (`X-Frame-Options: DENY`) |
 | Wander | wander-tripplanner.netlify.app | Anyone | |
-| AeroLogger | not deployed | Anyone | Icon says it isn't online yet |
+| AeroLogger | aero-logger.com | Anyone | |
 | LearnLeaf | learnleaf-organizer.netlify.app | Anyone | |
 | Journal Together | journaltogether.netlify.app | Anyone | |
 | StimulTrack | stimultrack.netlify.app | Anyone | |

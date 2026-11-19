@@ -30,7 +30,7 @@ export const CATALOG = {
   property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
   ourden: { name: 'Our Den', url: 'https://ourden.netlify.app', color: '#4b3b78', glyph: 'moon', audience: 'invite', frame: false, blurb: 'A private space for two, across the distance.' },
   wander: { name: 'Wander', url: APPS.wander.url, color: '#2c5e9e', glyph: 'plane', audience: 'anyone', blurb: 'Trips, itineraries and live flights.' },
-  aerologger: { name: 'AeroLogger', url: null, color: '#3b6f8f', glyph: 'binoculars', audience: 'anyone', blurb: 'Log the aircraft you spot.' },
+  aerologger: { name: 'AeroLogger', url: 'https://aero-logger.com', color: '#3b6f8f', glyph: 'binoculars', audience: 'anyone', blurb: 'Log the aircraft you spot.' },
   learnleaf: { name: 'LearnLeaf', url: APPS.learnleaf.url, color: '#355147', glyph: 'leaf', audience: 'anyone', blurb: 'Tasks, subjects and projects for school and life.' },
   journal: { name: 'Journal Together', url: 'https://journaltogether.netlify.app', color: '#8a5a44', glyph: 'book', audience: 'anyone', blurb: 'A shared journal.' },
   stimultrack: { name: 'StimulTrack', url: 'https://stimultrack.netlify.app', color: '#6b4226', glyph: 'cup', audience: 'anyone', blurb: 'How much caffeine is in you right now.' },
