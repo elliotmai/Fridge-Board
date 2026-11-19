@@ -61,7 +61,7 @@ household, only you, or by invite). Board deep links stay in `src/config/apps.js
 | Drink Tracker | alcoholtracker.netlify.app | Anyone | |
 | Side Quest | side-quest-games.netlify.app | Anyone | |
 | Muster | muster-dashboard.netlify.app | Only you | |
-| Feedback | ticketbooth.netlify.app | Anyone | Ticket Booth, built into Hive |
+| Feedback | ticketbooth.netlify.app/admin | Only you | Ticket Booth's admin page; "Report a bug" links still go to its public form |
 
 ## Hive sign-in
 

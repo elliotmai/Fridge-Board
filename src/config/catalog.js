@@ -37,7 +37,9 @@ export const CATALOG = {
   alcohol: { name: 'Drink Tracker', url: 'https://alcoholtracker.netlify.app', color: '#8e2f3c', glyph: 'glass', audience: 'anyone', blurb: 'Track drinks over time.' },
   sidequest: { name: 'Side Quest', url: 'https://side-quest-games.netlify.app', color: '#c27c0e', glyph: 'dice', audience: 'anyone', blurb: 'Points games for trips, game days and hangouts.' },
   muster: { name: 'Muster', url: 'https://muster-dashboard.netlify.app', color: '#24292f', glyph: 'pulse', audience: 'owner', blurb: 'Every project you have going, and what Claude is waiting on.' },
-  feedback: { name: 'Feedback', url: 'https://ticketbooth.netlify.app', color: '#6b6f76', glyph: 'ticket', audience: 'anyone', blurb: 'Report a bug or ask for a feature in any app.' },
+  // Ticket Booth's admin page (passcode-protected): every app's bug reports and
+  // requests. The "Report a bug" links in each app still go to the public form.
+  feedback: { name: 'Feedback', url: 'https://ticketbooth.netlify.app/admin', color: '#6b6f76', glyph: 'ticket', audience: 'owner', blurb: 'Bug reports and feature requests from every app.' },
 };
 
 export const AUDIENCE = {
