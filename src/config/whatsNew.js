@@ -6,6 +6,17 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19.3',
+    date: 'November 2026',
+    items: [
+      'The home screen now works like your phone’s: swipe between pages, apps zoom open from their icons, and swipe up from the bottom to go home.',
+      'Press and hold an app for shortcuts, like KitchenHub’s shopping list. Keep dragging to rearrange, and hold at the edge to move it to another page.',
+      'Swipe down to search your apps and everything in them: tasks, events, trips, shopping and chores.',
+      'Make it yours in Settings: wallpapers or your own photo, icon size, columns, and widgets in three sizes. Rename any app and change its colour and symbol.',
+      'Red badges show what’s waiting, and the last page lists every app.',
+    ],
+  },
+  {
     version: '2026.11.19.2',
     date: 'November 2026',
     items: [

@@ -9,16 +9,21 @@ offline toast, pull-to-refresh on phones, Ticketbooth feedback link).
 
 ## The home screen
 
+It behaves like a phone's home screen, and almost everything about it can be
+changed.
+
 | | |
 | --- | --- |
-| **Open an app** | Tap it. Fridge Board runs inside Hive; every other app opens full screen in a frame, with **Home**, **Reload** and **Open in its own tab** along the top. The open app is in the address (`#kitchenhub`), so the phone's back gesture goes home. The three most recent apps stay loaded, so switching back is instant. |
-| **Rearrange** | Press and hold anything (or tap **Edit**). Drag to move, including in and out of the dock. Rest one app on another to make a folder; rest on a folder to add to it. The minus badge takes an app off the home screen, back to the App Library. Arrow keys move the focused icon. |
-| **Add** | **Edit → Add** lists every app and widget not on the home screen, and who each app is for. |
-| **Widgets** | Today (clock, weather), Chores, Tonight, Shopping, Next trip, Breeding and Tasks. They read the same `/api/board` feed as the board, so they're live wherever the board is, and labelled **Sample** where it isn't. Tapping one opens its app. |
-| **Settings** | The sliders button: what Hive opens to, going back to the board when left alone, theme, reset layout. |
+| **Pages** | Icons and widgets fill the screen exactly: no scrolling, swipe sideways between pages, dots show where you are. The grid fits whatever screen it's on (columns and rows from its size), so one layout works on a phone, a tablet, or a turned tablet (`pack` in `src/hive/layout.js`). The last page is the **App Library**: every app, grouped, with search. |
+| **Open** | Tap. The app zooms out of its icon; going home shrinks it back in. Fridge Board runs inside Hive; other apps open full screen with **Home**, **Reload**, **Open in its own tab**, and a home bar at the bottom: swipe it up (the app shrinks with your finger) or tap it. |
+| **Long press** | An icon's menu: its shortcuts (KitchenHub → Shopping list, GalaxyFarm → Chores…), Edit Icon, Remove, Edit Home Screen. Keep dragging from there and you're rearranging. A widget's menu changes its size (small, medium, large). Press and hold empty space to start editing. |
+| **Rearrange** | Drag; hold at the screen edge to change page. Rest on an icon to make a folder; folders open with a bloom from their icon. Minus badges remove. Arrow keys move the focused icon. |
+| **Search** | Swipe down, or tap the dots. Finds apps and what's in them: tasks (LearnLeaf and Google), calendar events, trips, shopping, meals, chores. With nothing typed: recent apps and today. |
+| **Badges** | Live counts: chores left (Fridge Board), things to buy (KitchenHub), tasks due (LearnLeaf). |
+| **Customize** | Settings (an app on the home screen) → Wallpaper & Home Screen: wallpapers or your own photo (labels turn white on dark ones), dimming, icon size, columns, names on or off, dock, search, App Library, badges, light or dark. **Edit Icon** renames any app and changes its colour and symbol. |
 
-The layout is saved on each device for now (`src/hive/layout.js`, tested in
-`layout.test.js`). It moves to your account with Hive sign-in.
+Layout and looks are saved on each device (`hive.layout`, `hive.look`); the
+layout format and page packing are tested in `layout.test.js`.
 
 ### The fridge tablet
 

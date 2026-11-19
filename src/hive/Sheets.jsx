@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AUDIENCE, CATALOG, appIds } from '@/config/catalog';
+import { AUDIENCE, CATALOG, appIds, appLook, appUrl } from '@/config/catalog';
 import { FEEDBACK_URL } from '@/config/app';
 import { useTheme } from '@/context/ThemeContext';
 import { AppIcon } from './Home';
@@ -19,23 +19,25 @@ function useDialog(onClose) {
   return ref;
 }
 
-export function FolderView({ folder, editing, onOpen, onRename, onTakeOut, onClose }) {
+export function FolderView({ folder, origin, custom, badges = {}, editing, onOpen, onRename, onTakeOut, onClose }) {
   const ref = useDialog(onClose);
   const [name, setName] = useState(folder.name);
+  // Bloom out of the folder's icon: start at its spot and size, then grow.
+  const from = origin ? { '--fx': `${origin.left + origin.width / 2 - window.innerWidth / 2}px`, '--fy': `${origin.top + origin.height / 2 - window.innerHeight / 2}px` } : {};
   return (
-    <div className="scrim hive-layer" onClick={onClose}>
-      <div className="folder-open" role="dialog" aria-modal="true" aria-label={`${folder.name} folder`} ref={ref} onClick={(e) => e.stopPropagation()}>
+    <div className="scrim hive-layer folder-scrim" onClick={onClose}>
+      <div className="folder-open" style={from} role="dialog" aria-modal="true" aria-label={`${folder.name} folder`} ref={ref} onClick={(e) => e.stopPropagation()}>
         {editing
           ? <input className="folder-name" value={name} aria-label="Folder name" onChange={(e) => setName(e.target.value)} onBlur={() => onRename(name)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
           : <h2 className="folder-title">{folder.name}</h2>}
         <div className="folder-grid">
           {folder.apps.map((id) => (
             <div className="tile" key={id}>
-              <button className="tile-btn" onClick={() => !editing && onOpen(id)}>
-                <AppIcon id={id} /><span className="tile-name">{CATALOG[id].name}</span>
+              <button className="tile-btn" onClick={(e) => !editing && onOpen(id, e.currentTarget.querySelector('.icon'))}>
+                <AppIcon id={id} custom={custom} badge={badges[id]} /><span className="tile-name">{appLook(id, custom).name}</span>
               </button>
               {editing && (
-                <button className="badge-out" aria-label={`Move ${CATALOG[id].name} out of the folder`} onClick={() => onTakeOut(id)}>
+                <button className="badge-out" aria-label={`Move ${appLook(id, custom).name} out of the folder`} onClick={() => onTakeOut(id)}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18V6M7 11l5-5 5 5" /></svg>
                 </button>
               )}
@@ -89,7 +91,7 @@ export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
   );
 }
 
-export function HiveSettings({ settings, setSettings, onResetLayout, onClose, account }) {
+export function HiveSettings({ settings, setSettings, onResetLayout, onClose, account, onLook, onEdit }) {
   const ref = useDialog(onClose);
   const { theme, setTheme } = useTheme();
   const [confirm, setConfirm] = useState(false);
@@ -114,6 +116,12 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
             </>
           )}
         </div>
+        <button className="set-row set-link" onClick={onLook}>
+          <span><b>Wallpaper &amp; Home Screen</b><small>Wallpaper, icon size, columns, dock, badges.</small></span><span className="chev" aria-hidden="true">›</span>
+        </button>
+        <button className="set-row set-link" onClick={onEdit}>
+          <span><b>Edit Home Screen</b><small>Or press and hold any empty space.</small></span><span className="chev" aria-hidden="true">›</span>
+        </button>
         <label className="set-row">
           <span><b>Open to</b><small>On the fridge tablet, Fridge Board keeps it working like before.</small></span>
           <select value={settings.start} onChange={(e) => setSettings((s) => ({ ...s, start: e.target.value }))}>
@@ -141,12 +149,30 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
   );
 }
 
-/** A non-native app, full screen inside Hive, with a way home and a way out. */
-export function AppFrame({ id, visible, onHome }) {
+/**
+ * A non-native app, full screen inside Hive. The bar at the bottom is the
+ * home indicator: swipe it up (the app shrinks with your finger) or tap it to
+ * go home. The top bar has Home, Reload and Open in its own tab.
+ */
+export function AppFrame({ id, visible, onHome, path }) {
   const a = CATALOG[id];
   const [nonce, setNonce] = useState(0);
+  const [pull, setPull] = useState(0);
+  const start = useRef(null);
+  const src = appUrl(id, path?.path);
+  const onDown = (e) => { start.current = { y: e.clientY, id: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId); };
+  const onMove = (e) => { if (start.current?.id === e.pointerId) setPull(Math.max(0, start.current.y - e.clientY)); };
+  const onUp = (e) => {
+    if (start.current?.id !== e.pointerId) return;
+    const moved = start.current.y - e.clientY;
+    start.current = null;
+    setPull(0);
+    if (moved > 70 || Math.abs(moved) < 6) onHome();
+  };
+  const k = Math.min(1, pull / 260);
   return (
-    <div className="frame-view" hidden={!visible}>
+    <div className="frame-view" hidden={!visible}
+      style={pull ? { transform: `translateY(${-pull * 0.5}px) scale(${1 - k * 0.22})`, borderRadius: `${16 + k * 24}px`, transition: 'none' } : undefined}>
       <div className="frame-bar" style={{ '--c': a.color }}>
         <button className="frame-home" onClick={onHome} aria-label="Back to the Hive home screen">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Home
@@ -157,14 +183,14 @@ export function AppFrame({ id, visible, onHome }) {
             <button className="frame-btn" aria-label={`Reload ${a.name}`} onClick={() => setNonce((n) => n + 1)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" /></svg>
             </button>
-            <a className="frame-btn" href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${a.name} in its own tab`}>
+            <a className="frame-btn" href={src} target="_blank" rel="noopener noreferrer" aria-label={`Open ${a.name} in its own tab`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
             </a>
           </span>
         )}
       </div>
       {a.url ? (
-        <iframe key={nonce} className="frame" src={a.url} title={a.name} data-app={id}
+        <iframe key={`${nonce}:${path?.n || 0}`} className="frame" src={src} title={a.name} data-app={id}
           allow="geolocation; camera; microphone; clipboard-read; clipboard-write; fullscreen; web-share" />
       ) : (
         <div className="frame-missing">
@@ -173,6 +199,10 @@ export function AppFrame({ id, visible, onHome }) {
           <p>It will open right here once it&apos;s online.</p>
         </div>
       )}
+      <button className="home-indicator" aria-label="Swipe up or tap to go home"
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { start.current = null; setPull(0); }}>
+        <i />
+      </button>
     </div>
   );
 }

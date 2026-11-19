@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addApp, defaultLayout, DOCK_MAX, locate, merge, move, normalize, placedApps, remove, rename, takeOut } from './layout.js';
+import { addApp, defaultLayout, DOCK_MAX, locate, merge, move, normalize, pack, placedApps, remove, rename, setCustom, setWidgetSize, takeOut } from './layout.js';
 
 const keys = (list) => list.map((i) => i.key);
 const base = () => ({
@@ -93,4 +93,68 @@ test('the default layout places every app exactly once', () => {
   const all = [...l.dock, ...l.grid].flatMap((i) => (i.k === 'app' ? [i.key] : i.k === 'folder' ? i.apps : []));
   assert.equal(all.length, new Set(all).size);
   assert.equal(placedApps(l).size, all.length);
+});
+
+// ------------------------------------------------------------------ pages
+const apps = (n, from = 0) => Array.from({ length: n }, (_, i) => ({ k: 'app', key: `a${i + from}` }));
+const spots = (page) => page.map((p) => `${p.item.key}@${p.col},${p.row}${p.w > 1 || p.h > 1 ? `:${p.w}x${p.h}` : ''}`);
+
+test('pack fills a page row by row, then starts the next', () => {
+  const pages = pack(apps(10), 4, 2);
+  assert.equal(pages.length, 2);
+  assert.deepEqual(spots(pages[0]), ['a0@1,1', 'a1@2,1', 'a2@3,1', 'a3@4,1', 'a4@1,2', 'a5@2,2', 'a6@3,2', 'a7@4,2']);
+  assert.deepEqual(spots(pages[1]), ['a8@1,1', 'a9@2,1']);
+  assert.deepEqual(pages[1].map((p) => p.index), [8, 9]); // indexes stay global
+});
+
+test('widgets take their size, and small apps fill in beside them', () => {
+  const grid = [{ k: 'widget', key: 'w:x', w: 'x', size: 's' }, ...apps(5)];
+  assert.deepEqual(spots(pack(grid, 4, 4)[0]), ['w:x@1,1:2x2', 'a0@3,1', 'a1@4,1', 'a2@3,2', 'a3@4,2', 'a4@1,3']);
+});
+
+test('a widget that does not fit moves to the next page; smaller items fill the gap', () => {
+  const grid = [...apps(6), { k: 'widget', key: 'w:s', w: 's', size: 's' }, ...apps(2, 6)];
+  const pages = pack(grid, 4, 2);
+  assert.equal(pages.length, 2);
+  // a6 and a7 come after the widget but fit on page 1, so page 1 has no hole.
+  assert.deepEqual(spots(pages[0]).slice(-2), ['a6@3,2', 'a7@4,2']);
+  assert.deepEqual(spots(pages[1]), ['w:s@1,1:2x2']); // the widget goes first on the next page
+  assert.deepEqual(spots(pack(grid, 4, 3)[0]).slice(-3), ['w:s@3,2:2x2', 'a6@1,3', 'a7@2,3']); // a taller screen fits it all
+  assert.deepEqual(spots(pack([{ k: 'widget', key: 'w:l', w: 'l', size: 'l' }], 4, 3)[0]), ['w:l@1,1:4x3']); // shrinks to the page
+});
+
+test('making a widget large never empties the page it was on', () => {
+  const grid = [{ k: 'widget', key: 'w:t', w: 't', size: 'm' }, { k: 'widget', key: 'w:c', w: 'c', size: 'l' }, { k: 'widget', key: 'w:k', w: 'k', size: 's' }, ...apps(4)];
+  const [p1, p2] = pack(grid, 4, 5);
+  assert.deepEqual(spots(p1), ['w:t@1,1:4x2', 'w:k@1,3:2x2', 'a0@3,3', 'a1@4,3', 'a2@3,4', 'a3@4,4']);
+  assert.deepEqual(spots(p2), ['w:c@1,1:4x4']);
+});
+
+test('an empty grid is one empty page', () => {
+  assert.deepEqual(pack([], 4, 5), [[]]);
+});
+
+// ------------------------------------------------------- sizes and icons
+test('widget size changes, and only to a real size', () => {
+  const l = { v: 2, grid: [{ k: 'widget', key: 'w:chores', w: 'chores', size: 's' }], dock: [], custom: {} };
+  assert.equal(setWidgetSize(l, 'w:chores', 'l').grid[0].size, 'l');
+  assert.equal(setWidgetSize(l, 'w:chores', 'xl'), l);
+});
+
+test('icons can be renamed and recoloured, and reset', () => {
+  const l = { v: 2, grid: [], dock: [], custom: {} };
+  let c = setCustom(l, 'kitchenhub', { name: '  Kitchen ', color: '#ff0000' });
+  assert.deepEqual(c.custom.kitchenhub, { name: 'Kitchen', color: '#ff0000' });
+  c = setCustom(c, 'kitchenhub', { name: '' });
+  assert.deepEqual(c.custom.kitchenhub, { color: '#ff0000' });
+  assert.equal(setCustom(c, 'kitchenhub', null).custom.kitchenhub, undefined);
+  assert.deepEqual(setCustom(l, 'x', { evil: 'y' }).custom, {});
+});
+
+test('a version 1 layout upgrades: sizes for widgets, and the new Settings app', () => {
+  const v1 = { v: 1, grid: [{ k: 'widget', key: 'w:today', w: 'today' }, { k: 'widget', key: 'w:chores', w: 'chores' }, { k: 'app', key: 'a' }], dock: [] };
+  const l = normalize(v1, ['a', 'settings'], ['today', 'chores']);
+  assert.equal(l.v, 2);
+  assert.deepEqual(l.grid.map((i) => i.size || i.key), ['m', 's', 'a', 'settings']);
+  assert.deepEqual(l.custom, {});
 });

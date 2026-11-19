@@ -23,4 +23,27 @@ export const GLYPHS = {
   ticket: G(<><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z" /><path d="M14 6v12" strokeDasharray="1.5 2" /></>),
 };
 
+GLYPHS.gear = G(<><circle cx="12" cy="12" r="3.2" /><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" /><circle cx="12" cy="12" r="6.4" /></>);
+GLYPHS.star = G(<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z" />);
+GLYPHS.heart = G(<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" />);
+GLYPHS.home = G(<><path d="M3.5 11L12 4l8.5 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M10 20v-5h4v5" /></>);
+GLYPHS.bolt = G(<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" />);
+GLYPHS.music = G(<><path d="M9 18V6l10-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="16.5" cy="16" r="2.5" /></>);
+
+/** Line icons for Hive's own buttons and menus. */
+const L = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+export const UI = {
+  search: () => <svg viewBox="0 0 24 24" {...L}><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>,
+  edit: () => <svg viewBox="0 0 24 24" {...L}><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13.5 6.5l4 4" /></svg>,
+  minus: () => <svg viewBox="0 0 24 24" {...L}><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg>,
+  plus: () => <svg viewBox="0 0 24 24" {...L}><path d="M12 5v14M5 12h14" /></svg>,
+  grid: () => <svg viewBox="0 0 24 24" {...L}><rect x="4" y="4" width="6" height="6" rx="1.6" /><rect x="14" y="4" width="6" height="6" rx="1.6" /><rect x="4" y="14" width="6" height="6" rx="1.6" /><rect x="14" y="14" width="6" height="6" rx="1.6" /></svg>,
+  palette: () => <svg viewBox="0 0 24 24" {...L}><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.3-1.2-1.6-1.2-2.8 0-1 .8-1.6 1.8-1.6h2.1a4 4 0 0 0 4-4C20.5 6.6 16.7 3.5 12 3.5z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7.5" r="1" /><circle cx="14.5" cy="7.5" r="1" /></svg>,
+  arrow: () => <svg viewBox="0 0 24 24" {...L}><path d="M7 17L17 7M9 7h8v8" /></svg>,
+  check: () => <svg viewBox="0 0 24 24" {...L}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
+  folder: () => <svg viewBox="0 0 24 24" {...L}><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z" /></svg>,
+  size: () => <svg viewBox="0 0 24 24" {...L}><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M4 12h16M12 12v8" /></svg>,
+  library: () => <svg viewBox="0 0 24 24" {...L}><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><path d="M16.5 13.5v6M13.5 16.5h6" /></svg>,
+};
+
 export const Fallback = G(<circle cx="12" cy="12" r="6" />);

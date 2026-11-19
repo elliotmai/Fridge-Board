@@ -43,16 +43,20 @@ export const WIDGETS = {
 };
 export const widgetIds = Object.keys(WIDGETS);
 
-export function Widget({ w, data, now, onOpen, color }) {
+/** How many list lines fit: a large widget is twice as tall as a small one. */
+const LINES = { s: 3, m: 3, l: 9 };
+
+export function Widget({ w, size, data, now, onOpen, color }) {
   const def = WIDGETS[w];
+  const sz = size || (def.size === 'wide' ? 'm' : 's');
   return (
-    <div className={`widget ${def.size}`} style={{ '--tint': color }}>
+    <div className={`widget size-${sz}`} style={{ '--tint': color }}>
       <div className="widget-head">
         <i aria-hidden="true" />{def.label}
         {data && <Freshness s={def.status(data)} />}
       </div>
       <button className="widget-body" onClick={() => onOpen(def.app)} aria-label={`${def.label}: open`}>
-        {data ? <def.Body data={data} now={now} /> : <span className="widget-wait">Loading</span>}
+        {data ? <def.Body data={data} now={now} max={LINES[sz]} size={sz} /> : <span className="widget-wait">Loading</span>}
       </button>
     </div>
   );
@@ -81,13 +85,13 @@ function Today({ data, now }) {
   );
 }
 
-function Chores({ data }) {
+function Chores({ data, max = 3 }) {
   const open = data.chores.filter((c) => !c.done);
   if (!open.length) return <><div className="w-big">All done</div><div className="w-sub">Every chore for today</div></>;
   return (
     <>
       <div className="w-big">{open.length}<small> left</small></div>
-      <ul className="w-list">{open.slice(0, 3).map((c) => <li key={c.id}>{c.title}</li>)}</ul>
+      <ul className="w-list">{open.slice(0, max).map((c) => <li key={c.id}>{c.title}</li>)}</ul>
     </>
   );
 }
@@ -106,13 +110,13 @@ function Dinner({ data }) {
   );
 }
 
-function Shopping({ data }) {
+function Shopping({ data, max = 3 }) {
   const left = data.shopping.filter((i) => !i.bought);
   if (!left.length) return <><div className="w-big">0</div><div className="w-sub">The list is empty</div></>;
   return (
     <>
       <div className="w-big">{left.length}<small> to buy</small></div>
-      <ul className="w-list">{left.slice(0, 3).map((i) => <li key={i.id}>{i.name}</li>)}</ul>
+      <ul className="w-list">{left.slice(0, max).map((i) => <li key={i.id}>{i.name}</li>)}</ul>
     </>
   );
 }
@@ -144,12 +148,12 @@ function Breeding({ data, now }) {
   );
 }
 
-function Tasks({ data, now }) {
+function Tasks({ data, now, max = 3 }) {
   const all = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
   const due = all.filter((t) => t.n != null);
   const over = due.filter((t) => t.n < 0).length;
   if (!all.length) return <><div className="w-big">0</div><div className="w-sub">Nothing due this week</div></>;
-  const shown = (due.length ? due : all).slice(0, over ? 2 : 3);
+  const shown = (due.length ? due : all).slice(0, over ? max - 1 : max);
   return (
     <>
       <div className="w-big">{due.length || all.length}<small> {due.length ? 'this week' : 'to do'}</small></div>
@@ -159,12 +163,12 @@ function Tasks({ data, now }) {
   );
 }
 
-function Calendar({ data, now }) {
+function Calendar({ data, now, max = 3 }) {
   const days = agendaDays(dedupeEvents(data.events, data.trips).shown, now, 7);
   if (!days.length) return <><div className="w-mid">Nothing this week</div><div className="w-sub">Your calendar is clear</div></>;
   const first = days[0];
   const label = first.n === 0 ? 'Today' : first.n === 1 ? 'Tomorrow' : wd(first.date);
-  const rows = days.flatMap((d) => d.events.filter((e) => !e.continued).map((e) => ({ ...e, d }))).slice(0, 3);
+  const rows = days.flatMap((d) => d.events.filter((e) => !e.continued).map((e) => ({ ...e, d }))).slice(0, max);
   const at = (e) => (e.allDay ? 'All day' : new Date(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
   return (
     <>
