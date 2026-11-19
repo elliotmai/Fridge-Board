@@ -7,6 +7,8 @@ import { CATALOG, appIds } from '@/config/catalog';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
+import { accountsOn, signIn, signOut, useHiveUser } from './account';
+import { announce, startBridge } from './bridge';
 import { Home } from './Home';
 import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
 import { AddSheet, AppFrame, FolderView, HiveSettings } from './Sheets';
@@ -51,6 +53,19 @@ export function Hive() {
   const [editing, setEditing] = useState(false);
   const [folderKey, setFolderKey] = useState(null);
   const [sheet, setSheet] = useState(null); // 'add' | 'settings'
+
+  // One Hive sign-in, handed to apps in frames as short passes (bridge.js).
+  const { user, ready } = useHiveUser();
+  const signedIn = useRef(false);
+  signedIn.current = !!user;
+  useEffect(() => startBridge(() => signedIn.current), []);
+  const firstAnnounce = useRef(true);
+  useEffect(() => {
+    if (!ready) return;
+    if (firstAnnounce.current) { firstAnnounce.current = false; return; } // frames say hello themselves
+    announce(!!user);
+  }, [user, ready]);
+  const account = { on: accountsOn, ready, user, signIn, signOut };
 
   const data = useBoardData();
   const now = new Date(useTick(30000));
@@ -124,7 +139,7 @@ export function Hive() {
       <div className="hive-view" hidden={!!view}>
         <Home layout={layout} setLayout={setLayout} data={data} now={now}
           editing={editing} setEditing={setEditing} onOpen={open} onOpenFolder={setFolderKey}
-          onAdd={() => setSheet('add')} onSettings={() => setSheet('settings')} />
+          onAdd={() => setSheet('add')} onSettings={() => setSheet('settings')} account={account} />
       </div>
 
       {!view && folder?.k === 'folder' && (
@@ -137,7 +152,7 @@ export function Hive() {
           onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w) => setLayout(addWidget(layout, w))} />
       )}
       {!view && sheet === 'settings' && (
-        <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)}
+        <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)} account={account}
           onResetLayout={() => setStored(defaultLayout())} />
       )}
     </div>

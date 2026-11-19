@@ -25,7 +25,8 @@ body { background: var(--bg); }
 }
 .editing .home-bar { justify-content: space-between; }
 .home-hint { font-size: 13px; color: var(--muted); text-align: center; flex: 1; }
-.pill { height: 38px; padding: 0 16px; border-radius: 999px; background: var(--surface); font-weight: 500; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.pill { height: 38px; padding: 0 16px; border-radius: 999px; background: var(--surface); font-weight: 500; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
+.pill:disabled { opacity: .5; cursor: default; }
 .pill svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .pill.ghost { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .pill.round-pill { width: 38px; padding: 0; justify-content: center; }

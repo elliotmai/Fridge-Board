@@ -63,15 +63,48 @@ household, only you, or by invite). Board deep links stay in `src/config/apps.js
 | Muster | muster-dashboard.netlify.app | Only you | |
 | Feedback | ticketbooth.netlify.app | Anyone | Ticket Booth, built into Hive |
 
-Framed apps each ask for their own sign-in once inside Hive, until step 2.
+## Hive sign-in
+
+Sign in to Hive once (Google), and apps that support it sign you in by
+themselves when you open them inside Hive. LearnLeaf is the first; the
+template (`app-template`, "Sign in with Hive") carries it to the rest.
+
+1. An app in a frame says hello to Hive (`postMessage`).
+2. Hive's `/api/hive/pass` checks your Hive sign-in and issues a **pass**: a
+   JWT signed with Ed25519 by `HIVE_SIGNING_KEY`, made for that one app,
+   good for two minutes, carrying your Google-verified email. Hive sends it
+   only to that app's own address (`src/hive/bridge.js`).
+3. The app's `/api/hive/exchange` checks the pass with `HIVE_PUBLIC_KEY`, finds
+   the account with your email (or makes one), and returns a Firebase custom
+   token. The app signs in with it.
+
+Each app keeps its own users and data. Apps that don't support it yet ask for
+their own sign-in, as before. Sign-in is off until it's set up, and Hive works
+the same without it.
+
+**Set it up**
+
+1. Make a Firebase project for Hive. Turn on **Authentication → Google**, and
+   add `fridge-board-7u23.netlify.app` under **Authorized domains**. Add a web
+   app and copy its config.
+2. Run `node scripts/hive-keys.mjs` to get `HIVE_SIGNING_KEY` and `HIVE_PUBLIC_KEY`.
+3. In this site's Netlify environment: `VITE_HIVE_FIREBASE_API_KEY`,
+   `VITE_HIVE_FIREBASE_AUTH_DOMAIN`, `VITE_HIVE_FIREBASE_PROJECT_ID`,
+   `VITE_HIVE_FIREBASE_APP_ID` and `HIVE_SIGNING_KEY`. Redeploy.
+4. In each app that supports it (LearnLeaf so far): `HIVE_APP_ID` (its id in
+   `src/config/catalog.js`), `HIVE_PUBLIC_KEY`, and
+   `VITE_HIVE_ORIGIN=https://fridge-board-7u23.netlify.app`. It also needs
+   `FIREBASE_SERVICE_ACCOUNT`, which LearnLeaf already has. Redeploy.
+
+Household-only apps can set `HIVE_NEW_ACCOUNTS=off`, so only people who already
+have an account get in.
 
 ## Roadmap
 
 1. **Home screen** with folders, dock, widgets and the board as an app. *(done)*
-2. **One Hive sign-in.** Hive gets its own Firebase project for accounts. Each
-   app gets a small function that swaps a Hive sign-in for its own (Firebase
-   custom tokens), so nobody signs in twice. Added to `app-template` first.
-   GalaxyFarm needs a NextAuth version.
+2. **One Hive sign-in.** *(built: Hive, app-template, LearnLeaf; needs the
+   setup above)* Next: the other Firebase apps from the template module, and
+   a NextAuth version for GalaxyFarm.
 3. **Manifests.** Each app publishes its widgets, actions and events, so Hive
    stops hard-coding them.
 4. **Event hub.** Apps react to each other: a Wander trip turns on GalaxyFarm
@@ -126,7 +159,8 @@ All three numbers are adjustable in Board settings.
 ```bash
 npm install
 npm run dev
-npm test    # home screen layout rules
+npm test    # home screen layout, Hive passes, sign-in checks
+node scripts/hive-keys.mjs   # Hive sign-in key pair
 ```
 
 Deploys on Netlify with `netlify.toml` (build `npm run build`, publish `dist`).

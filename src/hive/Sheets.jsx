@@ -89,14 +89,31 @@ export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
   );
 }
 
-export function HiveSettings({ settings, setSettings, onResetLayout, onClose }) {
+export function HiveSettings({ settings, setSettings, onResetLayout, onClose, account }) {
   const ref = useDialog(onClose);
   const { theme, setTheme } = useTheme();
   const [confirm, setConfirm] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const doSignIn = () => { setAuthError(''); account.signIn().catch((e) => setAuthError(/popup-closed|cancelled/.test(e.code || '') ? '' : 'Sign-in didn’t finish. Try again.')); };
   return (
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Hive settings" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><h2>Hive settings</h2><button className="pill" onClick={onClose}>Close</button></div>
+        <div className="set-row">
+          {!account?.on ? (
+            <span><b>Hive account</b><small>Not set up yet. Until it is, each app asks you to sign in on its own.</small></span>
+          ) : account.user ? (
+            <>
+              <span><b>{account.user.name || 'Signed in'}</b><small>{account.user.email}. Apps that support Hive sign you in automatically.</small></span>
+              <button className="pill" onClick={() => account.signOut()}>Sign out</button>
+            </>
+          ) : (
+            <>
+              <span><b>Hive account</b><small>{authError || 'Sign in once, and apps that support Hive sign you in automatically.'}</small></span>
+              <button className="pill strong" onClick={doSignIn} disabled={!account.ready}>Sign in with Google</button>
+            </>
+          )}
+        </div>
         <label className="set-row">
           <span><b>Open to</b><small>On the fridge tablet, Fridge Board keeps it working like before.</small></span>
           <select value={settings.start} onChange={(e) => setSettings((s) => ({ ...s, start: e.target.value }))}>
@@ -118,7 +135,6 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose }) 
             ? <button className="pill danger" onClick={() => { onResetLayout(); setConfirm(false); }}>Reset it</button>
             : <button className="pill" onClick={() => setConfirm(true)}>Reset</button>}
         </div>
-        <p className="sheet-note">Each app still asks you to sign in once inside Hive. One Hive sign-in for every app is the next step.</p>
         <a className="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer">Report a bug or request a feature</a>
       </div>
     </div>
@@ -148,7 +164,7 @@ export function AppFrame({ id, visible, onHome }) {
         )}
       </div>
       {a.url ? (
-        <iframe key={nonce} className="frame" src={a.url} title={a.name}
+        <iframe key={nonce} className="frame" src={a.url} title={a.name} data-app={id}
           allow="geolocation; camera; microphone; clipboard-read; clipboard-write; fullscreen; web-share" />
       ) : (
         <div className="frame-missing">

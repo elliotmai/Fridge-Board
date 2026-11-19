@@ -30,7 +30,7 @@ function FolderIcon({ apps }) {
  * can be dragged to reorder, dropped on each other to make a folder, or taken
  * off with the minus badge. Arrow keys move the focused icon while editing.
  */
-export function Home({ layout, setLayout, data, now, editing, setEditing, onOpen, onOpenFolder, onAdd, onSettings }) {
+export function Home({ layout, setLayout, data, now, editing, setEditing, onOpen, onOpenFolder, onAdd, onSettings, account }) {
   const [drag, setDrag] = useState(null); // { key, x, y, dx, dy, w, h, mergeKey }
   const press = useRef(null);
   const suppress = useRef(false);
@@ -241,6 +241,9 @@ export function Home({ layout, setLayout, data, now, editing, setEditing, onOpen
           </>
         ) : (
           <>
+            {account?.on && account.ready && !account.user && (
+              <button className="pill ghost signin-pill" onClick={() => account.signIn().catch(() => {})}>Sign in to Hive</button>
+            )}
             <button className="pill ghost" onClick={() => setEditing(true)}>Edit</button>
             <button className="pill ghost round-pill" aria-label="Hive settings" onClick={onSettings}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>

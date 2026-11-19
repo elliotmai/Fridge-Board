@@ -3,10 +3,12 @@
   publish = "dist"
 
 # Netlify's secret scan flags any env var value it finds in the code. These
-# three aren't secrets, and HOME_TZ's usual value is the function's default,
-# so leave them out. The tokens are still scanned.
+# aren't secrets: HOME_TZ's usual value is the function's default, and Hive's
+# Firebase web config is meant to be in the page (Firebase's security comes
+# from its rules and authorized domains, not from hiding it). Tokens and
+# HIVE_SIGNING_KEY are still scanned.
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "HOME_LAT,HOME_LON,HOME_TZ"
+  SECRETS_SCAN_OMIT_KEYS = "HOME_LAT,HOME_LON,HOME_TZ,VITE_HIVE_FIREBASE_API_KEY,VITE_HIVE_FIREBASE_AUTH_DOMAIN,VITE_HIVE_FIREBASE_PROJECT_ID,VITE_HIVE_FIREBASE_APP_ID"
 
 # Single-page app: send every path to index.html.
 [[redirects]]

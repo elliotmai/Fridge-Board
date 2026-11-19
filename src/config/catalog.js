@@ -1,4 +1,4 @@
-import { APPS } from './apps';
+import { APPS } from './apps.js';
 
 /**
  * Every app Hive can put on the home screen.
