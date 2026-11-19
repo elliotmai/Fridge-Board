@@ -93,8 +93,6 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
   const ref = useDialog(onClose);
   const { theme, setTheme } = useTheme();
   const [confirm, setConfirm] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const doSignIn = () => { setAuthError(''); account.signIn().catch((e) => setAuthError(/popup-closed|cancelled/.test(e.code || '') ? '' : 'Sign-in didn’t finish. Try again.')); };
   return (
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Hive settings" ref={ref} onClick={(e) => e.stopPropagation()}>
@@ -102,15 +100,17 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
         <div className="set-row">
           {!account?.on ? (
             <span><b>Hive account</b><small>Not set up yet. Until it is, each app asks you to sign in on its own.</small></span>
-          ) : account.user ? (
-            <>
-              <span><b>{account.user.name || 'Signed in'}</b><small>{account.user.email}. Apps that support Hive sign you in automatically.</small></span>
-              <button className="pill" onClick={() => account.signOut()}>Sign out</button>
-            </>
           ) : (
             <>
-              <span><b>Hive account</b><small>{authError || 'Sign in once, and apps that support Hive sign you in automatically.'}</small></span>
-              <button className="pill strong" onClick={doSignIn} disabled={!account.ready}>Sign in with Google</button>
+              <span>
+                <b>{account.user?.verified ? account.user.name || 'Hive account' : 'Hive account'}</b>
+                <small>{!account.user ? 'Sign in once, and apps that support Hive sign you in by themselves.'
+                  : !account.user.verified ? `Confirm ${account.user.email} to finish.`
+                  : account.user.email}</small>
+              </span>
+              <button className={`pill ${account.user?.verified ? '' : 'strong'}`} onClick={account.open} disabled={!account.ready}>
+                {!account.user ? 'Sign in' : !account.user.verified ? 'Confirm' : 'Manage'}
+              </button>
             </>
           )}
         </div>

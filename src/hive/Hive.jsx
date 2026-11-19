@@ -7,7 +7,8 @@ import { CATALOG, appIds } from '@/config/catalog';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
-import { accountsOn, signIn, signOut, useHiveUser } from './account';
+import { accountsOn, useHiveUser } from './account';
+import { AccountSheet } from './AccountSheet';
 import { announce, startBridge } from './bridge';
 import { Home } from './Home';
 import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
@@ -52,20 +53,21 @@ export function Hive() {
   const [boardOpened, setBoardOpened] = useState(view === 'board');
   const [editing, setEditing] = useState(false);
   const [folderKey, setFolderKey] = useState(null);
-  const [sheet, setSheet] = useState(null); // 'add' | 'settings'
+  const [sheet, setSheet] = useState(null); // 'add' | 'settings' | 'account'
 
   // One Hive sign-in, handed to apps in frames as short passes (bridge.js).
   const { user, ready } = useHiveUser();
   const signedIn = useRef(false);
-  signedIn.current = !!user;
+  // Apps match people by email, so only a confirmed email counts as signed in.
+  signedIn.current = !!user?.verified;
   useEffect(() => startBridge(() => signedIn.current), []);
   const firstAnnounce = useRef(true);
   useEffect(() => {
     if (!ready) return;
     if (firstAnnounce.current) { firstAnnounce.current = false; return; } // frames say hello themselves
-    announce(!!user);
-  }, [user, ready]);
-  const account = { on: accountsOn, ready, user, signIn, signOut };
+    announce(!!user?.verified);
+  }, [user?.verified, ready]);
+  const account = { on: accountsOn, ready, user, open: () => setSheet('account') };
 
   const data = useBoardData();
   const now = new Date(useTick(30000));
@@ -151,6 +153,7 @@ export function Hive() {
         <AddSheet layout={layout} onClose={() => setSheet(null)}
           onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w) => setLayout(addWidget(layout, w))} />
       )}
+      {!view && sheet === 'account' && accountsOn && <AccountSheet user={user} onClose={() => setSheet(null)} />}
       {!view && sheet === 'settings' && (
         <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)} account={account}
           onResetLayout={() => setStored(defaultLayout())} />

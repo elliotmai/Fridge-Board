@@ -241,8 +241,8 @@ export function Home({ layout, setLayout, data, now, editing, setEditing, onOpen
           </>
         ) : (
           <>
-            {account?.on && account.ready && !account.user && (
-              <button className="pill ghost signin-pill" onClick={() => account.signIn().catch(() => {})}>Sign in to Hive</button>
+            {account?.on && account.ready && !account.user?.verified && (
+              <button className="pill ghost signin-pill" onClick={account.open}>{account.user ? 'Confirm your email' : 'Sign in to Hive'}</button>
             )}
             <button className="pill ghost" onClick={() => setEditing(true)}>Edit</button>
             <button className="pill ghost round-pill" aria-label="Hive settings" onClick={onSettings}>

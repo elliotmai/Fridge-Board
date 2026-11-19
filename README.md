@@ -65,8 +65,8 @@ household, only you, or by invite). Board deep links stay in `src/config/apps.js
 
 ## Hive sign-in
 
-Sign in to Hive once (Google), and apps that support it sign you in by
-themselves when you open them inside Hive. LearnLeaf is the first; the
+Sign in to Hive once (email and password, or Google), and apps that support
+it sign you in by themselves when you open them inside Hive. LearnLeaf is the first; the
 template (`app-template`, "Sign in with Hive") carries it to the rest.
 
 1. An app in a frame says hello to Hive (`postMessage`).
@@ -78,14 +78,21 @@ template (`app-template`, "Sign in with Hive") carries it to the rest.
    the account with your email (or makes one), and returns a Firebase custom
    token. The app signs in with it.
 
+Apps find you by email, so Hive only vouches for an email it has confirmed:
+a new email-and-password account gets a confirmation link, and until it's
+clicked, apps are told nobody is signed in (`signedIn` in `src/hive/Hive.jsx`;
+`/api/hive/pass` refuses unconfirmed emails too). Use the same email as your
+apps. Your app passwords don't matter: Hive proves you own the email.
+
 Each app keeps its own users and data. Apps that don't support it yet ask for
 their own sign-in, as before. Sign-in is off until it's set up, and Hive works
 the same without it.
 
 **Set it up**
 
-1. Make a Firebase project for Hive. Turn on **Authentication → Google**, and
-   add `fridge-board-7u23.netlify.app` under **Authorized domains**. Add a web
+1. Make a Firebase project for Hive. Under **Authentication → Sign-in method**
+   turn on **Email/Password** and **Google**, and add
+   `fridge-board-7u23.netlify.app` under **Settings → Authorized domains**. Add a web
    app and copy its config.
 2. Run `node scripts/hive-keys.mjs` to get `HIVE_SIGNING_KEY` and `HIVE_PUBLIC_KEY`.
 3. In this site's Netlify environment: `VITE_HIVE_FIREBASE_API_KEY`,
