@@ -10,7 +10,8 @@
  *   BOARD_ACCESS_KEY   required; see netlify/lib/shared.mjs
  *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
- *   LEARNLEAF_TOKEN    tasks
+ *   LEARNLEAF_TOKEN    tasks, only when nobody is signed in to Hive (signed in,
+ *                      LearnLeaf is read as that person with a pass)
  *   Google Calendar and Google Tasks need no setting here: they're fetched as
  *   the signed-in Hive user (Authorization header), with a pass for Our Den.
  *   Needs HIVE_SIGNING_KEY (Hive's own key; see src/config/hive.js).
@@ -22,7 +23,7 @@
  *   ZNT_PROJECT_ID, ZNT_API_KEY
  */
 import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
-import { hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { appAuth, hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
 const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
@@ -125,10 +126,11 @@ async function google(where, user) {
   return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
 }
 
-async function learnleaf() {
-  const token = env('LEARNLEAF_TOKEN');
-  if (!token) return { status: 'unconfigured', reason: 'Set LEARNLEAF_TOKEN' };
-  const auth = bearer(token);
+// As the signed-in Hive user (a pass) when there is one; LEARNLEAF_TOKEN otherwise.
+async function learnleaf(user) {
+  let headers;
+  try { headers = appAuth(user, 'learnleaf', 'LEARNLEAF_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
+  const auth = { headers };
   const [summary, subj] = await Promise.all([getJson(`${urls.learnleaf()}/api/summary`, auth), getJson(`${urls.learnleaf()}/api/subjects`, auth)]);
   const tasks = [...summary.overdue, ...summary.dueToday, ...summary.upcoming].map((t) => ({
     id: t.taskId, name: t.taskName, subject: t.taskSubject, due: t.taskDueDate, time: t.taskDueTime || '',
@@ -254,7 +256,7 @@ export default async (req) => {
   const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
     settle('kitchenhub', kitchenhub),
-    settle('learnleaf', learnleaf),
+    settle('learnleaf', () => learnleaf(user)),
     settle('wander', () => wander(where)),
     settle('znt', () => znt(where)),
     settle('google', () => google(where, user)),

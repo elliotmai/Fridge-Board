@@ -29,3 +29,16 @@ export function passHeader(user, app) {
   if (!key) throw Object.assign(new Error('Hive sign-in is not set up'), { unconfigured: true });
   return { authorization: `Hive ${signPass(user, app, key)}` };
 }
+
+/**
+ * How to call `app` for this request: as the signed-in Hive user with a pass
+ * when there is one, else with the old site-wide token in `tokenEnv` (kept so
+ * the board works while you move off it). Throws a readable reason with
+ * `unconfigured` when neither is available.
+ */
+export function appAuth(user, app, tokenEnv) {
+  if (user?.email_verified && env('HIVE_SIGNING_KEY')) return passHeader(user, app);
+  const token = tokenEnv && env(tokenEnv);
+  if (token) return { authorization: `Bearer ${token}` };
+  throw Object.assign(new Error(user ? 'Confirm your Hive email to see this' : 'Sign in to Hive to see this'), { unconfigured: true });
+}

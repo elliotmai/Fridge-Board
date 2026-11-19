@@ -11,7 +11,7 @@
  * Same board key as /api/board; the app tokens never leave this function.
  */
 import { bearer, env, json, requireKey, urls } from '../lib/shared.mjs';
-import { hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { appAuth, hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
@@ -37,9 +37,9 @@ export default async (req, context) => {
     if (path.startsWith('/api/todos/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
       if (path.startsWith('/api/todos/learnleaf/')) {
-        const token = env('LEARNLEAF_TOKEN');
-        if (!token) return json(503, { error: 'LearnLeaf is not connected' });
-        return await forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, token, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH' });
+        let headers;
+        try { headers = appAuth(await hiveUser(req), 'learnleaf', 'LEARNLEAF_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
+        return await forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers });
       }
       let headers;
       try { headers = passHeader(await hiveUser(req), 'ourden'); } catch (e) { return json(401, { error: e.message }); }
