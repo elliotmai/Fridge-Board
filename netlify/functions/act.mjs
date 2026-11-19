@@ -10,8 +10,8 @@
  *
  * Same board key as /api/board; the app tokens never leave this function.
  */
-import { bearer, env, json, requireKey, urls } from '../lib/shared.mjs';
-import { appAuth, hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { bearer, json, requireKey, urls } from '../lib/shared.mjs';
+import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
@@ -37,9 +37,7 @@ export default async (req, context) => {
     if (path.startsWith('/api/todos/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
       if (path.startsWith('/api/todos/learnleaf/')) {
-        let headers;
-        try { headers = appAuth(await hiveUser(req), 'learnleaf', 'LEARNLEAF_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
-        return await forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers });
+        return await asUser(await hiveUser(req), 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers }));
       }
       let headers;
       try { headers = passHeader(await hiveUser(req), 'ourden'); } catch (e) { return json(401, { error: e.message }); }
@@ -48,20 +46,18 @@ export default async (req, context) => {
     }
     if (path.startsWith('/api/chores/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
-      let headers;
-      try { headers = appAuth(await hiveUser(req), 'galaxyfarm', 'GALAXYFARM_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
-      return await forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
+      return await asUser(await hiveUser(req), 'galaxyfarm', 'GALAXYFARM_TOKEN', (headers) => forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers }));
     }
-    let headers;
-    try { headers = appAuth(await hiveUser(req), 'kitchenhub', 'KITCHENHUB_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
+    const user = await hiveUser(req);
     if (!id) {
       const name = typeof body.name === 'string' ? body.name.trim().slice(0, 200) : '';
       if (!name) return json(400, { error: 'name is required' });
-      return await forward(`${urls.kitchenhub()}/shopping`, null, { name, ...(typeof body.section === 'string' ? { section: body.section } : {}) }, { headers });
+      return await asUser(user, 'kitchenhub', 'KITCHENHUB_TOKEN', (headers) => forward(`${urls.kitchenhub()}/shopping`, null, { name, ...(typeof body.section === 'string' ? { section: body.section } : {}) }, { headers }));
     }
     if (typeof body.bought !== 'boolean') return json(400, { error: 'bought must be true or false' });
-    return await forward(`${urls.kitchenhub()}/shopping/${encodeURIComponent(id)}`, null, { bought: body.bought }, { headers });
+    return await asUser(user, 'kitchenhub', 'KITCHENHUB_TOKEN', (headers) => forward(`${urls.kitchenhub()}/shopping/${encodeURIComponent(id)}`, null, { bought: body.bought }, { headers }));
   } catch (e) {
+    if (e.unconfigured) return json(401, { error: e.message });
     console.error('act failed:', e);
     return json(502, { error: 'The app could not be reached' });
   }

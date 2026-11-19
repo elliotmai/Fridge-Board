@@ -42,3 +42,30 @@ export function appAuth(user, app, tokenEnv) {
   if (token) return { authorization: `Bearer ${token}` };
   throw Object.assign(new Error(user ? 'Confirm your Hive email to see this' : 'Sign in to Hive to see this'), { unconfigured: true });
 }
+
+/**
+ * Call `app` as this person, falling back to the old token if the app refuses
+ * the pass (401/403), e.g. because its pass support isn't deployed yet.
+ * `run(headers)` makes the call; it may throw an error with `.status` or
+ * return a Response. Without a fallback token, the refusal stands.
+ */
+export async function asUser(user, app, tokenEnv, run) {
+  const headers = appAuth(user, app, tokenEnv);
+  const token = tokenEnv && env(tokenEnv);
+  const retry = /^Hive /.test(headers.authorization) && token ? () => run({ authorization: `Bearer ${token}` }) : null;
+  const refused = (status) => status === 401 || status === 403;
+  try {
+    const out = await run(headers);
+    if (retry && out instanceof Response && refused(out.status)) {
+      console.warn(`[hive] ${app} refused a pass; used ${tokenEnv} instead`);
+      return retry();
+    }
+    return out;
+  } catch (e) {
+    if (retry && refused(e.status)) {
+      console.warn(`[hive] ${app} refused a pass; used ${tokenEnv} instead`);
+      return retry();
+    }
+    throw e;
+  }
+}

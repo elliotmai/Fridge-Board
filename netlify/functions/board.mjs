@@ -12,20 +12,21 @@
  *                      is signed in to Hive (signed in, it's read as that person)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping, use soon; only when nobody is
  *                      signed in to Hive (signed in, it's read as that person)
- *   LEARNLEAF_TOKEN    tasks, only when nobody is signed in to Hive (signed in,
- *                      LearnLeaf is read as that person with a pass)
+ *   LEARNLEAF_TOKEN    tasks; only when nobody is signed in to Hive, or LearnLeaf
+ *                      refuses the pass (signed in, it's read as that person)
  *   Google Calendar and Google Tasks need no setting here: they're fetched as
  *   the signed-in Hive user (Authorization header), with a pass for Our Den.
  *   Needs HIVE_SIGNING_KEY (Hive's own key; see src/config/hive.js).
- *   WANDER_TOKEN       trips (each with only the owner's own legs and stays)
+ *   WANDER_TOKEN       trips (each with only the owner's own legs and stays); only
+ *                      when nobody is signed in to Hive, or Wander refuses the pass
  *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
  *                      appTripTravel marks legs with `mine`
  *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
  *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, OURDEN_URL, WANDER_FUNCTIONS_URL,
  *   ZNT_PROJECT_ID, ZNT_API_KEY
  */
-import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
-import { appAuth, hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
+import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
 const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
 const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
@@ -41,9 +42,9 @@ const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); retu
 /* ---------------------------------------------------------- GalaxyFarm --- */
 // As the signed-in Hive user (a pass) when there is one; GALAXYFARM_TOKEN otherwise.
 async function galaxyfarm(user) {
-  let headers;
-  try { headers = appAuth(user, 'galaxyfarm', 'GALAXYFARM_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
-  const r = await getJson(`${urls.galaxyfarm()}/api/board/v1`, { headers });
+  let r;
+  try { r = await asUser(user, 'galaxyfarm', 'GALAXYFARM_TOKEN', (headers) => getJson(`${urls.galaxyfarm()}/api/board/v1`, { headers }));
+  } catch (e) { if (e.unconfigured) return { status: 'unconfigured', reason: e.message }; throw e; }
   return {
     status: 'live',
     data: {
@@ -99,9 +100,9 @@ async function weather({ home, tz }) {
 /* ---------------------------------------------------------- KitchenHub --- */
 // As the signed-in Hive user (a pass) when there is one; KITCHENHUB_TOKEN otherwise.
 async function kitchenhub(user) {
-  let headers;
-  try { headers = appAuth(user, 'kitchenhub', 'KITCHENHUB_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
-  const r = await getJson(`${urls.kitchenhub()}/`, { headers });
+  let r;
+  try { r = await asUser(user, 'kitchenhub', 'KITCHENHUB_TOKEN', (headers) => getJson(`${urls.kitchenhub()}/`, { headers }));
+  } catch (e) { if (e.unconfigured) return { status: 'unconfigured', reason: e.message }; throw e; }
   return {
     status: 'live',
     data: {
@@ -132,10 +133,10 @@ async function google(where, user) {
 
 // As the signed-in Hive user (a pass) when there is one; LEARNLEAF_TOKEN otherwise.
 async function learnleaf(user) {
-  let headers;
-  try { headers = appAuth(user, 'learnleaf', 'LEARNLEAF_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
-  const auth = { headers };
-  const [summary, subj] = await Promise.all([getJson(`${urls.learnleaf()}/api/summary`, auth), getJson(`${urls.learnleaf()}/api/subjects`, auth)]);
+  let summary, subj;
+  try {
+    [summary, subj] = await asUser(user, 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => Promise.all([getJson(`${urls.learnleaf()}/api/summary`, { headers }), getJson(`${urls.learnleaf()}/api/subjects`, { headers })]));
+  } catch (e) { if (e.unconfigured) return { status: 'unconfigured', reason: e.message }; throw e; }
   const tasks = [...summary.overdue, ...summary.dueToday, ...summary.upcoming].map((t) => ({
     id: t.taskId, name: t.taskName, subject: t.taskSubject, due: t.taskDueDate, time: t.taskDueTime || '',
   }));
@@ -177,11 +178,12 @@ function isMine(item) {
  * travel (`items`: their legs and stays); other travellers' flights are left
  * out. Whether a trip counts as "away" is decided by distance on the board.
  */
-async function wander({ tz }) {
-  const token = env('WANDER_TOKEN');
-  if (!token) return { status: 'unconfigured', reason: 'Set WANDER_TOKEN' };
-  const auth = bearer(token);
-  const { trips } = await getJson(`${urls.wander()}/appTrips`, auth);
+// As the signed-in Hive user (a pass) when there is one; WANDER_TOKEN otherwise.
+async function wander({ tz }, user) {
+  let trips, auth;
+  try {
+    ({ trips, auth } = await asUser(user, 'wander', 'WANDER_TOKEN', async (headers) => ({ ...(await getJson(`${urls.wander()}/appTrips`, { headers })), auth: { headers } })));
+  } catch (e) { if (e.unconfigured) return { status: 'unconfigured', reason: e.message }; throw e; }
   const today = dateIn(new Date(), tz), horizon = addDays(today, TRAVEL_LOOKAHEAD_DAYS);
   let lookups = 0;
   const out = await Promise.all(trips.filter((t) => t.start_date && t.end_date).map(async (t) => {
@@ -262,7 +264,7 @@ export default async (req) => {
     settle('weather', () => weather(where)),
     settle('kitchenhub', () => kitchenhub(user)),
     settle('learnleaf', () => learnleaf(user)),
-    settle('wander', () => wander(where)),
+    settle('wander', () => wander(where, user)),
     settle('znt', () => znt(where)),
     settle('google', () => google(where, user)),
   ]);
