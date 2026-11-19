@@ -149,11 +149,11 @@ that person with a Hive pass (`netlify/lib/hiveUser.mjs`). Calendar and Google
 Tasks work this way already: sign in to Hive on the fridge with your email,
 and it shows your Google, through the link you made in Our Den.
 
-The app tokens below (`KITCHENHUB_TOKEN`, `WANDER_TOKEN`) are still personal
-settings from before Hive sign-in; they move to passes app by app. LearnLeaf
-and GalaxyFarm already have: signed in, the board reads them as you, and
-`LEARNLEAF_TOKEN` / `GALAXYFARM_TOKEN` are only fallbacks for when nobody is
-signed in. Delete each once the board shows that app's data while signed in.
+`WANDER_TOKEN` is still a personal setting from before Hive sign-in. LearnLeaf,
+GalaxyFarm and KitchenHub already take passes: signed in, the board reads them
+as you, and `LEARNLEAF_TOKEN` / `GALAXYFARM_TOKEN` / `KITCHENHUB_TOKEN` are only
+fallbacks for when nobody is signed in. Delete each once the board shows that
+app's data while signed in.
 
 ### Environment (Netlify → Project configuration → Environment variables)
 

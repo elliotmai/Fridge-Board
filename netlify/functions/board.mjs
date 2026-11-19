@@ -10,7 +10,8 @@
  *   BOARD_ACCESS_KEY   required; see netlify/lib/shared.mjs
  *   GALAXYFARM_TOKEN   chores, housesitter guide, home location; only when nobody
  *                      is signed in to Hive (signed in, it's read as that person)
- *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
+ *   KITCHENHUB_TOKEN   meals, recipes, shopping, use soon; only when nobody is
+ *                      signed in to Hive (signed in, it's read as that person)
  *   LEARNLEAF_TOKEN    tasks, only when nobody is signed in to Hive (signed in,
  *                      LearnLeaf is read as that person with a pass)
  *   Google Calendar and Google Tasks need no setting here: they're fetched as
@@ -96,10 +97,11 @@ async function weather({ home, tz }) {
 }
 
 /* ---------------------------------------------------------- KitchenHub --- */
-async function kitchenhub() {
-  const token = env('KITCHENHUB_TOKEN');
-  if (!token) return { status: 'unconfigured', reason: 'Set KITCHENHUB_TOKEN' };
-  const r = await getJson(`${urls.kitchenhub()}/`, bearer(token));
+// As the signed-in Hive user (a pass) when there is one; KITCHENHUB_TOKEN otherwise.
+async function kitchenhub(user) {
+  let headers;
+  try { headers = appAuth(user, 'kitchenhub', 'KITCHENHUB_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
+  const r = await getJson(`${urls.kitchenhub()}/`, { headers });
   return {
     status: 'live',
     data: {
@@ -258,7 +260,7 @@ export default async (req) => {
   const where = resolveHome(gf);
   const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
-    settle('kitchenhub', kitchenhub),
+    settle('kitchenhub', () => kitchenhub(user)),
     settle('learnleaf', () => learnleaf(user)),
     settle('wander', () => wander(where)),
     settle('znt', () => znt(where)),

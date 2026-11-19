@@ -52,15 +52,15 @@ export default async (req, context) => {
       try { headers = appAuth(await hiveUser(req), 'galaxyfarm', 'GALAXYFARM_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
       return await forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
-    const token = env('KITCHENHUB_TOKEN');
-    if (!token) return json(503, { error: 'KitchenHub is not connected' });
+    let headers;
+    try { headers = appAuth(await hiveUser(req), 'kitchenhub', 'KITCHENHUB_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
     if (!id) {
       const name = typeof body.name === 'string' ? body.name.trim().slice(0, 200) : '';
       if (!name) return json(400, { error: 'name is required' });
-      return await forward(`${urls.kitchenhub()}/shopping`, token, { name, ...(typeof body.section === 'string' ? { section: body.section } : {}) });
+      return await forward(`${urls.kitchenhub()}/shopping`, null, { name, ...(typeof body.section === 'string' ? { section: body.section } : {}) }, { headers });
     }
     if (typeof body.bought !== 'boolean') return json(400, { error: 'bought must be true or false' });
-    return await forward(`${urls.kitchenhub()}/shopping/${encodeURIComponent(id)}`, token, { bought: body.bought });
+    return await forward(`${urls.kitchenhub()}/shopping/${encodeURIComponent(id)}`, null, { bought: body.bought }, { headers });
   } catch (e) {
     console.error('act failed:', e);
     return json(502, { error: 'The app could not be reached' });
