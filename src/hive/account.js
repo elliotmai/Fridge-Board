@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { HIVE_FIREBASE } from '@/config/hive';
 
 /**
  * The Hive account: one sign-in (email and password, or Google), on Hive's own
@@ -6,15 +7,16 @@ import { useEffect, useState } from 'react';
  * bridge.js). Apps match you by email, so an email-and-password account counts
  * only once its email is confirmed; until then apps are told nobody is signed in.
  *
- * Off until the four VITE_HIVE_FIREBASE_* values are set in Netlify; until
- * then Hive works exactly as before and each app keeps its own sign-in.
- * Firebase loads only when it's configured, so it costs nothing otherwise.
+ * The Firebase config is in src/config/hive.js (public by design). A
+ * VITE_HIVE_FIREBASE_* value, if set, overrides it, e.g. to try another project.
+ * Firebase loads only when it's first needed.
  */
+const env = import.meta.env || {};
 const cfg = {
-  apiKey: import.meta.env.VITE_HIVE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_HIVE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_HIVE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_HIVE_FIREBASE_APP_ID,
+  apiKey: env.VITE_HIVE_FIREBASE_API_KEY || HIVE_FIREBASE.apiKey,
+  authDomain: env.VITE_HIVE_FIREBASE_AUTH_DOMAIN || HIVE_FIREBASE.authDomain,
+  projectId: env.VITE_HIVE_FIREBASE_PROJECT_ID || HIVE_FIREBASE.projectId,
+  appId: env.VITE_HIVE_FIREBASE_APP_ID || HIVE_FIREBASE.appId,
 };
 export const accountsOn = Boolean(cfg.apiKey && cfg.projectId && cfg.authDomain);
 

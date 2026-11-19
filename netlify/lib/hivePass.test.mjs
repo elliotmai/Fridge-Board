@@ -14,7 +14,7 @@ test('says plainly when Hive sign-in is not set up', async () => {
   delete process.env.HIVE_SIGNING_KEY; delete process.env.VITE_HIVE_FIREBASE_PROJECT_ID;
   const r = await call({ app: 'learnleaf' });
   assert.equal(r.status, 503);
-  assert.deepEqual((await r.json()).missing, ['VITE_HIVE_FIREBASE_PROJECT_ID', 'HIVE_SIGNING_KEY']);
+  assert.deepEqual((await r.json()).missing, ['HIVE_SIGNING_KEY']);
 });
 
 test('refuses unknown apps, missing sign-ins and GETs', async () => {

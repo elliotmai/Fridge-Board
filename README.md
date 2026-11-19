@@ -88,20 +88,18 @@ Each app keeps its own users and data. Apps that don't support it yet ask for
 their own sign-in, as before. Sign-in is off until it's set up, and Hive works
 the same without it.
 
-**Set it up**
+**Setup**
 
-1. Make a Firebase project for Hive. Under **Authentication → Sign-in method**
-   turn on **Email/Password** and **Google**, and add
-   `fridge-board-7u23.netlify.app` under **Settings → Authorized domains**. Add a web
-   app and copy its config.
-2. Run `node scripts/hive-keys.mjs` to get `HIVE_SIGNING_KEY` and `HIVE_PUBLIC_KEY`.
-3. In this site's Netlify environment: `VITE_HIVE_FIREBASE_API_KEY`,
-   `VITE_HIVE_FIREBASE_AUTH_DOMAIN`, `VITE_HIVE_FIREBASE_PROJECT_ID`,
-   `VITE_HIVE_FIREBASE_APP_ID` and `HIVE_SIGNING_KEY`. Redeploy.
-4. In each app that supports it (LearnLeaf so far): `HIVE_APP_ID` (its id in
-   `src/config/catalog.js`), `HIVE_PUBLIC_KEY`, and
-   `VITE_HIVE_ORIGIN=https://fridge-board-7u23.netlify.app`. It also needs
-   `FIREBASE_SERVICE_ACCOUNT`, which LearnLeaf already has. Redeploy.
+Hive's Firebase project is `hive-aa9c0` (Email/Password and Google on,
+`fridge-board-7u23.netlify.app` authorized). Its web config, Hive's address and
+the public half of the pass key are in `src/config/hive.js`: public by design,
+so nothing about them goes in Netlify. The only Netlify setting is the secret
+half, `HIVE_SIGNING_KEY`.
+
+An app that supports Hive keeps a copy of the public key and Hive's address in
+its code, and needs only its own `FIREBASE_SERVICE_ACCOUNT` (LearnLeaf already
+has it). To replace the key pair: `node scripts/hive-keys.mjs`, then update
+`HIVE_SIGNING_KEY` here and the public key in `src/config/hive.js` and in each app.
 
 Household-only apps can set `HIVE_NEW_ACCOUNTS=off`, so only people who already
 have an account get in.

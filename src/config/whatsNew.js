@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19.2',
+    date: 'November 2026',
+    items: [
+      'Hive accounts: tap Sign in to Hive on the home screen to sign in with your email and password, or Google. Use the same email as your apps.',
+      'Signed in, Coming up shows your own Google Calendar and Google Tasks, through the Google link you made in Our Den.',
+      'LearnLeaf signs you in by itself when you open it inside Hive.',
+    ],
+  },
+  {
     version: '2026.11.19.1',
     date: 'November 2026',
     items: [

@@ -13,7 +13,7 @@
  *   LEARNLEAF_TOKEN    tasks
  *   Google Calendar and Google Tasks need no setting here: they're fetched as
  *   the signed-in Hive user (Authorization header), with a pass for Our Den.
- *   Needs Hive sign-in set up (VITE_HIVE_FIREBASE_PROJECT_ID, HIVE_SIGNING_KEY).
+ *   Needs HIVE_SIGNING_KEY (Hive's own key; see src/config/hive.js).
  *   WANDER_TOKEN       trips (each with only the owner's own legs and stays)
  *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
  *                      appTripTravel marks legs with `mine`

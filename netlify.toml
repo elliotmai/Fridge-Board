@@ -9,6 +9,9 @@
 # HIVE_SIGNING_KEY are still scanned.
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "HOME_LAT,HOME_LON,HOME_TZ,VITE_HIVE_FIREBASE_API_KEY,VITE_HIVE_FIREBASE_AUTH_DOMAIN,VITE_HIVE_FIREBASE_PROJECT_ID,VITE_HIVE_FIREBASE_APP_ID"
+  # Hive's Firebase web API key (src/config/hive.js) is public by design, so
+  # smart detection shouldn't fail the build over it.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyBi5xLBJVPpGQj2qoNc7tPHB-HE3AIDBAE"
 
 # Single-page app: send every path to index.html.
 [[redirects]]

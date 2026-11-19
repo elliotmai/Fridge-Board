@@ -6,10 +6,7 @@ import { makeKeys, verifyPass } from './hiveAssertion.mjs';
 const req = (auth) => new Request('http://x/api/board', { headers: auth ? { authorization: auth } : {} });
 const verify = async (t) => { if (t !== 'good') throw new Error('bad'); return { uid: 'u1', email: 'me@example.com', email_verified: true }; };
 
-test('no Hive project, no token, or a bad token means nobody', async () => {
-  delete process.env.VITE_HIVE_FIREBASE_PROJECT_ID;
-  assert.equal(await hiveUser(req('Bearer good'), { verify }), null);
-  process.env.VITE_HIVE_FIREBASE_PROJECT_ID = 'hive';
+test('no token or a bad token means nobody', async () => {
   assert.equal(await hiveUser(req(), { verify }), null);
   assert.equal(await hiveUser(req('Bearer junk'), { verify }), null);
   assert.equal((await hiveUser(req('Bearer good'), { verify })).uid, 'u1');

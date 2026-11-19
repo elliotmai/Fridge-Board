@@ -7,10 +7,11 @@
  * See netlify/lib/hiveAssertion.mjs for what a pass is.
  *
  * Environment (Netlify → Project configuration → Environment variables):
- *   VITE_HIVE_FIREBASE_PROJECT_ID  Hive's Firebase project (also used by the page)
- *   HIVE_SIGNING_KEY               from `node scripts/hive-keys.mjs`. Secret.
+ *   HIVE_SIGNING_KEY   the private half of HIVE_PUBLIC_KEY (src/config/hive.js). Secret.
+ * Hive's Firebase project comes from src/config/hive.js.
  */
 import { CATALOG } from '../../src/config/catalog.js';
+import { HIVE_FIREBASE } from '../../src/config/hive.js';
 import { verifyFirebaseIdToken } from '../lib/firebaseIdToken.mjs';
 import { PASS_SECONDS, signPass } from '../lib/hiveAssertion.mjs';
 import { env, json } from '../lib/shared.mjs';
@@ -22,9 +23,9 @@ export const passApps = () => Object.entries(CATALOG).filter(([, a]) => a.url &&
 
 export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'POST only' });
-  const projectId = env('VITE_HIVE_FIREBASE_PROJECT_ID');
+  const projectId = env('VITE_HIVE_FIREBASE_PROJECT_ID') || HIVE_FIREBASE.projectId;
   const signingKey = env('HIVE_SIGNING_KEY');
-  if (!projectId || !signingKey) return json(503, { error: 'Hive sign-in is not set up', missing: [!projectId && 'VITE_HIVE_FIREBASE_PROJECT_ID', !signingKey && 'HIVE_SIGNING_KEY'].filter(Boolean) });
+  if (!signingKey) return json(503, { error: 'Hive sign-in is not set up', missing: ['HIVE_SIGNING_KEY'] });
 
   let app = '';
   try { ({ app } = await req.json()); } catch { /* fall through */ }
