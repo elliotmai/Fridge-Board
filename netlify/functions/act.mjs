@@ -47,10 +47,10 @@ export default async (req, context) => {
       return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
     if (path.startsWith('/api/chores/')) {
-      const token = env('GALAXYFARM_TOKEN');
-      if (!token) return json(503, { error: 'GalaxyFarm is not connected' });
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
-      return await forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, token, { done: body.done });
+      let headers;
+      try { headers = appAuth(await hiveUser(req), 'galaxyfarm', 'GALAXYFARM_TOKEN'); } catch (e) { return json(401, { error: e.message }); }
+      return await forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
     const token = env('KITCHENHUB_TOKEN');
     if (!token) return json(503, { error: 'KitchenHub is not connected' });

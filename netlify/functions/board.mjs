@@ -8,7 +8,8 @@
  *
  * Environment (Netlify → Project configuration → Environment variables):
  *   BOARD_ACCESS_KEY   required; see netlify/lib/shared.mjs
- *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
+ *   GALAXYFARM_TOKEN   chores, housesitter guide, home location; only when nobody
+ *                      is signed in to Hive (signed in, it's read as that person)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
  *   LEARNLEAF_TOKEN    tasks, only when nobody is signed in to Hive (signed in,
  *                      LearnLeaf is read as that person with a pass)
@@ -37,10 +38,11 @@ const dateIn = (d, zone) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, y
 const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 
 /* ---------------------------------------------------------- GalaxyFarm --- */
-async function galaxyfarm() {
-  const token = env('GALAXYFARM_TOKEN');
-  if (!token) return { status: 'unconfigured', reason: 'Set GALAXYFARM_TOKEN' };
-  const r = await getJson(`${urls.galaxyfarm()}/api/board/v1`, bearer(token));
+// As the signed-in Hive user (a pass) when there is one; GALAXYFARM_TOKEN otherwise.
+async function galaxyfarm(user) {
+  let headers;
+  try { headers = appAuth(user, 'galaxyfarm', 'GALAXYFARM_TOKEN'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
+  const r = await getJson(`${urls.galaxyfarm()}/api/board/v1`, { headers });
   return {
     status: 'live',
     data: {
@@ -251,7 +253,8 @@ export default async (req) => {
   if (locked) return locked;
 
   // GalaxyFarm first: it owns the home location the others need.
-  const [gf, user] = await Promise.all([settle('galaxyfarm', galaxyfarm), hiveUser(req)]);
+  const user = await hiveUser(req);
+  const gf = await settle('galaxyfarm', () => galaxyfarm(user));
   const where = resolveHome(gf);
   const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
