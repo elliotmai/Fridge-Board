@@ -3,7 +3,7 @@ import { Board } from '@/components/board/Board';
 import { Footer } from '@/components/Footer';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { APP_KEY } from '@/config/app';
-import { CATALOG, appIds, appUrl } from '@/config/catalog';
+import { CATALOG, appIds, appUrl, opensInTab } from '@/config/catalog';
 import { useTheme } from '@/context/ThemeContext';
 import { mergeTodos } from '@/lib/agenda';
 import { useIsPhone } from '@/hooks/useMedia';
@@ -147,7 +147,7 @@ export function Hive() {
     // In its own tab: apps that can't be framed, and any the person chose (in a
     // frame, a browser gives the app separate storage, so its own sign-in
     // doesn't carry over unless the app supports Sign in with Hive).
-    if (a.url && !a.native && (a.frame === false || look.inside === false || look.external?.[id])) {
+    if (opensInTab(id, look)) {
       window.open(appUrl(id, path), '_blank', 'noopener'); return;
     }
     if (path) setPaths((p) => ({ ...p, [id]: { path, n: (p[id]?.n || 0) + 1 } }));
@@ -210,7 +210,7 @@ export function Hive() {
           onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
           onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
           onEditIcon={setIconEdit} onAddToHome={(id) => setLayout(addApp(layout, id))}
-          onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: on || undefined } }))} account={account} />
+          onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: !!on } }))} account={account} />
         </WidgetActions.Provider>
       </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { CATALOG, GROUPS, appIds, appLook, folderName } from '@/config/catalog';
+import { CATALOG, GROUPS, appIds, appLook, folderName, opensInTab } from '@/config/catalog';
 import { locate, merge, move, pack, placedApps, remove, setWidgetSize } from './layout';
 import { Fallback, GLYPHS, UI } from './glyphs';
 import { columnsFor, iconPx, rowPx } from './look';
@@ -341,7 +341,7 @@ export function Home({
     const shortcuts = (a.shortcuts || []).map((s) => ({ label: s.label, icon: UI.arrow, onSelect: () => { close(); onOpen(item.key, null, s.path); } }));
     const onHome = placedApps(layout).has(item.key);
     const canFrame = a.url && !a.native && a.frame !== false;
-    const inTab = canFrame && (look.inside === false || look.external?.[item.key]);
+    const inTab = canFrame && opensInTab(item.key, look);
     return [
       ...shortcuts,
       ...(shortcuts.length ? [{ divider: true }] : []),

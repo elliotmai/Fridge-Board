@@ -14,7 +14,7 @@ export const DEFAULT_LOOK = {
   badges: true,
   search: true,
   inside: true, // open apps inside Hive (false: every app in its own tab)
-  external: {}, // app id → true: that app opens in its own tab
+  external: {}, // app id → true: its own tab; false: inside Hive (see opensInTab)
 };
 
 /**

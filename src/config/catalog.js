@@ -38,7 +38,8 @@ export const CATALOG = {
   ourden: { name: 'Our Den', url: 'https://ourden.netlify.app', color: '#4b3b78', glyph: 'moon', audience: 'invite', frame: false, blurb: 'A private space for two, across the distance.' },
   wander: { name: 'Wander', url: APPS.wander.url, color: '#2c5e9e', glyph: 'plane', audience: 'anyone', blurb: 'Trips, itineraries and live flights.' },
   aerologger: { name: 'AeroLogger', url: 'https://aero-logger.com', color: '#3b6f8f', glyph: 'binoculars', audience: 'anyone', blurb: 'Log the aircraft you spot.' },
-  learnleaf: { name: 'LearnLeaf', url: APPS.learnleaf.url, color: '#355147', glyph: 'leaf', audience: 'anyone', blurb: 'Tasks, subjects and projects for school and life.',
+  // hive: signs you in with your Hive account when opened inside Hive.
+  learnleaf: { name: 'LearnLeaf', url: APPS.learnleaf.url, hive: true, color: '#355147', glyph: 'leaf', audience: 'anyone', blurb: 'Tasks, subjects and projects for school and life.',
     shortcuts: [{ label: 'Tasks', path: APPS.learnleaf.paths.tasks }] },
   journal: { name: 'Journal Together', url: 'https://journaltogether.netlify.app', color: '#8a5a44', glyph: 'book', audience: 'anyone', blurb: 'A shared journal.' },
   stimultrack: { name: 'StimulTrack', url: 'https://stimultrack.netlify.app', color: '#6b4226', glyph: 'cup', audience: 'anyone', blurb: 'How much caffeine is in you right now.' },
@@ -89,4 +90,19 @@ export function appUrl(id, path = '') {
   if (!a?.url) return null;
   if (/^https?:\/\//.test(path)) return path;
   try { return new URL(path || '', a.url.endsWith('/') ? a.url : `${a.url}/`).href.replace(/\/$/, path ? '' : '/'); } catch { return a.url; }
+}
+
+/**
+ * Whether an app opens in its own tab rather than inside Hive. Inside Hive the
+ * browser gives an app a separate sign-in of its own, so only apps that sign
+ * you in with Hive open inside by default. `look.external[id]` is your choice
+ * per app (true: own tab, false: inside), and "Open apps inside Hive" off
+ * sends every app to its own tab.
+ */
+export function opensInTab(id, look = {}) {
+  const a = CATALOG[id] || {};
+  if (!a.url || a.native) return false;
+  if (a.frame === false || look.inside === false) return true;
+  const mine = look.external?.[id];
+  return mine === undefined ? !a.hive : mine;
 }
