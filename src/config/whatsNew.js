@@ -11,6 +11,9 @@ export const WHATS_NEW = [
     items: [
       'Widgets are interactive: tick off chores, shopping and to-dos right on the home screen, and add to the shopping list from a medium or large Shopping widget. Ticks go straight to the app they belong to, with Undo.',
       'Scroll inside widgets: the forecast hour by hour or 10 days ahead, two weeks of calendar, the week’s dinners, every upcoming trip. Nothing is cut off any more.',
+      'GalaxyFarm opens in its own tab, where its sign-in works. Inside Hive, your phone’s browser blocked it.',
+      'Entering edit mode no longer pushes apps and widgets onto other pages.',
+      'Trips show up again in widgets and on the board.',
       'Tap a dinner for its recipe, a trip for its plan, or an event for that day in Google Calendar. Tap a widget’s title to open its app.',
     ],
   },

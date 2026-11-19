@@ -39,7 +39,7 @@ function firstSettings() {
 
 const viewFromHash = () => {
   const h = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
-  return CATALOG[h] ? h : null;
+  return CATALOG[h] && CATALOG[h].frame !== false ? h : null; // apps that can't be framed open in a tab, never here
 };
 
 /**

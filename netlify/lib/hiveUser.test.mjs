@@ -48,6 +48,9 @@ test('an app that refuses the pass is retried once with the old token', async ()
   assert.deepEqual(seen, ['Hive', 'Bearer']);
   const asResponse = async (h) => new Response('{}', { status: /^Hive/.test(h.authorization) ? 401 : 200 });
   assert.equal((await asUser(me, 'wander', 'WANDER_TOKEN', asResponse)).status, 200);
+  // Wander before it learned passes: "Hive …" is a malformed token, so 400.
+  const oldWander = async (h) => { if (/^Hive/.test(h.authorization)) throw Object.assign(new Error('bad'), { status: 400 }); return 'trips'; };
+  assert.equal(await asUser(me, 'wander', 'WANDER_TOKEN', oldWander), 'trips');
   delete process.env.WANDER_TOKEN;
   await assert.rejects(asUser(me, 'wander', 'WANDER_TOKEN', run), (e) => e.status === 403); // no token: the refusal stands
   const fine = async () => 'served';

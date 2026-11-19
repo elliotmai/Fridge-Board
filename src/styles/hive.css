@@ -24,7 +24,8 @@ body { background: var(--bg); }
 .home-bar {
   display: flex; align-items: center; gap: 8px; justify-content: flex-start;
   padding: calc(8px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 4px max(14px, env(safe-area-inset-left, 0px));
-  min-height: calc(46px + env(safe-area-inset-top, 0px));
+  /* One height whatever it holds, so edit mode never changes how many rows fit. */
+  height: calc(48px + env(safe-area-inset-top, 0px)); box-sizing: border-box; flex: none;
 }
 .home-bar .grow { flex: 1; }
 .pill { height: 36px; padding: 0 15px; border-radius: 999px; background: var(--surface); font-weight: 500; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; transition: transform .15s ease, background-color .2s; }

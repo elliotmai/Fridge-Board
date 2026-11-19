@@ -53,7 +53,8 @@ export async function asUser(user, app, tokenEnv, run) {
   const headers = appAuth(user, app, tokenEnv);
   const token = tokenEnv && env(tokenEnv);
   const retry = /^Hive /.test(headers.authorization) && token ? () => run({ authorization: `Bearer ${token}` }) : null;
-  const refused = (status) => status === 401 || status === 403;
+  // 400 too: an app that has not learned passes yet reads "Hive …" as a malformed token.
+  const refused = (status) => status === 400 || status === 401 || status === 403;
   try {
     const out = await run(headers);
     if (retry && out instanceof Response && refused(out.status)) {

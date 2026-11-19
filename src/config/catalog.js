@@ -24,7 +24,9 @@ import { APPS } from './apps.js';
 export const CATALOG = {
   board: { name: 'Fridge Board', color: '#2f7a4a', glyph: 'board', audience: 'household', native: true, blurb: 'Chores, meals, shopping, trips and breeding on one screen.' },
   settings: { name: 'Settings', color: '#8e8e93', glyph: 'gear', audience: 'anyone', native: true, blurb: 'Your Hive account, wallpaper, and how the home screen looks.' },
-  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
+  // GalaxyFarm signs in with a cookie, which Safari (and soon every browser)
+  // refuses to a site shown inside another one, so it opens in its own tab.
+  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', frame: false, blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
   cattlegraph: { name: 'Cattle Graph', url: 'https://cattle-registrations.netlify.app', color: '#5a4632', glyph: 'graph', audience: 'household', frame: false, blurb: 'Pedigrees across every breed association.' },
