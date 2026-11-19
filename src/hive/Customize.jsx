@@ -92,6 +92,10 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
         <Toggle label="Show names under icons" checked={look.labels} onChange={set('labels')} />
         <Toggle label="Badges" hint="Counts on icons, like chores left or things to buy." checked={look.badges} onChange={set('badges')} />
 
+        <h3 className="sheet-sub">Apps</h3>
+        <Toggle label="Open apps inside Hive" checked={look.inside !== false} onChange={set('inside')}
+          hint="Off: apps open in their own tab, where you stay signed in as usual. Inside Hive, an app keeps a separate sign-in unless it supports Sign in with Hive. You can also choose per app: press and hold its icon." />
+
         <h3 className="sheet-sub">Home Screen</h3>
         <Toggle label="Dock" checked={look.dock} onChange={set('dock')} />
         <Toggle label="Search" hint="Swipe down, or tap the dots, to search apps and everything in them." checked={look.search} onChange={set('search')} />

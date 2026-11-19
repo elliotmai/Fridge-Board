@@ -96,8 +96,10 @@ export function Hive() {
   const badges = useMemo(() => {
     if (!data) return {};
     const due = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects }, now).filter((t) => t.n != null && t.n <= 0).length;
+    const chores = data.chores.filter((c) => !c.done).length;
     return {
-      board: data.chores.filter((c) => !c.done).length,
+      board: chores,
+      galaxyfarm: chores,
       kitchenhub: data.shopping.filter((i) => !i.bought).length,
       learnleaf: due,
     };
@@ -141,11 +143,16 @@ export function Hive() {
     if (!a) return;
     setFolder(null);
     if (id === 'settings') { setSheet('settings'); return; }
-    if (a.frame === false && a.url) { window.open(appUrl(id, path), '_blank', 'noopener'); return; }
+    // In its own tab: apps that can't be framed, and any the person chose (in a
+    // frame, a browser gives the app separate storage, so its own sign-in
+    // doesn't carry over unless the app supports Sign in with Hive).
+    if (a.url && !a.native && (a.frame === false || look.inside === false || look.external?.[id])) {
+      window.open(appUrl(id, path), '_blank', 'noopener'); return;
+    }
     if (path) setPaths((p) => ({ ...p, [id]: { path, n: (p[id]?.n || 0) + 1 } }));
     if (reducedMotion() || viewFromHash() === id) { navigate(id); return; }
     setAnim({ id, dir: 'open', rect: from?.getBoundingClientRect?.() || null, key: Date.now() });
-  }, [navigate]);
+  }, [navigate, look.inside, look.external]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goHome = useCallback(() => {
     const leaving = viewFromHash() || (view === 'board' ? 'board' : null);
@@ -200,7 +207,8 @@ export function Hive() {
           editing={editing} setEditing={setEditing} onOpen={open}
           onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
           onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
-          onEditIcon={setIconEdit} onAddToHome={(id) => setLayout(addApp(layout, id))} account={account} />
+          onEditIcon={setIconEdit} onAddToHome={(id) => setLayout(addApp(layout, id))}
+          onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: on || undefined } }))} account={account} />
       </div>
 
       {!view && folderItem?.k === 'folder' && (

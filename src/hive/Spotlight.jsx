@@ -23,7 +23,12 @@ export function Spotlight({ data, now, custom, recent, onOpen, onAction, onClose
   const flat = results.flatMap((g) => g.items);
   useEffect(() => setSel(0), [q]);
 
-  const go = (r) => { onClose(); if (r.action) onAction(r.action); else onOpen(r.app, null, r.path); };
+  const go = (r) => {
+    onClose();
+    if (r.action) onAction(r.action);
+    else if (r.url) window.open(r.url, '_blank', 'noopener'); // outside Hive: Google Calendar, Google Tasks
+    else onOpen(r.app, null, r.path);
+  };
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); onClose(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(flat.length - 1, s + 1)); }
@@ -89,7 +94,7 @@ function Row({ r, custom, onGo, active }) {
       <button className={`spot-row ${active ? 'active' : ''}`} onClick={() => onGo(r)}>
         <AppIcon id={r.app} custom={custom} size={34} />
         <span><b>{r.title}</b>{r.sub && <small>{r.sub}</small>}</span>
-        <em>{appLook(r.app, custom).name}</em>
+        <em>{r.where || appLook(r.app, custom).name}</em>
       </button>
     </li>
   );
@@ -121,14 +126,13 @@ export function search(query, { data, now, custom = {} }) {
 
   const todos = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
   add('Tasks', todos.filter((t) => has(t.name, q) || has(t.tag, q)).map((t) => ({
-    key: t.key, app: t.source === 'learnleaf' ? 'learnleaf' : 'board',
-    path: t.source === 'learnleaf' ? APPS.learnleaf.paths.tasks : undefined,
+    key: t.key, ...(t.source === 'learnleaf' ? { app: 'learnleaf', path: APPS.learnleaf.paths.tasks } : google.tasks),
     title: t.name, sub: [t.tag, t.due ? when(t.due, now) : ''].filter(Boolean).join(' · '),
   })));
 
   const { shown } = dedupeEvents(data.events || [], data.trips || []);
   add('Calendar', shown.filter((e) => has(e.title, q) || has(e.location, q)).map((e) => ({
-    key: `ev:${e.id}`, app: 'board', title: e.title, sub: [when(eventDays(e).first, now), e.location].filter(Boolean).join(' · '),
+    key: `ev:${e.id}`, ...google.day(eventDays(e).first), title: e.title, sub: [when(eventDays(e).first, now), e.location].filter(Boolean).join(' · '),
   })));
 
   add('Trips', (data.trips || []).filter((t) => has(t.name, q) || has(t.dest, q)).map((t) => ({
@@ -140,26 +144,37 @@ export function search(query, { data, now, custom = {} }) {
   })));
 
   add('Meals', (data.meals || []).filter((m) => has(m.name, q)).map((m) => ({
-    key: `meal:${m.d}:${m.type}`, app: 'board', title: m.name, sub: `${m.type}, ${m.d === 0 ? 'today' : m.d === 1 ? 'tomorrow' : `in ${m.d} days`}`,
+    key: `meal:${m.d}:${m.type}`, app: 'kitchenhub', path: m.recipe ? APPS.kitchenhub.paths.recipe(m.recipe) : APPS.kitchenhub.paths.mealPlan,
+    title: m.name, sub: `${m.type}, ${m.d === 0 ? 'today' : m.d === 1 ? 'tomorrow' : `in ${m.d} days`}`,
   })));
 
   add('Chores', (data.chores || []).filter((c) => has(c.title, q) || has(c.detail, q)).map((c) => ({
-    key: `chore:${c.id}`, app: 'board', title: c.title, sub: [c.detail, c.done ? 'Done' : ''].filter(Boolean).join(' · '),
+    key: `chore:${c.id}`, app: 'galaxyfarm', path: APPS.galaxyfarm.paths.chores, title: c.title, sub: [c.detail, c.done ? 'Done' : ''].filter(Boolean).join(' · '),
   })));
 
   return groups;
 }
+
+/**
+ * Google's own apps for things that live there. They aren't Hive apps, so
+ * they open in a new tab; the icon shown is the board's, which displays them.
+ */
+const pad = (n) => String(n).padStart(2, '0');
+const google = {
+  tasks: { app: 'board', url: 'https://tasks.google.com/', where: 'Google Tasks' },
+  day: (d) => ({ app: 'board', url: `https://calendar.google.com/calendar/r/day/${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`, where: 'Google Calendar' }),
+};
 
 /** With nothing typed: what's on today, at a glance. */
 function todayList(data, now) {
   if (!data) return [];
   const out = [];
   const dinner = (data.meals || []).find((m) => m.d === 0 && m.type === 'Dinner');
-  if (dinner) out.push({ key: 'dinner', app: 'board', title: dinner.name, sub: 'Tonight’s dinner' });
+  if (dinner) out.push({ key: 'dinner', app: 'kitchenhub', path: dinner.recipe ? APPS.kitchenhub.paths.recipe(dinner.recipe) : APPS.kitchenhub.paths.mealPlan, title: dinner.name, sub: 'Tonight’s dinner' });
   const { shown } = dedupeEvents(data.events || [], data.trips || []);
   shown.filter((e) => daysBetween(startOf(now), eventDays(e).first) === 0).slice(0, 3)
-    .forEach((e) => out.push({ key: `ev:${e.id}`, app: 'board', title: e.title, sub: e.allDay ? 'All day' : new Date(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) }));
+    .forEach((e) => out.push({ key: `ev:${e.id}`, ...google.day(eventDays(e).first), title: e.title, sub: e.allDay ? 'All day' : new Date(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) }));
   const left = (data.chores || []).filter((c) => !c.done).length;
-  if (left) out.push({ key: 'chores', app: 'board', title: `${left} chore${left === 1 ? '' : 's'} left`, sub: 'Fridge Board' });
+  if (left) out.push({ key: 'chores', app: 'galaxyfarm', path: APPS.galaxyfarm.paths.chores, title: `${left} chore${left === 1 ? '' : 's'} left`, sub: 'GalaxyFarm' });
   return out;
 }

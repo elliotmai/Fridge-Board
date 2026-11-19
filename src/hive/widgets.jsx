@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APPS } from '@/config/apps';
 import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { takeKeyFromUrl } from '@/data/api';
 import { USER_CHANGED } from './account';
@@ -28,18 +29,19 @@ export function useBoardData() {
 const OPTS = { window: 30, breedWindow: 30, awayMiles: 75 };
 
 /**
- * Each widget: which app it opens, its label, its size on the grid, and what
- * it shows. `size` is 'wide' (full row on a phone) or 'square' (2×2 icons).
+ * Each widget: the app that owns what it shows (tapping opens it there, at
+ * `path`), or `url` for something outside Hive (Google Calendar), its label,
+ * its default size, and what it shows.
  */
 export const WIDGETS = {
   today: { label: 'Today', app: 'board', size: 'wide', Body: Today, status: (d) => d.status.weather },
-  chores: { label: 'Chores', app: 'board', size: 'square', Body: Chores, status: (d) => d.status.chores },
-  dinner: { label: 'Tonight', app: 'board', size: 'square', Body: Dinner, status: (d) => d.status.meals },
-  shopping: { label: 'Shopping', app: 'board', size: 'square', Body: Shopping, status: (d) => d.status.shopping },
+  chores: { label: 'Chores', app: 'galaxyfarm', path: APPS.galaxyfarm.paths.chores, size: 'square', Body: Chores, status: (d) => d.status.chores },
+  dinner: { label: 'Tonight', app: 'kitchenhub', path: APPS.kitchenhub.paths.mealPlan, size: 'square', Body: Dinner, status: (d) => d.status.meals },
+  shopping: { label: 'Shopping', app: 'kitchenhub', path: APPS.kitchenhub.paths.shopping, size: 'square', Body: Shopping, status: (d) => d.status.shopping },
   trip: { label: 'Next trip', app: 'wander', size: 'square', Body: Trip, status: (d) => d.status.trips },
   breeding: { label: 'Breeding', app: 'znt', size: 'square', Body: Breeding, status: (d) => d.status.breeding },
-  tasks: { label: 'To do', app: 'board', size: 'square', Body: Tasks, status: (d) => [d.status.tasks, d.status.gtasks].find((x) => x?.status !== 'live') || d.status.tasks },
-  calendar: { label: 'Calendar', app: 'board', size: 'square', Body: Calendar, status: (d) => d.status.calendar },
+  tasks: { label: 'To do', app: 'learnleaf', path: APPS.learnleaf.paths.tasks, size: 'square', Body: Tasks, status: (d) => [d.status.tasks, d.status.gtasks].find((x) => x?.status !== 'live') || d.status.tasks },
+  calendar: { label: 'Calendar', app: 'board', url: 'https://calendar.google.com/', size: 'square', Body: Calendar, status: (d) => d.status.calendar },
 };
 export const widgetIds = Object.keys(WIDGETS);
 
@@ -55,7 +57,7 @@ export function Widget({ w, size, data, now, onOpen, color }) {
         <i aria-hidden="true" />{def.label}
         {data && <Freshness s={def.status(data)} />}
       </div>
-      <button className="widget-body" onClick={() => onOpen(def.app)} aria-label={`${def.label}: open`}>
+      <button className="widget-body" onClick={() => onOpen(def)} aria-label={`${def.label}: open`}>
         {data ? <def.Body data={data} now={now} max={LINES[sz]} size={sz} /> : <span className="widget-wait">Loading</span>}
       </button>
     </div>

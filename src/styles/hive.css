@@ -47,6 +47,7 @@ body { background: var(--bg); }
 .page-grid { display: grid; height: 100%; gap: 0 6px; max-width: 1240px; margin: 0 auto; }
 
 .tile { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; }
+.tile-widget { overflow: hidden; border-radius: 24px; }
 .tile-btn { display: grid; justify-items: center; align-content: center; gap: 5px; width: 100%; min-width: 0; border-radius: 18px; }
 .tile-btn:active .icon, .tile-btn.pressed .icon { transform: scale(.88); filter: brightness(.85); transition-duration: .08s; }
 .tile-name {
@@ -86,7 +87,14 @@ body { background: var(--bg); }
   border-radius: 22px; padding: 12px 14px 13px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 28px rgba(0, 0, 0, .08);
   transition: transform .3s cubic-bezier(.2, .9, .22, 1.2);
+  /* Never spill into the next row: clip, and fit the content to the space (below). */
+  overflow: hidden; container-type: size;
 }
+/* A widget's content adapts to how much room its slot really has. */
+@container (max-height: 180px) { .w-days { display: none; } .w-today { grid-template-columns: 1fr auto; } }
+@container (max-height: 150px) { .w-list li:nth-child(n + 3) { display: none; } .w-next { display: none; } .w-big { font-size: 26px; } }
+@container (max-height: 118px) { .w-list, .w-sub + .w-sub { display: none; } .widget-head .fresh { display: none; } }
+@container (max-width: 150px) { .w-today { grid-template-columns: 1fr; } .w-wx { display: none; } }
 .widget-wrap:active .widget { transform: scale(.97); }
 .widget-head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .01em; min-height: 18px; }
 .widget-head > i { width: 8px; height: 8px; border-radius: 50%; background: var(--tint); flex: none; }
@@ -136,7 +144,7 @@ body { background: var(--bg); }
 .no-labels .badge-remove { top: calc(50% - var(--icon) / 2 - 9px); }
 .badge-remove::before, .badge-out::before { content: ""; position: absolute; inset: -5px; }
 .badge-remove svg, .badge-out svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.tile-widget .badge-remove { top: -2px; left: -2px; }
+.tile-widget .badge-remove { top: 8px; left: 8px; }
 .dock .badge-remove { top: -6px; left: -4px; }
 .drag-ghost {
   position: fixed; z-index: 70; pointer-events: none; display: grid; place-items: center;

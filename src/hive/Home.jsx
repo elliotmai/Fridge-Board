@@ -50,7 +50,7 @@ function FolderIcon({ apps, custom, badge }) {
  */
 export function Home({
   layout, setLayout, data, now, editing, setEditing, look, badges = {}, dark,
-  onOpen, onOpenFolder, onAdd, onCustomize, onSearch, onEditIcon, onAddToHome, account,
+  onOpen, onOpenFolder, onAdd, onCustomize, onSearch, onEditIcon, onAddToHome, onSetExternal, account,
 }) {
   const custom = layout.custom || {};
   const [drag, setDrag] = useState(null); // { key, x, y, dx, dy, w, h, mergeKey }
@@ -76,7 +76,8 @@ export function Home({
   const icon = iconPx(box.w, look);
   const padX = box.w >= 760 ? 36 : 18;
   const cols = columnsFor(Math.max(0, box.w - padX * 2), look);
-  const rows = Math.max(3, Math.floor((box.h - 16) / rowPx(icon, look)));
+  // Only as many rows as truly fit: squeezing in more makes tiles spill into each other.
+  const rows = Math.max(1, Math.floor((box.h - 16) / rowPx(icon, look)));
   const pages = useMemo(() => (box.h ? pack(layout.grid, cols, rows) : [[]]), [layout.grid, cols, rows, box.h]);
   const total = pages.length + (look.library ? 1 : 0);
 
@@ -253,8 +254,13 @@ export function Home({
     if (suppress.current) { suppress.current = false; return; }
     if (item.k === 'folder') return onOpenFolder(item.key, el?.querySelector('.icon'));
     if (editing) return;
-    const id = item.k === 'widget' ? WIDGETS[item.w].app : item.key;
-    onOpen(id, el?.querySelector('.icon, .widget'));
+    if (item.k === 'widget') {
+      // A widget opens the app that owns what it shows, at the right page.
+      const def = WIDGETS[item.w];
+      if (def.url) { window.open(def.url, '_blank', 'noopener'); return; }
+      return onOpen(def.app, el?.querySelector('.widget'), def.path);
+    }
+    onOpen(item.key, el?.querySelector('.icon'));
   };
 
   const onKeyDown = (e, item, zone, index) => {
@@ -286,7 +292,7 @@ export function Home({
           <div className="tile-btn widget-wrap" tabIndex={editing ? 0 : -1} onKeyDown={(e) => onKeyDown(e, item, zone, index)}
             onClickCapture={(e) => { if (suppress.current || editing) { e.stopPropagation(); suppress.current = false; } }}>
             <Widget w={item.w} size={item.size} data={data} now={now} color={appLook(WIDGETS[item.w].app, custom).color}
-              onOpen={(id) => activate({ k: 'app', key: id }, document.querySelector(`[data-key="${CSS.escape(item.key)}"]`))} />
+              onOpen={() => activate(item, document.querySelector(`.page-grid [data-key="${CSS.escape(item.key)}"]`))} />
           </div>
         ) : (
           <button className="tile-btn" onClick={(e) => activate(item, e.currentTarget)} onKeyDown={(e) => onKeyDown(e, item, zone, index)}
@@ -329,9 +335,15 @@ export function Home({
     const a = CATALOG[item.key] || {};
     const shortcuts = (a.shortcuts || []).map((s) => ({ label: s.label, icon: UI.arrow, onSelect: () => { close(); onOpen(item.key, null, s.path); } }));
     const onHome = placedApps(layout).has(item.key);
+    const canFrame = a.url && !a.native && a.frame !== false;
+    const inTab = canFrame && (look.inside === false || look.external?.[item.key]);
     return [
       ...shortcuts,
       ...(shortcuts.length ? [{ divider: true }] : []),
+      ...(canFrame && look.inside !== false ? [{
+        label: inTab ? 'Open Inside Hive' : 'Open in Its Own Tab', icon: UI.arrow,
+        onSelect: () => { close(); onSetExternal(item.key, !inTab); },
+      }] : []),
       { label: 'Edit Icon', icon: UI.palette, onSelect: () => { close(); onEditIcon(item.key); } },
       ...(zone === 'library'
         ? (onHome ? [] : [{ label: 'Add to Home Screen', icon: UI.plus, onSelect: () => { close(); onAddToHome(item.key); } }])

@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19.4',
+    date: 'November 2026',
+    items: [
+      'Widgets and search results open the app they come from: chores in GalaxyFarm, shopping and meals in KitchenHub, tasks in LearnLeaf, events in Google Calendar.',
+      'Widgets no longer overlap. They fit what they show to the space they have.',
+      'Apps can open in their own tab, where you stay signed in as usual: for all apps in Settings, or one at a time by pressing and holding its icon.',
+    ],
+  },
+  {
     version: '2026.11.19.3',
     date: 'November 2026',
     items: [
