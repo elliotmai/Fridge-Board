@@ -18,9 +18,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/icon.svg'],
       manifest: {
-        name: 'Fridge Board',
-        short_name: 'Fridge',
-        description: 'Chores, meals, shopping, trips, tasks and cattle on one screen.',
+        name: 'Hive',
+        short_name: 'Hive',
+        description: 'Every app in one home screen: the farm, the kitchen, trips, school and more.',
         theme_color: '#f3f4f1',
         background_color: '#f3f4f1',
         display: 'standalone',

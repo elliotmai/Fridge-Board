@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './pwa';
 import './index.css';
 import './styles/board.css';
+import './styles/hive.css';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(

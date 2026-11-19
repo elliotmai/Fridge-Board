@@ -1,11 +1,11 @@
 import { APPS, appLink } from '@/config/apps';
 import { DAY, fmt, md, wd } from '@/lib/dates';
 import { Freshness } from './bits';
-import { Plane, Sliders, Snow, WX } from './Icons';
+import { HomeIcon, Plane, Sliders, Snow, WX } from './Icons';
 
 const APP_DOTS = { galaxyfarm: 'var(--farm)', kitchenhub: 'var(--kitchen)', learnleaf: 'var(--ahead)', wander: 'var(--ahead)', znt: 'var(--farm)' };
 
-export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, onOpenSettings, phone }) {
+export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, onOpenSettings, onHome, phone }) {
   const parts = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).match(/^(.*?)\s?([AP]M)?$/i);
   const W = WX[weather.code] ?? WX.cloud;
   const today = weather.days[0];
@@ -40,9 +40,10 @@ export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, on
             <span className="switch" aria-hidden="true" />
           </button>
           <button className="round" aria-label="Board settings" onClick={onOpenSettings}><Sliders /></button>
+          {onHome && <button className="round" aria-label="Hive home screen" onClick={onHome}><HomeIcon /></button>}
         </div>
       </header>
-      {phone && (
+      {phone && !onHome && (
         <nav className="apps" aria-label="Open an app">
           {Object.entries(APPS).map(([k, a]) => (
             <a key={k} href={appLink(k, '')} target="_blank" rel="noopener noreferrer" style={{ '--dot': APP_DOTS[k] }}><i />{a.name}</a>

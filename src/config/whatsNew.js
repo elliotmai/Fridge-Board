@@ -6,6 +6,17 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19',
+    date: 'November 2026',
+    items: [
+      'Fridge Board is now Hive: a home screen with every one of your apps on it.',
+      'Press and hold to rearrange. Drop one app on another to make a folder, and drag apps in and out of the dock.',
+      'Widgets show today\'s weather, chores, dinner, shopping, your next trip, breeding and tasks at a glance.',
+      'Apps open full screen inside Hive. Tap Home to come back, or open one in its own tab.',
+      'The fridge tablet still opens straight to the board. The grid button on the board goes to the home screen.',
+    ],
+  },
+  {
     version: '2026.11.18.1',
     date: 'November 2026',
     items: [

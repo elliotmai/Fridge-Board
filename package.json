@@ -1,5 +1,5 @@
 {
-  "name": "fridge-board",
+  "name": "hive",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test src/hive/*.test.js"
   },
   "dependencies": {
     "react": "^18.3.1",

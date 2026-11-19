@@ -21,7 +21,8 @@ const DEFAULT_OPTS = { offset: 0, window: 30, breedWindow: 30, awayMiles: 75, au
 const IDLE_MS = 120000;
 const toggleIn = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function Board() {
+/** `onHome` (from Hive) adds a button back to the home screen. */
+export function Board({ onHome }) {
   const { toast, clear: clearToasts } = useToast();
   const phone = useIsPhone();
   const [data, setData] = useState(null);
@@ -182,7 +183,7 @@ export function Board() {
 
   return (
     <div className="fb">
-      <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} phone={phone} />
+      <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} onHome={onHome} phone={phone} />
       {data.locked && <LockBanner reason={data.locked} onSave={saveKey} />}
       <AwayBanner trip={ts.away} sitter={sitter} onTurnOff={toggleSitter} />
       <main className={`board ${sitter ? 'sitter' : ''}`}>
