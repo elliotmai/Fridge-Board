@@ -3,7 +3,8 @@ import { loadBoard, REFRESH_MS } from '@/data/sources';
 import { takeKeyFromUrl } from '@/data/api';
 import { Freshness } from '@/components/board/bits';
 import { WX } from '@/components/board/Icons';
-import { DAY, daysBetween, fmt, parseDate, plural, startOf, wd } from '@/lib/dates';
+import { DAY, daysBetween, fmt, plural, startOf, wd } from '@/lib/dates';
+import { agendaDays, dedupeEvents, mergeTodos } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
 
 /** The board's feed, for widgets. Same source, same refresh rhythm as the board. */
@@ -35,7 +36,8 @@ export const WIDGETS = {
   shopping: { label: 'Shopping', app: 'board', size: 'square', Body: Shopping, status: (d) => d.status.shopping },
   trip: { label: 'Next trip', app: 'wander', size: 'square', Body: Trip, status: (d) => d.status.trips },
   breeding: { label: 'Breeding', app: 'znt', size: 'square', Body: Breeding, status: (d) => d.status.breeding },
-  tasks: { label: 'Tasks', app: 'learnleaf', size: 'square', Body: Tasks, status: (d) => d.status.tasks },
+  tasks: { label: 'To do', app: 'board', size: 'square', Body: Tasks, status: (d) => [d.status.tasks, d.status.gtasks].find((x) => x?.status !== 'live') || d.status.tasks },
+  calendar: { label: 'Calendar', app: 'board', size: 'square', Body: Calendar, status: (d) => d.status.calendar },
 };
 export const widgetIds = Object.keys(WIDGETS);
 
@@ -141,19 +143,31 @@ function Breeding({ data, now }) {
 }
 
 function Tasks({ data, now }) {
-  const today = startOf(now);
-  const due = data.tasks
-    .filter((t) => t.due)
-    .map((t) => ({ ...t, n: daysBetween(today, parseDate(t.due)) }))
-    .filter((t) => t.n <= 7)
-    .sort((a, b) => a.n - b.n);
+  const all = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
+  const due = all.filter((t) => t.n != null);
   const over = due.filter((t) => t.n < 0).length;
-  if (!due.length) return <><div className="w-big">0</div><div className="w-sub">Nothing due this week</div></>;
+  if (!all.length) return <><div className="w-big">0</div><div className="w-sub">Nothing due this week</div></>;
+  const shown = (due.length ? due : all).slice(0, over ? 2 : 3);
   return (
     <>
-      <div className="w-big">{due.length}<small> this week</small></div>
+      <div className="w-big">{due.length || all.length}<small> {due.length ? 'this week' : 'to do'}</small></div>
       {over > 0 && <div className="w-sub w-warn">{over} overdue</div>}
-      <ul className="w-list">{due.slice(0, over ? 2 : 3).map((t) => <li key={t.id}>{t.name}</li>)}</ul>
+      <ul className="w-list">{shown.map((t) => <li key={t.key}>{t.name}</li>)}</ul>
+    </>
+  );
+}
+
+function Calendar({ data, now }) {
+  const days = agendaDays(dedupeEvents(data.events, data.trips).shown, now, 7);
+  if (!days.length) return <><div className="w-mid">Nothing this week</div><div className="w-sub">Your calendar is clear</div></>;
+  const first = days[0];
+  const label = first.n === 0 ? 'Today' : first.n === 1 ? 'Tomorrow' : wd(first.date);
+  const rows = days.flatMap((d) => d.events.filter((e) => !e.continued).map((e) => ({ ...e, d }))).slice(0, 3);
+  const at = (e) => (e.allDay ? 'All day' : new Date(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+  return (
+    <>
+      <div className="w-mid">{label}</div>
+      <ul className="w-list w-cal">{rows.map((e) => <li key={`${e.id}-${e.d.n}`}><b>{e.d.n === first.n ? at(e) : wd(e.d.date)}</b> {e.title}</li>)}</ul>
     </>
   );
 }

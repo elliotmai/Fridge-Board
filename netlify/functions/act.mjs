@@ -4,15 +4,17 @@
  *   POST /api/chores/:id     { done }     → GalaxyFarm POST /api/board/v1/chores/:id
  *   POST /api/shopping       { name, section? } → KitchenHub POST /shopping
  *   POST /api/shopping/:id   { bought }   → KitchenHub POST /shopping/:id
+ *   POST /api/todos/learnleaf/:id     { done } → LearnLeaf PATCH /api/tasks/:id
+ *   POST /api/todos/google/:list/:id  { done } → Our Den POST /api/board/google/tasks/:list/:id
  *
  * Same board key as /api/board; the app tokens never leave this function.
  */
 import { bearer, env, json, requireKey, urls } from '../lib/shared.mjs';
 
-async function forward(url, token, body) {
+async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
-    method: 'POST',
-    ...bearer(token, { 'content-type': 'application/json' }),
+    method,
+    ...(headers ? { headers: { ...headers, 'content-type': 'application/json' } } : bearer(token, { 'content-type': 'application/json' })),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(8000),
   });
@@ -30,6 +32,18 @@ export default async (req, context) => {
   const path = new URL(req.url).pathname;
   const id = context.params?.id;
   try {
+    if (path.startsWith('/api/todos/')) {
+      if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
+      if (path.startsWith('/api/todos/learnleaf/')) {
+        const token = env('LEARNLEAF_TOKEN');
+        if (!token) return json(503, { error: 'LearnLeaf is not connected' });
+        return await forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, token, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH' });
+      }
+      const key = env('OURDEN_BOARD_KEY');
+      if (!key) return json(503, { error: 'Google Tasks is not connected' });
+      const list = context.params?.list;
+      return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers: { 'x-board-key': key } });
+    }
     if (path.startsWith('/api/chores/')) {
       const token = env('GALAXYFARM_TOKEN');
       if (!token) return json(503, { error: 'GalaxyFarm is not connected' });
@@ -51,4 +65,4 @@ export default async (req, context) => {
   }
 };
 
-export const config = { path: ['/api/chores/:id', '/api/shopping', '/api/shopping/:id'] };
+export const config = { path: ['/api/chores/:id', '/api/shopping', '/api/shopping/:id', '/api/todos/learnleaf/:id', '/api/todos/google/:list/:id'] };

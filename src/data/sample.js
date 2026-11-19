@@ -148,3 +148,23 @@ export const WEATHER = {
   now: 57, code: 'partly', desc: 'Partly cloudy',
   days: [{ hi: 66, lo: 33, code: 'sun' }, { hi: 61, lo: 41, code: 'cloud' }, { hi: 54, lo: 44, code: 'rain' }, { hi: 63, lo: 39, code: 'sun' }],
 };
+
+// Google Calendar via Our Den. The first three duplicate the Thanksgiving trip
+// in Wander (the trip, its flight, its stay), so the board hides them.
+const at = (d, h, m = 0) => { const x = dayFrom(d); x.setHours(h, m, 0, 0); return x.toISOString(); };
+export const EVENTS = [
+  { id: 'ev-tg', title: 'Thanksgiving in Asheville', allDay: true, start: iso(dayFrom(9)), end: iso(dayFrom(14)) },
+  { id: 'ev-fl', title: 'Flight to Dallas (AA 3521)', allDay: false, start: at(9, 6, 10), end: at(9, 7, 5) },
+  { id: 'ev-st', title: 'Stay at Airbnb in Montford', allDay: true, start: iso(dayFrom(9)), end: iso(dayFrom(13)) },
+  { id: 'ev-1', title: 'Farrier', allDay: false, start: at(0, 16), end: at(0, 17), location: 'Barn' },
+  { id: 'ev-2', title: 'Dentist', allDay: false, start: at(1, 9, 30), end: at(1, 10, 30) },
+  { id: 'ev-3', title: 'Hay delivery', allDay: true, start: iso(dayFrom(2)), end: iso(dayFrom(3)) },
+  { id: 'ev-4', title: 'Book club', allDay: false, start: at(4, 19), end: at(4, 21) },
+];
+
+// Google Tasks via Our Den.
+export const GTASKS = [
+  { id: 'gt-1', list: 'L1', listTitle: 'My Tasks', title: 'Call the propane company', due: iso(dayFrom(0)) },
+  { id: 'gt-2', list: 'L1', listTitle: 'My Tasks', title: 'Return library books', due: iso(dayFrom(3)) },
+  { id: 'gt-3', list: 'L2', listTitle: 'House', title: 'Replace furnace filter', due: null },
+];

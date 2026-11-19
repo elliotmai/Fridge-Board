@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --test src/hive/*.test.js netlify/lib/*.test.mjs"
+    "test": "node --test src/hive/*.test.js src/lib/*.test.js netlify/lib/*.test.mjs"
   },
   "dependencies": {
     "firebase": "^11.10.0",

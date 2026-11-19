@@ -16,6 +16,7 @@ export const urls = {
   galaxyfarm: () => env('GALAXYFARM_URL', 'https://galaxyfarm.netlify.app').replace(/\/$/, ''),
   kitchenhub: () => env('KITCHENHUB_URL', 'https://us-central1-mykitchenhub-db665.cloudfunctions.net/board').replace(/\/$/, ''),
   learnleaf: () => env('LEARNLEAF_URL', 'https://learnleaf-organizer.netlify.app').replace(/\/$/, ''),
+  ourden: () => env('OURDEN_URL', 'https://ourden.netlify.app').replace(/\/$/, ''),
   wander: () => env('WANDER_FUNCTIONS_URL', 'https://us-central1-wander-f10b1.cloudfunctions.net').replace(/\/$/, ''),
 };
 

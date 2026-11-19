@@ -135,7 +135,8 @@ app can't be reached keeps its last good copy, labelled **Not updating**.
 | --- | --- | --- | --- |
 | Chores, housesitter guide, home location | GalaxyFarm | `GET /api/board/v1` | `POST /api/board/v1/chores/:id` |
 | Meals, recipe cards, shopping, use soon | KitchenHub | `board` function `GET /` | `POST /shopping`, `POST /shopping/:id` |
-| Tasks | LearnLeaf | `/api/summary`, `/api/subjects` | none |
+| To do (with Google Tasks) | LearnLeaf | `/api/summary`, `/api/subjects` | `PATCH /api/tasks/:id` (`taskStatus`) |
+| Calendar, To do | Our Den (your Google link there) | `GET /api/board/google` | `POST /api/board/google/tasks/:list/:id` |
 | Trips | Wander | `appTrips`, `appTripTravel` | none |
 | Next breeding group | ZNT | Firestore `sessions` (public read) | none |
 | Weather | Open-Meteo | forecast at the GalaxyFarm location | none |
@@ -149,9 +150,20 @@ app can't be reached keeps its last good copy, labelled **Not updating**.
 | `KITCHENHUB_TOKEN` | Token from KitchenHub's `scripts/make-api-token.mjs` |
 | `LEARNLEAF_TOKEN` | Token from LearnLeaf's `scripts/make-api-token.mjs` (add its hash to `apiTokenHashes`) |
 | `WANDER_TOKEN` | Wander → Account → Connected apps |
+| `OURDEN_BOARD_KEY` | Any long random string. The same value goes on Our Den as `OURDEN_BOARD_KEY`; see Our Den's README, "Fridge Board feed". Turns on Calendar and Google Tasks. |
 | `HOME_LAT`, `HOME_LON`, `HOME_TZ` | Optional. Only used if GalaxyFarm has no location set. |
 
 ## Rules the board follows
+
+- **To do:** LearnLeaf and Google Tasks in one list: overdue and due within a
+  week, soonest first, then Google tasks with no date (up to five). Ticking one
+  ticks it in the app it came from.
+- **Calendar:** the next seven days from your primary Google calendar. An event
+  that is really a Wander trip is left out, since the trip is under Travel: it
+  falls within the trip's dates (a day either side) and shares a flight number
+  or a word with the trip's name, destination, flights or stays, or it's an
+  all-day block over the trip's dates. The header says how many were moved.
+  Rules and tests: `src/lib/agenda.js`.
 
 - **Trips:** only ones starting within 30 days, or under way.
 - **Away:** only when the current trip is more than 75 miles from home. That

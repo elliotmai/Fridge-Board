@@ -11,11 +11,13 @@
  *   GALAXYFARM_TOKEN   chores, housesitter guide, and the home location (GalaxyFarm settings)
  *   KITCHENHUB_TOKEN   meals, recipes, shopping list, food to use soon
  *   LEARNLEAF_TOKEN    tasks
+ *   OURDEN_BOARD_KEY   Google Calendar and Google Tasks, through the Google link
+ *                      in Our Den (same value as OURDEN_BOARD_KEY on Our Den)
  *   WANDER_TOKEN       trips (each with only the owner's own legs and stays)
  *   WANDER_TRAVELER_NAME  your name as Wander shows it; only needed until Wander's
  *                      appTripTravel marks legs with `mine`
  *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
- *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, WANDER_FUNCTIONS_URL,
+ *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, OURDEN_URL, WANDER_FUNCTIONS_URL,
  *   ZNT_PROJECT_ID, ZNT_API_KEY
  */
 import { bearer, env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
@@ -109,6 +111,17 @@ async function kitchenhub() {
 }
 
 /* ----------------------------------------------------------- LearnLeaf --- */
+/* ------------------------------------------------- Google, via Our Den --- */
+// Our Den already holds a Google link (Calendar read-only + Tasks); its
+// /api/board/google answers with the next two weeks of events and open tasks.
+async function google(where) {
+  const key = env('OURDEN_BOARD_KEY');
+  if (!key) return { status: 'unconfigured', reason: 'Set OURDEN_BOARD_KEY' };
+  const tz = where.tz || 'UTC';
+  const d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers: { 'x-board-key': key } }, 12000);
+  return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
+}
+
 async function learnleaf() {
   const token = env('LEARNLEAF_TOKEN');
   if (!token) return { status: 'unconfigured', reason: 'Set LEARNLEAF_TOKEN' };
@@ -235,17 +248,18 @@ export default async (req) => {
   // GalaxyFarm first: it owns the home location the others need.
   const gf = await settle('galaxyfarm', galaxyfarm);
   const where = resolveHome(gf);
-  const [w, kh, ll, wa, z] = await Promise.all([
+  const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
     settle('kitchenhub', kitchenhub),
     settle('learnleaf', learnleaf),
     settle('wander', () => wander(where)),
     settle('znt', () => znt(where)),
+    settle('google', () => google(where)),
   ]);
   return json(200, {
     generatedAt: new Date().toISOString(),
     home: where.home ? { ...where.home, tz: where.tz, from: where.from } : null,
-    sources: { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z },
+    sources: { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z, google: g },
   }, { 'cache-control': 'private, no-store' });
 };
 

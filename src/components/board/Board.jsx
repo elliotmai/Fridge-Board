@@ -6,6 +6,7 @@ import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
 import { DAY, plural } from '@/lib/dates';
+import { agendaDays, dedupeEvents, mergeTodos } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
 import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
@@ -31,6 +32,7 @@ export function Board({ onHome }) {
   // shows them straight away until the next refresh brings the app's own answer.
   const [localDone, setLocalDone] = useStored('done', []);
   const [localBought, setLocalBought] = useStored('bought', []);
+  const [localTodos, setLocalTodos] = useStored('todosDone', []);
   const [cleared, setCleared] = useStored('cleared', []);
   const [extra, setExtra] = useStored('extra', []);
   const [overrides, setOverrides] = useState({});
@@ -177,8 +179,31 @@ export function Board({ onHome }) {
     if (Date.now() >= timers[key].endsAt) { toggleTimer(key); return; }
     setCook((c) => ({ id: rid, page: +step, seen: [...new Set([...(c?.id === rid ? c.seen : [0]), +step])], gathered: c?.id === rid ? c.gathered : [] }));
   };
-  const reset = () => { setLocalDone([]); setLocalBought([]); setCleared([]); setExtra([]); toast('Cleared ticks and added items on this device'); };
+  const reset = () => { setLocalDone([]); setLocalBought([]); setLocalTodos([]); setCleared([]); setExtra([]); toast('Cleared ticks and added items on this device'); };
   const saveKey = async (k) => { setKey(k); const d = await reload(); if (!d.locked) toast('Board unlocked'); return !d.locked; };
+  // To do: LearnLeaf + Google Tasks in one list. Ticks go to the app that owns
+  // the task; in sample mode they stay on this device.
+  const todos = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
+  const liveTodo = (t) => (t.source === 'google' ? data.status.gtasks : data.status.tasks).status === 'live';
+  const todoKey = (t) => `todo:${t.key}`;
+  const todoDone = todos.filter((t) => (liveTodo(t) ? overrides[todoKey(t)] ?? false : localTodos.includes(t.key))).map((t) => t.key);
+  const setTodo = (t, value) => {
+    if (!liveTodo(t)) { setLocalTodos((d) => (value ? [...new Set([...d, t.key])] : d.filter((x) => x !== t.key))); return true; }
+    const path = t.source === 'google'
+      ? `/api/todos/google/${encodeURIComponent(t.list)}/${encodeURIComponent(t.id)}`
+      : `/api/todos/learnleaf/${encodeURIComponent(t.id)}`;
+    return sendLive(todoKey(t), path, { done: value }, `Couldn't update ${t.name} in ${t.source === 'google' ? 'Google Tasks' : 'LearnLeaf'}`);
+  };
+  const toggleTodo = async (t) => {
+    const was = todoDone.includes(t.key);
+    const okay = await setTodo(t, !was);
+    if (!was && okay !== false) toast(`${t.name} done`, { duration: 5000, action: { label: 'Undo', onClick: () => setTodo(t, false) } });
+  };
+
+  // Calendar: events that are really a Wander trip show under Travel instead.
+  const { shown: calEvents, hidden: tripEvents } = dedupeEvents(data.events, data.trips);
+  const agenda = agendaDays(calEvents, now, 7);
+
   const peekMeal = peek != null && data.meals.find((m) => m.d === peek && m.type === 'Dinner');
 
   return (
@@ -198,7 +223,7 @@ export function Board({ onHome }) {
         )}
         {sitter
           ? <SitterPanel ts={ts} breeding={breeding} sitter={data.sitter} now={now} phone={phone} status={data.status} />
-          : <ComingUp ts={ts} breeding={breeding} tasks={data.tasks} subjects={data.subjects} now={now} opts={opts} phone={phone} status={data.status} />}
+          : <ComingUp ts={ts} breeding={breeding} todos={todos} todoDone={todoDone} onToggleTodo={toggleTodo} agenda={agenda} hiddenEvents={tripEvents.length} now={now} opts={opts} phone={phone} status={data.status} />}
       </main>
 
       {!cook && hasTimers && <div className="board-timers fb-layer"><TimerChips timers={timers} now={tick} onJump={jumpToTimer} /></div>}

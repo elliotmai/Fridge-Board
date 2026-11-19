@@ -6,6 +6,16 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19.1',
+    date: 'November 2026',
+    items: [
+      'To do now has your LearnLeaf tasks and Google Tasks in one list. Tick either kind off right on the board.',
+      'A new Calendar section shows the week from your Google Calendar. Trips you also put on your calendar show once, under Travel.',
+      'Fixed the board running off the bottom of the fridge screen.',
+      'New Calendar widget on the Hive home screen, and the To do widget includes Google Tasks.',
+    ],
+  },
+  {
     version: '2026.11.19',
     date: 'November 2026',
     items: [

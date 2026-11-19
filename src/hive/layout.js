@@ -21,13 +21,13 @@ export function defaultLayout() {
   return {
     v: 1,
     grid: [
-      widget('today'), widget('chores'), widget('dinner'),
+      widget('today'), widget('chores'), widget('calendar'),
       folder('f:farm', 'Farm', ['galaxyfarm', 'znt', 'cattlegraph']),
       app('letseat'), app('pool'), app('property'),
       app('ourden'), app('journal'), app('sidequest'), app('aerologger'),
       folder('f:health', 'Health', ['stimultrack', 'alcohol']),
       app('muster'), app('feedback'),
-      widget('trip'), widget('shopping'), widget('breeding'), widget('tasks'),
+      widget('tasks'), widget('dinner'), widget('trip'), widget('shopping'), widget('breeding'),
     ],
     dock: [app('board'), app('kitchenhub'), app('wander'), app('learnleaf')],
   };

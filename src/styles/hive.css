@@ -6,6 +6,9 @@
 body { background: var(--bg); }
 .hive, .hive-layer { font-family: var(--font); color: var(--ink); font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; }
 .hive-view[hidden], .frame-view[hidden] { display: none !important; }
+/* Keep the height chain html → #root → .hive → .hive-view → .fb unbroken, so the
+   board fits one screen on the fridge (board.css sizes .fb at 100%). */
+.hive, .hive-view { height: 100%; }
 :where(.hive, .hive-layer) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
 :where(.hive, .hive-layer) svg { flex: none; }
 
@@ -195,3 +198,4 @@ body { background: var(--bg); }
 .confirm h3 { margin: 0; font-size: 18px; }
 .confirm p { margin: 0; line-height: 1.45; }
 .confirm-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.w-cal b { font-weight: 600; margin-right: 4px; }

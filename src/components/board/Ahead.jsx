@@ -1,7 +1,7 @@
 import { appLink } from '@/config/apps';
 import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
 import { Countdown, Freshness, OpenIn } from './bits';
-import { Bed, Car, Pin, Plane, Right, Train, Warn } from './Icons';
+import { Bed, Car, Pin, Plane, Right, Tick, Train, Warn } from './Icons';
 
 const KIND_ICON = { flight: Plane, plane: Plane, stay: Bed, drive: Car, car: Car, train: Train, rail: Train };
 const KIND_LABEL = { flight: 'Flight', drive: 'Drive', car: 'Drive', train: 'Train', bus: 'Bus', ferry: 'Ferry', stay: 'Stay', other: 'Travel' };
@@ -82,30 +82,57 @@ function Breeding({ b, now, phone }) {
   );
 }
 
-const NO_SUBJECT = ['No subject', 'var(--muted)'];
+const MAX_UNDATED = 5;
+const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).replace(':00', '').replace(/\s/g, '').toLowerCase();
+const dayName = (d, n) => (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${wd(d)} ${short(d)}`);
 
-export function ComingUp({ ts, breeding, tasks, subjects, now, opts, phone, status }) {
-  const today = startOf(now);
-  const list = tasks
-    .filter((t) => t.due)
-    .map((t) => ({ ...t, due: parseDate(t.due) }))
-    .map((t) => ({ ...t, n: daysBetween(today, t.due) }))
-    .filter((t) => t.n <= 7)
-    .sort((a, b) => a.n - b.n);
-  const over = list.filter((t) => t.n < 0).length;
+/** One to-do row: tick box, name, where it's from, when it's due. */
+function Todo({ t, done, onToggle }) {
+  const when = t.n == null ? '' : t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due);
+  return (
+    <button className={`todo ${t.n != null && t.n < 0 ? 'overdue' : ''} ${done ? 'is-done' : ''}`} role="checkbox" aria-checked={done} onClick={() => onToggle(t)}>
+      <span className="tbox" aria-hidden="true"><Tick /></span>
+      <span className="tname">{t.name}<small><i style={{ background: t.color }} />{t.tag}</small></span>
+      {when && <em>{when}</em>}
+    </button>
+  );
+}
+
+export function ComingUp({ ts, breeding, todos, todoDone, onToggleTodo, agenda, hiddenEvents, now, opts, phone, status }) {
+  const dated = todos.filter((t) => t.n != null);
+  const undated = todos.filter((t) => t.n == null);
+  const over = dated.filter((t) => t.n < 0 && !todoDone.includes(t.key)).length;
+  const todoStatus = [status.tasks, status.gtasks].find((x) => x && x.status !== 'live') || status.tasks;
   return (
     <section className="zone ahead stacked" aria-label="Coming up">
       <div className="zh"><h2>Coming up</h2></div>
-      <div className={`part ${list.length ? '' : 'is-empty'}`}>
-        <div className="sh">Tasks<Freshness s={status.tasks} />{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
+      <div className={`part ${todos.length ? '' : 'is-empty'}`}>
+        <div className="sh">To do<Freshness s={todoStatus} />{over > 0 && <span className="badge late">{over} overdue</span>}{phone && <OpenIn app="learnleaf" path="tasks" />}</div>
         <div className="scroll" data-scroll>
-          {list.length ? list.map((t) => (
-            <div key={t.id} className={`task ${t.n < 0 ? 'overdue' : ''}`}>
-              <i style={{ background: (subjects[t.subject] ?? NO_SUBJECT)[1] }} title={(subjects[t.subject] ?? NO_SUBJECT)[0]} />
-              <span>{t.name}</span>
-              <em>{t.n < 0 ? 'Overdue' : t.n === 0 ? clock12(t.time) || 'Today' : t.n === 1 ? 'Tomorrow' : wd(t.due)}</em>
+          {todos.length ? (
+            <>
+              {dated.map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} />)}
+              {undated.length > 0 && <span className="later-h">No date</span>}
+              {undated.slice(0, MAX_UNDATED).map((t) => <Todo key={t.key} t={t} done={todoDone.includes(t.key)} onToggle={onToggleTodo} />)}
+              {undated.length > MAX_UNDATED && <p className="empty-note">And {undated.length - MAX_UNDATED} more in Google Tasks.</p>}
+            </>
+          ) : <p className="empty-note">Nothing due this week.</p>}
+        </div>
+      </div>
+      <div className={`part ${agenda.length ? '' : 'is-empty'}`}>
+        <div className="sh">Calendar<Freshness s={status.calendar} />{hiddenEvents > 0 && <span className="by" title="Events that are a Wander trip, or its flights and stays, show under Travel instead.">{hiddenEvents} under Travel</span>}</div>
+        <div className="scroll" data-scroll>
+          {agenda.length ? agenda.map((d) => (
+            <div className="cal-day" key={d.n}>
+              <span className={`cal-date ${d.n === 0 ? 'is-today' : ''}`}>{dayName(d.date, d.n)}</span>
+              {d.events.map((e) => (
+                <div className="cal-ev" key={`${e.id}-${d.n}`}>
+                  <em>{e.allDay ? (e.continued ? 'cont.' : 'All day') : e.continued ? 'cont.' : timeOf(e.start)}</em>
+                  <span>{e.title}{e.location && !e.continued && <small>{e.location}</small>}</span>
+                </div>
+              ))}
             </div>
-          )) : <p className="empty-note">Nothing due this week.</p>}
+          )) : <p className="empty-note">Nothing on the calendar this week.</p>}
         </div>
       </div>
       <div className={`part ${ts.shown.length || ts.later.length ? '' : 'is-empty'}`}>

@@ -526,3 +526,32 @@ a.entry h3::after { content: ""; }
   .kitchen .kcol + .kcol { padding-left: 0; border-left: 0; }
   .away { flex-wrap: wrap; }
 }
+
+/* ---------- to do (LearnLeaf + Google Tasks) and calendar ---------- */
+.todo { display: flex; gap: 10px; align-items: center; width: 100%; padding: 6px 6px; border-radius: 10px; font-size: 16px; text-align: left; }
+.todo .tbox { width: 22px; height: 22px; border-radius: 7px; border: 2px solid color-mix(in srgb, var(--ahead) 55%, var(--line)); display: grid; place-items: center; flex: none; background: var(--surface); }
+.todo .tbox svg { width: 15px; height: 15px; opacity: 0; }
+.todo.is-done .tbox { background: var(--ahead); border-color: var(--ahead); }
+.todo.is-done .tbox svg { opacity: 1; }
+.todo.is-done .tname { text-decoration: line-through; color: var(--muted); }
+.todo .tname { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.todo .tname small { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.todo .tname small i { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.todo em { font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.todo.overdue em { color: var(--late); font-weight: 500; }
+.cal-day + .cal-day { margin-top: 6px; }
+.cal-date { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 6px; text-transform: uppercase; letter-spacing: .04em; }
+.cal-date.is-today { color: var(--ahead); }
+.cal-ev { display: flex; gap: 10px; align-items: baseline; padding: 4px 6px; font-size: 15.5px; }
+.cal-ev em { font-style: normal; font-size: 13px; color: var(--muted); min-width: 52px; white-space: nowrap; }
+.cal-ev span { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.cal-ev small { font-size: 12px; color: var(--muted); }
+@media (min-width: 760px) and (max-width: 1150px), (min-width: 760px) and (max-height: 680px) {
+  .todo { padding: 3px 4px; font-size: 13px; gap: 8px; }
+  .todo .tbox { width: 18px; height: 18px; border-radius: 6px; }
+  .todo .tname small { font-size: 11px; }
+  .todo em, .cal-ev em { font-size: 11px; }
+  .cal-ev { padding: 2px 4px; font-size: 13px; }
+  .cal-ev em { min-width: 42px; }
+  .cal-date { font-size: 11px; }
+}

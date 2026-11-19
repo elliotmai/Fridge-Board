@@ -12,6 +12,7 @@ import * as sample from './sample';
  *   tasks                               LearnLeaf   /api/summary
  *   trips                               Wander      appTrips, appTripTravel
  *   breeding sessions                   ZNT         Firestore sessions
+ *   calendar, Google Tasks              Our Den     /api/board/google (your Google link there)
  *   weather                             Open-Meteo  at the GalaxyFarm location
  *
  * Each section reports `status[section]`:
@@ -47,6 +48,7 @@ export async function loadBoard() {
   const learnleaf = pick(feed, 'learnleaf', { tasks: sample.TASKS, subjects: sample.SUBJECTS });
   const wander = pick(feed, 'wander', { trips: sample.TRIPS });
   const znt = pick(feed, 'znt', { sessions: sample.SESSIONS });
+  const google = pick(feed, 'google', { events: sample.EVENTS, tasks: sample.GTASKS });
 
   // KitchenHub dates → days from today, which is what the meal components use.
   const today = startOf(new Date());
@@ -65,6 +67,8 @@ export async function loadBoard() {
     subjects: learnleaf.data.subjects,
     trips: wander.data.trips,
     sessions: znt.data.sessions,
+    events: google.data.events,
+    gtasks: google.data.tasks,
     chores: gf.data.chores,
     sitter: gf.data.sitter,
     meals,
@@ -74,6 +78,7 @@ export async function loadBoard() {
     quick: sample.QUICK,
     status: {
       weather: meta(weather), tasks: meta(learnleaf), trips: meta(wander), breeding: meta(znt),
+      calendar: meta(google), gtasks: meta(google),
       chores: meta(gf), sitter: meta(gf), meals: meta(kh), shopping: meta(kh),
     },
   };
