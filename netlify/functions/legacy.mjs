@@ -24,6 +24,7 @@ export const LEGACY_PROJECTS = {
   alcohol: 'alctracker-b6c8a',
   wander: 'wander-f10b1',
   aerologger: 'aerologger-ec6a6',
+  sidequest: 'sidequest-42196',
   // Each app is added here when it moves.
 };
 
