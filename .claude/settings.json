@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm run test)",
+      "mcp__Netlify__netlify-project-services-reader",
+      "mcp__Netlify__netlify-deploy-services-reader",
+      "mcp__github__actions_list"
+    ]
+  }
+}
