@@ -16,7 +16,7 @@ export default defineConfig({
       // Auto-update: a new deploy's service worker installs and takes over,
       // then the app reloads to the latest code with no "refresh?" prompt.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/icon.svg'],
+      includeAssets: ['favicon.svg', 'icons/icon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Hive',
         short_name: 'Hive',
@@ -27,10 +27,15 @@ export default defineConfig({
         orientation: 'any', // landscape on the fridge, portrait on phones
         start_url: '/',
         icons: [
-          // SVG covers all sizes. Add pwa-192.png / pwa-512.png (+ a maskable
-          // 512) to /public/icons for best Android install icons, then list
-          // them here — see README "Icons".
-          { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          // Honeycomb. icon.svg and favicon.svg switch to white-on-black in dark mode
+          // (a media query inside the SVG); installed icons have no dark slot, so the
+          // PNGs are the light version. Maskable has a full-bleed
+          // background with the comb inside the safe zone so Android can crop it.
+          { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icons/maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
       workbox: {

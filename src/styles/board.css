@@ -179,7 +179,6 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 .countdown { display: grid; justify-items: end; line-height: 1; color: var(--c); }
 .countdown b { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; }
 .countdown span { font-size: 12px; color: var(--muted); margin-top: 3px; }
-.countdown.now b { font-size: 18px; background: var(--c); color: var(--on); padding: 6px 10px; border-radius: 99px; }
 .legs { display: grid; gap: 2px; font-size: 14px; color: var(--muted); margin-top: 2px; }
 .herd { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 .herd span { font-size: 13px; background: var(--surface); padding: 3px 10px; border-radius: 99px; }
@@ -437,7 +436,6 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
   .entry p, .entry .line, .legs { font-size: 12px; }
   .countdown b { font-size: 22px; }
   .countdown span { font-size: 10px; }
-  .countdown.now b { font-size: 13px; padding: 4px 8px; }
   .herd span { font-size: 11px; padding: 2px 7px; }
   .track { margin: 8px 0 2px; }
   .stop { font-size: 11px; }

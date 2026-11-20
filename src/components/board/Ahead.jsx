@@ -46,7 +46,7 @@ function Breeding({ b, now, phone }) {
   const reached = stops.filter((s) => s.state !== 'ahead').length;
   return (
     <div className="entry">
-      <div className="row"><h3>{b.name}</h3>{until > 0 ? <Countdown n={until} /> : <Countdown now />}</div>
+      <div className="row"><h3>{b.name}</h3><Countdown n={until} /></div>
       <div className="herd">
         {b.groups.length ? <><span><b>{b.head}</b> head</span>{b.groups.map((g) => <span key={g[0]}>{g[0]} {g[1]}</span>)}</> : <span>No groups added yet</span>}
       </div>
