@@ -73,13 +73,18 @@ do $$ begin
     {"collection": "trips", "id": "old1", "data": {"name": "Rome", "created_by": "someoneElse000000001"}},
     {"collection": "trip_members", "id": "om1", "data": {"trip_id": "old1", "user_id": "oldEveFirebaseUid0001"}},
     {"collection": "itinerary_events", "id": "oe1", "data": {"trip_id": "old1", "title": "Colosseum", "by": "oldEveFirebaseUid0001"}},
-    {"collection": "itinerary_events", "id": "spam", "data": {"trip_id": "t1", "title": "injected"}}
+    {"collection": "itinerary_events", "id": "spam", "data": {"trip_id": "t1", "title": "injected"}},
+    {"collection": "trip_members", "id": "sneak", "data": {"trip_id": "t1", "user_id": "oldEveFirebaseUid0001"}},
+    {"collection": "profiles", "id": "abababab-0000-0000-0000-000000000002", "data": {"name": "fake Bob"}}
   ]') = 3, 'imports her trip, not into Ann''s';
   assert (select data ->> 'by' from wander.docs where id = 'oe1') = 'abababab-0000-0000-0000-000000000003', 're-keyed';
   assert (select count(*) from wander.docs where trip_id = 'old1') = 3, 'she sees her old trip';
 end $$;
 reset role;
-do $$ begin assert not exists (select 1 from wander.docs where id = 'spam'), 'nothing injected'; end $$;
+do $$ begin
+  assert not exists (select 1 from wander.docs where id in ('spam', 'sneak')), 'nothing injected into Ann''s trip';
+  assert not exists (select 1 from wander.docs where data ->> 'name' = 'fake Bob'), 'no profile planted for a new account';
+end $$;
 set role anon;
 do $$ begin perform 1 from wander.docs; raise exception 'anon reads nothing';
 exception when insufficient_privilege then null; end $$;

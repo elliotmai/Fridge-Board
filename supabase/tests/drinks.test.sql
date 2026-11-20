@@ -77,8 +77,9 @@ do $$ begin
   assert drinks.import('oldCatFirebaseUid000', '{
     "users/oldCatFirebaseUid000/drinks/c1": {"name": "Wine"},
     "friendships/oldCatFirebaseUid000/ffffffff-0000-0000-0000-000000000001": {"displayName": "Amy"},
-    "users/ffffffff-0000-0000-0000-000000000001/profile": {"hacked": true}
-  }') = 2, 'imports only her own records';
+    "users/ffffffff-0000-0000-0000-000000000001/profile": {"hacked": true},
+    "parties/p1/members/oldCatFirebaseUid000": {"n": "Cat sneaking in"}
+  }') = 2, 'imports only her own records, and no way into an existing party';
   assert drinks.has(array['users', 'ffffffff-0000-0000-0000-000000000003', 'drinks', 'c1']), 're-keyed to her new id';
   assert drinks.has(array['friendships', 'ffffffff-0000-0000-0000-000000000003', 'ffffffff-0000-0000-0000-000000000001']), 'her friendship too';
 end $$;
