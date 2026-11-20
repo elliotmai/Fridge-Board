@@ -27,7 +27,9 @@ export default defineConfig({
         orientation: 'any', // landscape on the fridge, portrait on phones
         start_url: '/',
         icons: [
-          // Honeycomb. PNGs for installers that skip SVG; maskable has a full-bleed
+          // Honeycomb. icon.svg and favicon.svg switch to white-on-black in dark mode
+          // (a media query inside the SVG); installed icons have no dark slot, so the
+          // PNGs are the light version. Maskable has a full-bleed
           // background with the comb inside the safe zone so Android can crop it.
           { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
