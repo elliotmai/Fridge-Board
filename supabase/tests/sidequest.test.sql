@@ -39,8 +39,25 @@ do $$ begin
   assert pg_temp.denied($q$select sidequest.update('users/cdcdcdcd-0000-0000-0000-000000000001', '[{"path": ["username"], "op": "set", "value": "pwned"}]')$q$), 'not the host''s name';
   assert pg_temp.denied($q$insert into sidequest.docs (path, data) values ('sessions/ABC123/events/e1', '{"uid": "cdcdcdcd-0000-0000-0000-000000000001"}')$q$), 'no events as the host';
 end $$;
+-- transactions: a stale read is refused, a fresh one commits
+create temp table v as select updated_at::text as version from sidequest.docs where path = 'sessions/ABC123';
+grant select on v to authenticated;
+select sidequest.commit(jsonb_build_array(jsonb_build_object('path', 'sessions/ABC123', 'version', (select version from v))),
+  '[{"path": "sessions/ABC123", "kind": "update", "ops": [{"path": ["stock"], "op": "set", "value": [1, 2]}]}]');
+do $$ begin
+  perform sidequest.commit(jsonb_build_array(jsonb_build_object('path', 'sessions/ABC123', 'version', (select version from v))),
+    '[{"path": "sessions/ABC123", "kind": "update", "ops": [{"path": ["stock"], "op": "set", "value": []}]}]');
+  raise exception 'a stale read must not commit';
+exception when serialization_failure then null; end $$;
+do $$ begin
+  assert pg_temp.denied($q$delete from sidequest.docs where path = 'sessions/ABC123'$q$), 'only the host deletes a game';
+end $$;
+select pg_temp.as_user(1);
+delete from sidequest.docs where path like 'sessions/ABC123/%';
+delete from sidequest.docs where path = 'sessions/ABC123';
 reset role;
 do $$ begin
+  assert not exists (select 1 from sidequest.docs where path like 'sessions/ABC123%'), 'host deleted the game';
   assert (select data ->> 'isAdmin' from sidequest.docs where path = 'users/cdcdcdcd-0000-0000-0000-000000000001') = 'true', 'host kept admin';
   assert exists (select 1 from sidequest.docs where path = 'packs/new'), 'admin added a pack';
 end $$;
