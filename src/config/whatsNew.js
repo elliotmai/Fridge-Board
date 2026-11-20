@@ -8,7 +8,10 @@ export const WHATS_NEW = [
   {
     version: '2026.11.20.2',
     date: 'November 2026',
-    items: ['Trips close to home show only the flights, drives and stays you are on. Leaving and coming back are shown only for trips away.'],
+    items: [
+      'Trips close to home show only the flights, drives and stays you are on. Leaving and coming back are shown only for trips away.',
+      'Chores on the board are just the chore names now. The how-to details show in housesitter mode.',
+    ],
   },
   {
     version: '2026.11.20.1',
