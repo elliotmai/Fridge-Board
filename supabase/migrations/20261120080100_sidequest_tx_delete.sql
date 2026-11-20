@@ -47,11 +47,11 @@ end $$;
  */
 create function sidequest.commit(reads jsonb, writes jsonb) returns void
 language plpgsql security invoker set search_path = '' as $$
-declare r jsonb; w jsonb; cur text;
+declare r jsonb; w jsonb; cur timestamptz;
 begin
   for r in select * from jsonb_array_elements(reads) loop
-    select updated_at::text into cur from sidequest.docs where path = r ->> 'path' for update;
-    if cur is distinct from (r ->> 'version') then
+    select updated_at into cur from sidequest.docs where path = r ->> 'path' for update;
+    if cur is distinct from (r ->> 'version')::timestamptz then
       raise exception 'changed meanwhile: %', r ->> 'path' using errcode = '40001';
     end if;
   end loop;
