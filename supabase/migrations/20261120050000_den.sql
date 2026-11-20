@@ -212,7 +212,7 @@ grant execute on all functions in schema den to service_role;
 
 do $$ begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    alter publication supabase_realtime add table den.couples, den.items;
+    alter publication supabase_realtime add table den.couples, den.items, den.profiles;
   end if;
 end $$;
 
