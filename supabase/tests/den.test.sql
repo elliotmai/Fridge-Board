@@ -75,12 +75,33 @@ do $$ begin
   assert not (select data::text like '%oldDi%' from den.couples where id = 'fbDen1'), 'no old id left';
 end $$;
 
+-- merging: deep for the den and records, shallow for updates, $delete removes
+select set_config('request.jwt.claim.sub', 'eeeeeeee-0000-0000-0000-000000000004', false);
+select den.merge_couple('fbDen1', '{"partners": {"eeeeeeee-0000-0000-0000-000000000004": {"timeZone": "Asia/Tokyo"}}, "tonight": {"plan": 1}}');
+select den.merge_item('fbDen1', 'answers', '2026-11-20', '{"answers": {"a": "hi", "b": "yo"}}');
+select den.merge_item('fbDen1', 'answers', '2026-11-20', '{"answers": {"a": {"$delete": true}}, "when": {"$ts": 5}}');
+select den.patch_item('fbDen1', 'tasks', 'ft1', '{"title": "new", "assignee": {"$delete": true}}');
+do $$ begin
+  assert (select data->'partners'->'eeeeeeee-0000-0000-0000-000000000004'->>'email' from den.couples where id = 'fbDen1') = 'DI@example.com', 'deep merge keeps siblings';
+  assert (select data->'partners'->'eeeeeeee-0000-0000-0000-000000000004'->>'timeZone' from den.couples where id = 'fbDen1') = 'Asia/Tokyo', 'and sets the new one';
+  assert (select data from den.items where id = '2026-11-20') = '{"answers": {"b": "yo"}, "when": {"$ts": 5}}', 'merge_item creates, merges, deletes';
+  assert (select data from den.items where id = 'ft1') = jsonb_build_object('title', 'new', 'createdBy', 'eeeeeeee-0000-0000-0000-000000000004'), 'patch replaces fields';
+end $$;
+select set_config('request.jwt.claim.sub', 'eeeeeeee-0000-0000-0000-000000000001', false);
+select den.merge_couple('fbDen1', '{"hacked": true}');
+do $$ begin
+  perform den.merge_item('fbDen1', 'answers', 'x', '{}');
+  raise exception 'a non-member must not add records';
+exception when insufficient_privilege then null; end $$;
+
 -- profiles are private
+select set_config('request.jwt.claim.sub', 'eeeeeeee-0000-0000-0000-000000000004', false);
 insert into den.profiles (data) values ('{"coupleId": "fbDen1"}');
 select set_config('request.jwt.claim.sub', 'eeeeeeee-0000-0000-0000-000000000003', false);
 do $$ begin assert (select count(*) from den.profiles) = 0, 'Cy sees no one else''s profile'; end $$;
 
 reset role;
+do $$ begin assert not (select data ? 'hacked' from den.couples where id = 'fbDen1'), 'non-member merge changed nothing'; end $$;
 set role anon;
 do $$ begin
   perform 1 from den.couples;
