@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.20.3',
+    date: 'November 2026',
+    items: ['Hive has a new honeycomb icon. If it is already on your home screen, remove it and add it again to pick up the new one.'],
+  },
+  {
     version: '2026.11.20.2',
     date: 'November 2026',
     items: [
