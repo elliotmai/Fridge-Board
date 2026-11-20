@@ -6,7 +6,7 @@ begin
   for r in select * from jsonb_array_elements(reads) loop
     select updated_at into cur from sidequest.docs where path = r ->> 'path' for update;
     if cur is distinct from (r ->> 'version')::timestamptz then
-      raise exception 'changed meanwhile: %', r ->> 'path' using errcode = '40001';
+      raise exception 'changed meanwhile: %', r ->> 'path' using errcode = 'PT409'; -- HTTP 409; not 40001, which the API would retry by itself
     end if;
   end loop;
   for w in select * from jsonb_array_elements(writes) loop

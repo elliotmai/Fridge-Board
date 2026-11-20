@@ -42,7 +42,7 @@ end $$;
 /**
  * Commit a transaction: `reads` is [{path, version}] as read (version null for
  * "wasn't there"); `writes` is [{path, kind: 'update' | 'set' | 'delete', ops?, data?}].
- * If any read document changed since, nothing is written and it raises 40001
+ * If any read document changed since, nothing is written and it raises PT409 (HTTP 409)
  * (the page reads again and retries). Runs as the caller: the rules decide.
  */
 create function sidequest.commit(reads jsonb, writes jsonb) returns void
@@ -52,7 +52,7 @@ begin
   for r in select * from jsonb_array_elements(reads) loop
     select updated_at into cur from sidequest.docs where path = r ->> 'path' for update;
     if cur is distinct from (r ->> 'version')::timestamptz then
-      raise exception 'changed meanwhile: %', r ->> 'path' using errcode = '40001';
+      raise exception 'changed meanwhile: %', r ->> 'path' using errcode = 'PT409'; -- HTTP 409; not 40001, which the API would retry by itself
     end if;
   end loop;
   for w in select * from jsonb_array_elements(writes) loop

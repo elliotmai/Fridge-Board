@@ -48,7 +48,7 @@ do $$ begin
   perform sidequest.commit(jsonb_build_array(jsonb_build_object('path', 'sessions/ABC123', 'version', (select version from v))),
     '[{"path": "sessions/ABC123", "kind": "update", "ops": [{"path": ["stock"], "op": "set", "value": []}]}]');
   raise exception 'a stale read must not commit';
-exception when serialization_failure then null; end $$;
+exception when sqlstate 'PT409' then null; end $$;
 do $$ begin
   assert pg_temp.denied($q$delete from sidequest.docs where path = 'sessions/ABC123'$q$), 'only the host deletes a game';
 end $$;
