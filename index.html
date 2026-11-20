@@ -3,7 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" id="touch-icon" />
+    <script>
+      // iOS copies this icon once, at Add to Home Screen, and has no dark slot for web
+      // apps. So in dark mode, offer the dark icon: add Hive while dark, keep it dark.
+      (function () {
+        var mq = window.matchMedia && matchMedia('(prefers-color-scheme: dark)');
+        var link = document.getElementById('touch-icon');
+        if (!mq || !link) return;
+        var set = function () { link.href = mq.matches ? '/icons/apple-touch-icon-dark.png' : '/icons/apple-touch-icon.png'; };
+        set();
+        if (mq.addEventListener) mq.addEventListener('change', set); else if (mq.addListener) mq.addListener(set);
+      })();
+    </script>
     <!-- Full mobile viewport, non-zoomable, respects notches/safe areas -->
     <meta
       name="viewport"

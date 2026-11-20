@@ -16,7 +16,7 @@ export default defineConfig({
       // Auto-update: a new deploy's service worker installs and takes over,
       // then the app reloads to the latest code with no "refresh?" prompt.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/icon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'icons/icon.svg', 'icons/apple-touch-icon.png', 'icons/apple-touch-icon-dark.png'],
       manifest: {
         name: 'Hive',
         short_name: 'Hive',
