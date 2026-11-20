@@ -71,7 +71,7 @@ language sql stable security definer set search_path = '' as $$
     when not exists (select 1 from letseat.legacy) then 'none'
     -- The old data was open to anyone, so it goes to an account that existed
     -- before the move (people signing up from now on can't take it).
-    when (select created_at from auth.users where id = auth.uid()) >= timestamptz '2026-11-20 18:00:00+00' then 'not_eligible'
+    when (select created_at from auth.users where id = auth.uid()) >= timestamptz '2026-11-20 17:15:00+00' then 'not_eligible'
     else 'waiting'
   end
 $$;
