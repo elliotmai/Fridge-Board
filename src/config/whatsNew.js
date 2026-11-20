@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.20.5',
+    date: 'November 2026',
+    items: ['Want the dark Hive icon on your iPhone? Switch the phone to dark mode, remove Hive from your home screen, then add it again from Safari.'],
+  },
+  {
     version: '2026.11.20.4',
     date: 'November 2026',
     items: ['In dark mode, Hive’s icon in your browser tab turns into a white honeycomb on black.'],
