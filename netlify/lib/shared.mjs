@@ -17,7 +17,7 @@ export const urls = {
   kitchenhub: () => env('KITCHENHUB_URL', 'https://us-central1-mykitchenhub-db665.cloudfunctions.net/board').replace(/\/$/, ''),
   learnleaf: () => env('LEARNLEAF_URL', 'https://learnleaf.flyingdoublemranch.com').replace(/\/$/, ''),
   ourden: () => env('OURDEN_URL', 'https://den.flyingdoublemranch.com').replace(/\/$/, ''),
-  wander: () => env('WANDER_FUNCTIONS_URL', 'https://us-central1-wander-f10b1.cloudfunctions.net').replace(/\/$/, ''),
+  wander: () => env('WANDER_FUNCTIONS_URL', 'https://wander.flyingdoublemranch.com/api').replace(/\/$/, ''),
 };
 
 export const json = (status, body, extra = {}) =>
