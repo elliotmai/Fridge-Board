@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.20.1',
+    date: 'November 2026',
+    items: [
+      'Every app opens inside Hive now, including Our Den and Cattle Graph. To send one to its own tab instead, press and hold its icon.',
+      'Calendar and Google Tasks results open your board’s agenda inside Hive, instead of Google’s site in a new tab.',
+      'Sign in to Hive with any of your old app passwords, on any device.',
+    ],
+  },
+  {
     version: '2026.11.20',
     date: 'November 2026',
     items: [

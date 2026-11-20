@@ -16,7 +16,7 @@ const OPTS = { window: 30, breedWindow: 30, awayMiles: 75 };
 
 /**
  * Each widget: the app that owns what it shows (tapping the title opens it
- * there, at `path`), or `url` for something outside Hive (Google Calendar),
+ * there, at `path`),
  * its label, its default size, and what it shows.
  *
  * Bodies are interactive: lists scroll inside the widget, ticks go to the app
@@ -31,12 +31,12 @@ export const WIDGETS = {
   trip: { label: 'Trips', app: 'wander', size: 'square', Body: Trip, status: (d) => d.status.trips },
   breeding: { label: 'Breeding', app: 'znt', size: 'square', Body: Breeding, status: (d) => d.status.breeding },
   tasks: { label: 'To do', app: 'learnleaf', path: APPS.learnleaf.paths.tasks, size: 'square', Body: Tasks, status: (d) => [d.status.tasks, d.status.gtasks].find((x) => x?.status !== 'live') || d.status.tasks },
-  calendar: { label: 'Calendar', app: 'board', url: 'https://calendar.google.com/', size: 'square', Body: Calendar, status: (d) => d.status.calendar },
+  calendar: { label: 'Calendar', app: 'board', size: 'square', Body: Calendar, status: (d) => d.status.calendar },
 };
 export const widgetIds = Object.keys(WIDGETS);
 
 /**
- * `onOpen(to)` opens the widget's app; `to` ({ path } or { url }) opens a
+ * `onOpen(to)` opens the widget's app; `to` ({ path }) opens a
  * particular thing instead, like one recipe or one calendar day.
  * `still` (the long-press preview) shows it without scroll bars or actions.
  */
@@ -233,9 +233,6 @@ function Tasks({ data, now }) {
 
 /* ---------- things to look through ---------- */
 
-const pad = (n) => String(n).padStart(2, '0');
-const calDay = (d) => `https://calendar.google.com/calendar/r/day/${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
-
 function Calendar({ data, now, onOpen }) {
   const days = agendaDays(dedupeEvents(data.events, data.trips).shown, now, 14);
   if (!days.length) return <Empty big="Nothing coming up" sub="The next two weeks are clear" />;
@@ -248,7 +245,7 @@ function Calendar({ data, now, onOpen }) {
           <ul className="w-list">
             {d.events.map((e) => (
               <li key={`${e.id}-${d.n}`}>
-                <button className="w-act w-link" onClick={() => onOpen({ url: calDay(d.date) })}>
+                <button className="w-act w-link" onClick={() => onOpen()}>
                   <span className="w-when">{e.continued ? 'Cont.' : at(e)}</span>
                   <span className="w-text">{e.title}{e.location && <small>{e.location}</small>}</span>
                 </button>

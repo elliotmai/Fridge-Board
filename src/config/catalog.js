@@ -24,18 +24,18 @@ import { APPS } from './apps.js';
 export const CATALOG = {
   board: { name: 'Fridge Board', color: '#2f7a4a', glyph: 'board', audience: 'household', native: true, blurb: 'Chores, meals, shopping, trips and breeding on one screen.' },
   settings: { name: 'Settings', color: '#8e8e93', glyph: 'gear', audience: 'anyone', native: true, blurb: 'Your Hive account, wallpaper, and how the home screen looks.' },
-  // GalaxyFarm signs in with a cookie, which Safari (and soon every browser)
-  // refuses to a site shown inside another one, so it opens in its own tab.
-  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', frame: false, blurb: 'Cattle, flocks, chores and the housesitter guide.',
+  // GalaxyFarm signs in with a cookie, which Safari refuses to a site shown
+  // inside another one: on iPhone it can't stay signed in inside Hive yet.
+  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
-  cattlegraph: { name: 'Cattle Graph', url: 'https://cattle-registrations.netlify.app', color: '#5a4632', glyph: 'graph', audience: 'household', frame: false, blurb: 'Pedigrees across every breed association.' },
+  cattlegraph: { name: 'Cattle Graph', url: 'https://cattle-registrations.netlify.app', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
   kitchenhub: { name: 'KitchenHub', url: APPS.kitchenhub.url, color: '#9c3a5c', glyph: 'pot', audience: 'anyone', blurb: 'What is in the fridge, meal plans and shopping.',
     shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
   letseat: { name: "Let's Eat", url: 'https://lets-go-eat.netlify.app', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
   pool: { name: 'Pool Heater', url: 'https://pool-heater-monitor.netlify.app', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
   property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
-  ourden: { name: 'Our Den', url: 'https://ourden.netlify.app', color: '#4b3b78', glyph: 'moon', audience: 'invite', frame: false, blurb: 'A private space for two, across the distance.' },
+  ourden: { name: 'Our Den', url: 'https://ourden.netlify.app', color: '#4b3b78', glyph: 'moon', audience: 'invite', blurb: 'A private space for two, across the distance.' },
   wander: { name: 'Wander', url: APPS.wander.url, color: '#2c5e9e', glyph: 'plane', audience: 'anyone', blurb: 'Trips, itineraries and live flights.' },
   aerologger: { name: 'AeroLogger', url: 'https://aero-logger.com', color: '#3b6f8f', glyph: 'binoculars', audience: 'anyone', blurb: 'Log the aircraft you spot.' },
   // hive: signs you in with your Hive account when opened inside Hive.
@@ -93,16 +93,14 @@ export function appUrl(id, path = '') {
 }
 
 /**
- * Whether an app opens in its own tab rather than inside Hive. Inside Hive the
- * browser gives an app a separate sign-in of its own, so only apps that sign
- * you in with Hive open inside by default. `look.external[id]` is your choice
- * per app (true: own tab, false: inside), and "Open apps inside Hive" off
- * sends every app to its own tab.
+ * Whether an app opens in its own tab rather than inside Hive. Everything
+ * opens inside Hive unless you choose otherwise: per app (`look.external[id]`
+ * true, from press-and-hold) or for all apps ("Open apps inside Hive" off).
+ * `frame: false` is for an app that refuses to be shown inside another site.
  */
 export function opensInTab(id, look = {}) {
   const a = CATALOG[id] || {};
   if (!a.url || a.native) return false;
   if (a.frame === false || look.inside === false) return true;
-  const mine = look.external?.[id];
-  return mine === undefined ? !a.hive : mine;
+  return look.external?.[id] === true;
 }

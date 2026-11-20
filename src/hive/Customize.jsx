@@ -94,7 +94,7 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
 
         <h3 className="sheet-sub">Apps</h3>
         <Toggle label="Open apps inside Hive" checked={look.inside !== false} onChange={set('inside')}
-          hint="Apps that sign you in with Hive open inside it. The rest open in their own tab, where you stay signed in: inside Hive they’d ask you to sign in again. Off: every app opens in its own tab. To choose for one app, press and hold its icon." />
+          hint="On: every app opens inside Hive. Off: every app opens in its own tab. To choose for one app, press and hold its icon." />
 
         <h3 className="sheet-sub">Home Screen</h3>
         <Toggle label="Dock" checked={look.dock} onChange={set('dock')} />

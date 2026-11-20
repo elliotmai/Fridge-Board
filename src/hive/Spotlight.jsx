@@ -156,13 +156,12 @@ export function search(query, { data, now, custom = {} }) {
 }
 
 /**
- * Google's own apps for things that live there. They aren't Hive apps, so
- * they open in a new tab; the icon shown is the board's, which displays them.
+ * Google Calendar and Google Tasks won't be shown inside another site, so
+ * their results open the board, which shows the same events and tasks, inside Hive.
  */
-const pad = (n) => String(n).padStart(2, '0');
 const google = {
-  tasks: { app: 'board', url: 'https://tasks.google.com/', where: 'Google Tasks' },
-  day: (d) => ({ app: 'board', url: `https://calendar.google.com/calendar/r/day/${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`, where: 'Google Calendar' }),
+  tasks: { app: 'board', where: 'Google Tasks' },
+  day: () => ({ app: 'board', where: 'Google Calendar' }),
 };
 
 /** With nothing typed: what's on today, at a glance. */
