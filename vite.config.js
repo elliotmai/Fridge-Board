@@ -37,6 +37,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        // Apps served at Hive's own address (/apps/<id>/, netlify.toml) bring
+        // their own pages and service worker; Hive's must not answer for them.
+        navigateFallbackDenylist: [/^\/apps\//, /^\/api\//],
       },
       devOptions: { enabled: false },
     }),

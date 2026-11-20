@@ -16,6 +16,20 @@
   SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "sb_publishable_fZo1FUg_j4O1EHH-W2Jr1A_4P8W3o2S,AIzaSyBi5xLBJVPpGQj2qoNc7tPHB-HE3AIDBAE,AIzaSyA8rr1TEUUZ9b_PqR475mszkoC0aMoHeTE,AIzaSyArUnjG1BLqTbHCQqWruqLZDwy-aoMxgR4,AIzaSyAIJihKqOI3BJjSU7AZmBElHcvDJjeAIaQ,AIzaSyA-PPCs494aPCHuPEE6HIs2GgeCdHjviWw,AIzaSyApq0Wj12n2Gn8tjD0HJ-MsR3ON8hbh7QQ"
 
 # Single-page app: send every path to index.html.
+# Apps that have moved to Hive's Supabase project, served at Hive's own
+# address so they share its sign-in (docs/supabase-migration-plan.md). Each
+# app's own site keeps working on its own. Must come before the catch-all.
+[[redirects]]
+  from = "/apps/stimultrack/*"
+  to = "https://stimultrack.netlify.app/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/apps/stimultrack"
+  to = "/apps/stimultrack/"
+  status = 301
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
