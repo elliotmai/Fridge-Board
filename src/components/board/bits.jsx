@@ -31,8 +31,10 @@ export function OpenIn({ app, path, args = [], label }) {
   );
 }
 
-export function Countdown({ n, now }) {
-  if (now) return <span className="countdown now"><b>Now</b></span>;
+/** Days until something. Nothing once it's under way: the board can't know it actually happened. */
+export function Countdown({ n }) {
+  if (n < 0) return null;
+  if (n === 0) return <span className="countdown"><b>Today</b></span>;
   return <span className="countdown"><b>{n}</b><span>{n === 1 ? 'day' : 'days'}</span></span>;
 }
 
