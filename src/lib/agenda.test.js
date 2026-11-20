@@ -89,7 +89,7 @@ test('one timeline: trips, legs, breeding, events and tasks by day', () => {
     google: [{ id: 'g', list: 'L', title: 'Fix gate', due: null }],
   }, NOW);
   const timed = { ...thanksgiving, far: true, items: thanksgiving.items.map((i) => (i.kind === 'flight' ? { ...i, time: '6:10 AM' } : i)) };
-  const trips = [timed, { id: 'lis', name: 'Lisbon', dest: 'Lisbon, Portugal', startDate: day(40), endDate: day(48), items: [] }];
+  const trips = [timed, { id: 'lis', name: 'Lisbon', dest: 'Lisbon, Portugal', startDate: day(40), endDate: day(48), far: true, items: [] }];
   const breeding = { name: 'Fall heifers', cidr: new Date(2026, 10, 20), lut: new Date(2026, 10, 27), b1: new Date(2026, 10, 29), b2: new Date(2026, 11, 1), head: 30, groups: [], clash: [] };
   const events = [{ id: 'den', title: 'Dentist', allDay: false, start: at(0, 15), end: at(0, 16) }];
   const tl = timeline({ todos, events, trips, breeding }, NOW, { horizon: 14 });
@@ -108,7 +108,7 @@ test('one timeline: trips, legs, breeding, events and tasks by day', () => {
 
 test('a breeding run or trip starting inside two weeks is shown whole', () => {
   const b = { name: 'Fall', cidr: new Date(2026, 10, 30), lut: new Date(2026, 11, 7), b1: new Date(2026, 11, 9), b2: new Date(2026, 11, 11), groups: [], clash: [] };
-  const trip = { id: 'x', name: 'Long', dest: 'Far', startDate: day(12), endDate: day(20), items: [] };
+  const trip = { id: 'x', name: 'Long', dest: 'Far', startDate: day(12), endDate: day(20), far: true, items: [] };
   const tl = timeline({ breeding: b, trips: [trip] }, NOW, { horizon: 14 });
   const kinds = tl.days.flatMap((d) => d.items.map((i) => i.label || i.kind));
   assert.deepEqual(kinds, ['CIDRs in', 'trip-start', 'Lutalyse', 'Breeding starts', 'trip-end', 'Breeding ends']);
@@ -122,8 +122,19 @@ test('breeding past the horizon goes to Later; finished trips are gone', () => {
   assert.deepEqual(tl.later.map((l) => l.kind), ['breed']);
 });
 
-test('a trip already under way shows on today', () => {
-  const now = { id: 'n', name: 'Lake', dest: 'Lake Somerville', startDate: day(-1), endDate: day(1), far: false, items: [] };
+test('an away trip already under way shows on today', () => {
+  const now = { id: 'n', name: 'Asheville', dest: 'Asheville, NC', startDate: day(-1), endDate: day(1), far: true, items: [] };
   const tl = timeline({ trips: [now] }, NOW);
   assert.deepEqual(tl.days.map((d) => [d.n, d.items.map((i) => i.kind)]), [[0, ['trip-now']], [1, ['trip-end']]]);
+});
+
+test('a trip close to home shows only its activities, and nothing if none are yours', () => {
+  const lake = { id: 'l', name: 'Lake', dest: 'Lake Somerville', startDate: day(3), endDate: day(4), far: false,
+    items: [{ kind: 'drive', title: '', route: 'Home to Lake', date: day(3), time: '9:00 AM' }, { kind: 'stay', title: 'Cabin 6', date: day(3), until: day(4) }] };
+  const notMine = { id: 'm', name: 'Picnic', dest: 'Town park', startDate: day(5), endDate: day(5), far: false, items: [] };
+  const laterClose = { id: 'c', name: 'Rodeo', dest: 'Bryan', startDate: day(40), endDate: day(41), far: false, items: [] };
+  const tl = timeline({ trips: [lake, notMine, laterClose] }, NOW, { horizon: 14 });
+  assert.deepEqual(tl.days.map((d) => [d.n, d.items.map((i) => i.kind)]), [[3, ['stay', 'leg']]]);
+  assert.equal(tl.days[0].away, null);
+  assert.deepEqual(tl.later, []);
 });

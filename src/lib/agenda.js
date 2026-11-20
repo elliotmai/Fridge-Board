@@ -137,16 +137,20 @@ const plusDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); 
  *   later     trips and breeding beyond the horizon (within their own windows)
  *   anytime   tasks with no date
  *
- * Item kinds: task, event, trip-start, trip-now (under way), trip-end, leg, stay, breed. Within a day:
+ * Item kinds: task, event, trip-start, trip-now (under way), trip-end, leg, stay, breed.
+ * trip-start/now/end only for away trips (`far`); legs and stays are already only yours. Within a day:
  * all-day things first (trips, breeding, all-day events), then by time, then
  * untimed tasks.
  */
+/** A trip close to home shows only its legs and stays; one with none of yours doesn't show. */
+const shows = (t) => t.far || (t.items || []).some((i) => i.date);
+
 export function timeline({ todos = [], events = [], trips = [], breeding = null }, now, { horizon = 14 } = {}) {
   const today = startOf(now);
   // Two weeks, stretched so a trip or breeding run that starts inside it is shown whole.
   let end = plusDays(today, horizon - 1);
   const firstEnd = end;
-  for (const t of trips) { const s = parseDate(t.startDate), f = parseDate(t.endDate); if (s <= firstEnd && f > end) end = f; }
+  for (const t of trips) { const s = parseDate(t.startDate), f = parseDate(t.endDate); if (shows(t) && s <= firstEnd && f > end) end = f; }
   if (breeding && breeding.cidr <= firstEnd && breeding.b2 > end) end = startOf(breeding.b2);
   const items = [];
   const put = (date, item) => { if (date >= today && date <= end) items.push({ ...item, date: startOf(date) }); };
@@ -165,11 +169,14 @@ export function timeline({ todos = [], events = [], trips = [], breeding = null 
   const away = new Map(); // day number → destination
   for (const t of trips) {
     const s = parseDate(t.startDate), f = parseDate(t.endDate);
-    if (f < today) continue;
+    if (f < today || !shows(t)) continue;
     if (s > firstEnd) { later.push({ kind: 'trip', key: `trip:${t.id}`, date: s, n: daysBetween(today, s), trip: t }); continue; }
-    if (s < today) put(today, { kind: 'trip-now', key: `tn:${t.id}`, at: -2, trip: t });
-    else put(s, { kind: 'trip-start', key: `ts:${t.id}`, at: -2, trip: t });
-    if (daysBetween(s, f) > 0) put(f, { kind: 'trip-end', key: `te:${t.id}`, at: 24 * 60, trip: t });
+    // Leaving and coming back only for an away trip; a trip close to home is just its activities.
+    if (t.far) {
+      if (s < today) put(today, { kind: 'trip-now', key: `tn:${t.id}`, at: -2, trip: t });
+      else put(s, { kind: 'trip-start', key: `ts:${t.id}`, at: -2, trip: t });
+      if (daysBetween(s, f) > 0) put(f, { kind: 'trip-end', key: `te:${t.id}`, at: 24 * 60, trip: t });
+    }
     if (t.far) for (let d = new Date(Math.max(s, today)); d <= f && d <= end; d = plusDays(d, 1)) away.set(daysBetween(today, d), (t.dest || t.name).split(',')[0]);
     (t.items || []).forEach((i, n) => {
       if (!i.date) return;

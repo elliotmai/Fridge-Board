@@ -39,7 +39,7 @@ export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter
               </div>
               {open.map((c) => (
                 <CheckRow key={c.id} checked={false} late={late} onToggle={() => onToggle(c)}>
-                  {c.title}{c.detail && <small>{c.detail}</small>}
+                  {c.title}{sitter && c.detail && <small>{c.detail}</small>}
                 </CheckRow>
               ))}
             </div>
