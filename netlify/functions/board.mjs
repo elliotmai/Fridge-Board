@@ -23,14 +23,11 @@
  *                      appTripTravel marks legs with `mine`
  *   Optional: HOME_LAT / HOME_LON / HOME_TZ (only if GalaxyFarm has no location),
  *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, OURDEN_URL, WANDER_FUNCTIONS_URL,
- *   ZNT_PROJECT_ID, ZNT_API_KEY
+ *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (ZNT, from Hive's Supabase project)
  */
 import { env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
 import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
 
-const ZNT_PROJECT = () => env('ZNT_PROJECT_ID', 'znt-manager');
-const ZNT_KEY = () => env('ZNT_API_KEY', ''); // ZNT's rules allow reads, so no key is needed
-const ZNT_USER = 'znt-manager-user';
 // Travel is looked up for every trip starting this soon (or under way): it decides
 // which trips are the owner's own, so a trip without a lookup can't be shown.
 const TRAVEL_LOOKAHEAD_DAYS = 400;
@@ -230,32 +227,32 @@ async function wander({ tz }, user) {
 }
 
 /* ----------------------------------------------------------------- ZNT --- */
-function fsValue(v) {
-  if ('stringValue' in v) return v.stringValue;
-  if ('integerValue' in v) return Number(v.integerValue);
-  if ('doubleValue' in v) return v.doubleValue;
-  if ('booleanValue' in v) return v.booleanValue;
-  if ('timestampValue' in v) return new Date(v.timestampValue);
-  if ('nullValue' in v) return null;
-  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsValue);
-  if ('mapValue' in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k, x]) => [k, fsValue(x)]));
-  return undefined;
-}
 
-async function znt({ tz }) {
-  const base = `https://firestore.googleapis.com/v1/projects/${ZNT_PROJECT()}/databases/(default)/documents/users/${ZNT_USER}/sessions`;
-  const q = new URLSearchParams({ pageSize: '200' });
-  if (ZNT_KEY()) q.set('key', ZNT_KEY());
-  const r = await getJson(`${base}?${q}`);
-  const sessions = (r.documents || []).map((d) => {
-    const f = Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, fsValue(v)]));
-    return {
-      name: f.name || 'Breeding group',
-      cidr: f.cidrDate instanceof Date ? dateIn(f.cidrDate, tz) : null, // stored at local noon, so this is the CIDR day
-      groups: (f.groups || []).map((g) => [g.name || 'Group', Number(g.headCount) || 0]),
-      notes: f.notes || '',
-    };
-  }).filter((s) => s.cidr);
+/**
+ * ZNT's breeding sessions, from Hive's Supabase project (schema znt), for the
+ * household of whoever is signed in to Hive. The fridge tablet may have nobody
+ * signed in: then the only household, if there's exactly one.
+ */
+async function znt({ tz }, user) {
+  const url = env('SUPABASE_URL'), key = env('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) return { status: 'unconfigured', reason: 'Supabase is not set up for the board' };
+  const headers = { apikey: key, ...(key.startsWith('sb_') ? {} : { authorization: `Bearer ${key}` }) };
+  const read = (path, schema) => getJson(`${url}/rest/v1/${path}`, { headers: { ...headers, 'accept-profile': schema } });
+  let household = null;
+  if (user?.uid) household = (await read(`household_members?select=household_id&user_id=eq.${encodeURIComponent(user.uid)}&order=joined_at&limit=1`, 'core'))[0]?.household_id || null;
+  if (!household) {
+    const all = await read('households?select=id&limit=2', 'core');
+    if (all.length === 1) household = all[0].id;
+  }
+  if (!household) return { status: 'unconfigured', reason: 'Sign in to Hive to see your household’s breeding' };
+  const rows = await read(`docs?select=id,data&collection=eq.sessions&household_id=eq.${household}`, 'znt');
+  const day = (v) => (v && typeof v.$ts === 'number' ? dateIn(new Date(v.$ts), tz) : null); // stored at local noon, so this is the CIDR day
+  const sessions = rows.map(({ data: f }) => ({
+    name: f.name || 'Breeding group',
+    cidr: day(f.cidrDate),
+    groups: (f.groups || []).map((g) => [g.name || 'Group', Number(g.headCount) || 0]),
+    notes: f.notes || '',
+  })).filter((x) => x.cidr);
   return { status: 'live', data: { sessions } };
 }
 
@@ -280,7 +277,7 @@ export default async (req) => {
     settle('kitchenhub', () => kitchenhub(user)),
     settle('learnleaf', () => learnleaf(user)),
     settle('wander', () => wander(where, user)),
-    settle('znt', () => znt(where)),
+    settle('znt', () => znt(where, user)),
     settle('google', () => google(where, user)),
   ]);
   return json(200, {
