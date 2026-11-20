@@ -97,7 +97,7 @@ function Item({ i, todoDone, onToggle }) {
   switch (i.kind) {
     case 'task': return <Todo t={i.task} done={todoDone.includes(i.task.key)} onToggle={onToggle} when={i.task.time ? clock12(i.task.time) : ''} />;
     case 'event': return <Line left={i.event.allDay ? 'All day' : i.continued ? 'cont.' : timeOf(i.event.start)} title={i.event.title} sub={!i.continued && i.event.location} />;
-    case 'trip-start': return <Line icon={Plane} tone="trip" title={`Leave for ${t.name}`} sub={`${t.dest}, ${plural(daysBetween(parseDate(t.startDate), parseDate(t.endDate)), 'night')}${t.far ? '' : '. Close to home'}`} />;
+    case 'trip-start': return <Line icon={Plane} tone="trip" title={`Leave for ${t.name}`} sub={`${t.dest}, ${plural(daysBetween(parseDate(t.startDate), parseDate(t.endDate)), 'night')}`} />;
     case 'trip-now': return <Line icon={Plane} tone="trip" title={`Away: ${t.name}`} sub={`${t.dest}, back ${md(parseDate(t.endDate))}`} />;
     case 'trip-end': return <Line icon={Plane} tone="trip" title={`Back from ${t.name}`} />;
     case 'leg': {
