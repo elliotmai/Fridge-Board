@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '@/config/supabase';
+import { SESSION_COOKIE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, sessionCookieOptions } from '@/config/supabase';
 
 /**
  * The Hive account: one sign-in (email and password, or Google) on Hive's
@@ -15,13 +15,34 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '@/config/supabase';
  */
 export const accountsOn = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 
+/*
+ * The session lives in a cookie for the whole shared domain
+ * (src/config/supabase.js), so signing in here signs you in to every app
+ * under it, and signing out signs you out of them all.
+ */
 let loading = null;
 export function supabase() {
-  loading ??= import('@supabase/supabase-js').then(({ createClient }) =>
-    createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hive-auth' },
-    }));
+  loading ??= import('@supabase/ssr').then(async ({ createBrowserClient }) => {
+    const sb = createBrowserClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      cookieOptions: sessionCookieOptions(),
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
+    });
+    await adoptOldSession(sb);
+    return sb;
+  });
   return loading;
+}
+
+/** A sign-in saved the old way (this address's own storage) moves into the shared cookie, once. */
+async function adoptOldSession(sb) {
+  let old;
+  try { old = JSON.parse(localStorage.getItem(SESSION_COOKIE) || 'null'); } catch { old = null; }
+  if (!old?.refresh_token) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) await sb.auth.setSession({ access_token: old.access_token, refresh_token: old.refresh_token });
+  } catch { /* expired: they sign in again */ }
+  try { localStorage.removeItem(SESSION_COOKIE); } catch { /* ignore */ }
 }
 
 const confirmed = (u) => Boolean(u?.email_confirmed_at || u?.confirmed_at);
