@@ -89,7 +89,7 @@ begin
   if lists is not null and jsonb_typeof(lists) = 'object' then
     insert into letseat.lists (household_id, tree) values (hid, lists) on conflict (household_id) do nothing;
   end if;
-  delete from letseat.legacy;
+  delete from letseat.legacy where true; -- Supabase refuses a DELETE without WHERE
   return n;
 end $$;
 
