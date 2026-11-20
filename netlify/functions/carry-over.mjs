@@ -1,5 +1,8 @@
 /**
  * POST /api/auth/carry-over  { email, password }
+ *   → { how: 'password' }        sign in again with the same password
+ *     { how: 'token', token }    sign in with verifyOtp({ token_hash: token, type: 'magiclink' })
+ *     { how: 'email' }           a link to finish signing in is in their inbox
  *
  * Moves a password from an app's old Firebase project into Supabase on first
  * sign-in after the move (netlify/lib/carryOver.mjs). The page calls this only
@@ -17,6 +20,7 @@ export const config = { path: '/api/auth/carry-over' };
 const NO = { ok: false, error: 'Wrong email or password.' };
 
 /** Apps' own sites that may ask (inside Hive they're same-origin and need nothing). */
+const HIVE = 'https://fridge-board-7u23.netlify.app';
 const ORIGINS = new Set(['https://stimultrack.netlify.app']);
 const cors = (req) => {
   const o = req.headers.get('origin');
@@ -39,14 +43,17 @@ async function handle(req) {
   let body;
   try { body = await req.json(); } catch { return json(400, NO); }
   try {
-    const r = await carryOver(body?.email, body?.password, { admin: supabaseAdmin(url, key) });
+    // Where an emailed link should bring them back: the asking site, if it's one of ours.
+    const from = req.headers.get('origin');
+    const redirectTo = `${from && (ORIGINS.has(from) || from === HIVE) ? from : HIVE}/`;
+    const r = await carryOver(body?.email, body?.password, { admin: supabaseAdmin(url, key), redirectTo });
     if (!r.ok) {
       console.info(`[carry-over] refused: ${r.reason}`);
       // A flat delay, so this is no faster a way to guess passwords than signing in.
       await new Promise((res) => setTimeout(res, 600));
       return json(401, NO);
     }
-    return json(200, { ok: true, created: r.created });
+    return json(200, { ok: true, how: r.how, ...(r.token ? { token: r.token } : {}) });
   } catch (e) {
     console.error('[carry-over] failed:', e);
     return json(502, { ok: false, error: 'Sign-in is having trouble. Try again in a minute.' });

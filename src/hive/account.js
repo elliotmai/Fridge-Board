@@ -72,6 +72,9 @@ export async function signInWithEmail(email, password) {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }),
   }).catch(() => null);
   if (!r?.ok) throw first.error;
+  const d = await r.json().catch(() => ({}));
+  if (d.how === 'token') return void must(await sb.auth.verifyOtp({ token_hash: d.token, type: 'magiclink' }));
+  if (d.how === 'email') throw Object.assign(new Error('emailed'), { code: 'carry_over_emailed' });
   must(await sb.auth.signInWithPassword({ email, password }));
 }
 
@@ -116,6 +119,7 @@ export function authMessage(e) {
   const code = e?.code || '';
   const text = String(e?.message || '');
   if (code === 'invalid_credentials') return 'That email and password don’t match.';
+  if (code === 'carry_over_emailed') return 'Almost there: we emailed you a link to finish signing in. Open it on this device.';
   if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
   if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already a Hive account with that email. Sign in instead.';
   if (code === 'weak_password') return 'Use a longer password: at least 6 characters.';
