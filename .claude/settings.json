@@ -23,7 +23,9 @@
       "Bash(npm run lint)",
       "mcp__Netlify__netlify-observability-services-reader",
       "mcp__Supabase__list_projects",
-      "mcp__Supabase__get_advisors"
+      "mcp__Supabase__get_advisors",
+      "mcp__Supabase",
+      "mcp__Netlify"
     ]
   }
 }
