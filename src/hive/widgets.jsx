@@ -178,7 +178,7 @@ function Chores({ data }) {
     <>
       <div className="w-count">{left ? <><b>{left}</b> left</> : <b>All done</b>}</div>
       <Scroll label="Chores"><ul className="w-list">{list.map((c) => (
-        <Check key={c.id} on={c.done} label={c.title} onToggle={() => act.chore(c)} sub={c.detail}>{c.title}</Check>
+        <Check key={c.id} on={c.done} label={c.title} onToggle={() => act.chore(c)}>{c.title}</Check>
       ))}</ul></Scroll>
     </>
   );
