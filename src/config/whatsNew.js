@@ -9,7 +9,7 @@ export const WHATS_NEW = [
     version: '2026.11.20.3',
     date: 'November 2026',
     items: [
-      'Hive has a new honeycomb icon. If it is already on your home screen, remove it and add it again to pick up the new one.',
+      'Hive has a new green honeycomb icon. If it is already on your home screen, remove it and add it again to pick up the new one.',
       'The breeding card counts down to CIDR day, then says Today. It no longer says Now once the date passes, since the board can’t tell whether the CIDRs actually went in.',
     ],
   },
