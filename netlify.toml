@@ -21,7 +21,7 @@
 # app's own site keeps working on its own. Must come before the catch-all.
 [[redirects]]
   from = "/apps/stimultrack/*"
-  to = "https://stimultrack.netlify.app/:splat"
+  to = "https://stimul.flyingdoublemranch.com/:splat"
   status = 200
   force = true
 

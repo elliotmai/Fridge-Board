@@ -20,11 +20,13 @@ export const config = { path: '/api/auth/carry-over' };
 const NO = { ok: false, error: 'Wrong email or password.' };
 
 /** Apps' own sites that may ask (inside Hive they're same-origin and need nothing). */
-const HIVE = 'https://fridge-board-7u23.netlify.app';
-const ORIGINS = new Set(['https://stimultrack.netlify.app']);
+const HIVE = 'https://hive.flyingdoublemranch.com';
+// Every app site under the shared domain (and the old addresses while caches catch up).
+const ORIGINS = new Set(['https://fridge-board-7u23.netlify.app', 'https://stimultrack.netlify.app']);
+const SHARED = /^https:\/\/([a-z0-9-]+\.)?flyingdoublemranch\.com$/;
 const cors = (req) => {
   const o = req.headers.get('origin');
-  return o && ORIGINS.has(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
+  return o && (ORIGINS.has(o) || SHARED.test(o)) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
 };
 
 export default async (req) => {
@@ -45,7 +47,7 @@ async function handle(req) {
   try {
     // Where an emailed link should bring them back: the asking site, if it's one of ours.
     const from = req.headers.get('origin');
-    const redirectTo = `${from && (ORIGINS.has(from) || from === HIVE) ? from : HIVE}/`;
+    const redirectTo = `${from && (ORIGINS.has(from) || SHARED.test(from)) ? from : HIVE}/`;
     const r = await carryOver(body?.email, body?.password, { admin: supabaseAdmin(url, key), redirectTo });
     if (!r.ok) {
       console.info(`[carry-over] refused: ${r.reason}`);

@@ -6,28 +6,28 @@
 export const APPS = {
   galaxyfarm: {
     name: 'GalaxyFarm',
-    url: 'https://galaxyfarm.netlify.app',
+    url: 'https://flyingdoublemranch.com',
     paths: { chores: '/admin/chores', housesitter: '/admin/housesitter' },
   },
   kitchenhub: {
     name: 'KitchenHub',
-    url: 'https://mykitchenhub.netlify.app',
+    url: 'https://kitchen.flyingdoublemranch.com',
     paths: { mealPlan: '/meal-plan', shopping: '/shopping-list', inventory: '/inventory', recipe: (id) => `/recipes?recipe=${encodeURIComponent(id)}` },
   },
   learnleaf: {
     name: 'LearnLeaf',
-    url: 'https://learnleaf-organizer.netlify.app',
+    url: 'https://learnleaf.flyingdoublemranch.com',
     paths: { tasks: '/tasks' },
   },
   wander: {
     name: 'Wander',
-    url: 'https://wander-tripplanner.netlify.app',
+    url: 'https://wander.flyingdoublemranch.com',
     paths: { trips: '/', trip: (id) => `/trips/${encodeURIComponent(id)}` },
   },
   znt: {
     name: 'ZNT',
     // ZNT has no URL routes yet (pages are tab state), so every link opens its home.
-    url: 'https://zntmanager.netlify.app',
+    url: 'https://znt.flyingdoublemranch.com',
     paths: { home: '/' },
   },
 };

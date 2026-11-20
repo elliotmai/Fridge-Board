@@ -29,27 +29,27 @@ export const CATALOG = {
   galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
-  cattlegraph: { name: 'Cattle Graph', url: 'https://cattle-registrations.netlify.app', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
+  cattlegraph: { name: 'Cattle Graph', url: 'https://cattle.flyingdoublemranch.com', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
   kitchenhub: { name: 'KitchenHub', url: APPS.kitchenhub.url, color: '#9c3a5c', glyph: 'pot', audience: 'anyone', blurb: 'What is in the fridge, meal plans and shopping.',
     shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
-  letseat: { name: "Let's Eat", url: 'https://lets-go-eat.netlify.app', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
-  pool: { name: 'Pool Heater', url: 'https://pool-heater-monitor.netlify.app', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
+  letseat: { name: "Let's Eat", url: 'https://letseat.flyingdoublemranch.com', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
+  pool: { name: 'Pool Heater', url: 'https://pool.flyingdoublemranch.com', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
   property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
-  ourden: { name: 'Our Den', url: 'https://ourden.netlify.app', color: '#4b3b78', glyph: 'moon', audience: 'invite', blurb: 'A private space for two, across the distance.' },
+  ourden: { name: 'Our Den', url: 'https://den.flyingdoublemranch.com', color: '#4b3b78', glyph: 'moon', audience: 'invite', blurb: 'A private space for two, across the distance.' },
   wander: { name: 'Wander', url: APPS.wander.url, color: '#2c5e9e', glyph: 'plane', audience: 'anyone', blurb: 'Trips, itineraries and live flights.' },
   aerologger: { name: 'AeroLogger', url: 'https://aero-logger.com', color: '#3b6f8f', glyph: 'binoculars', audience: 'anyone', blurb: 'Log the aircraft you spot.' },
   // hive: signs you in with your Hive account when opened inside Hive.
   learnleaf: { name: 'LearnLeaf', url: APPS.learnleaf.url, hive: true, color: '#355147', glyph: 'leaf', audience: 'anyone', blurb: 'Tasks, subjects and projects for school and life.',
     shortcuts: [{ label: 'Tasks', path: APPS.learnleaf.paths.tasks }] },
-  journal: { name: 'Journal Together', url: 'https://journaltogether.netlify.app', color: '#8a5a44', glyph: 'book', audience: 'anyone', blurb: 'A shared journal.' },
-  stimultrack: { name: 'StimulTrack', url: 'https://stimultrack.netlify.app', color: '#6b4226', glyph: 'cup', audience: 'anyone', blurb: 'How much caffeine is in you right now.' },
-  alcohol: { name: 'Drink Tracker', url: 'https://alcoholtracker.netlify.app', color: '#8e2f3c', glyph: 'glass', audience: 'anyone', blurb: 'Track drinks over time.' },
-  sidequest: { name: 'Side Quest', url: 'https://side-quest-games.netlify.app', color: '#c27c0e', glyph: 'dice', audience: 'anyone', blurb: 'Points games for trips, game days and hangouts.' },
-  muster: { name: 'Muster', url: 'https://muster-dashboard.netlify.app', color: '#24292f', glyph: 'pulse', audience: 'owner', blurb: 'Every project you have going, and what Claude is waiting on.' },
+  journal: { name: 'Journal Together', url: 'https://journal.flyingdoublemranch.com', color: '#8a5a44', glyph: 'book', audience: 'anyone', blurb: 'A shared journal.' },
+  stimultrack: { name: 'StimulTrack', url: 'https://stimul.flyingdoublemranch.com', color: '#6b4226', glyph: 'cup', audience: 'anyone', blurb: 'How much caffeine is in you right now.' },
+  alcohol: { name: 'Drink Tracker', url: 'https://drinks.flyingdoublemranch.com', color: '#8e2f3c', glyph: 'glass', audience: 'anyone', blurb: 'Track drinks over time.' },
+  sidequest: { name: 'Side Quest', url: 'https://sidequest.flyingdoublemranch.com', color: '#c27c0e', glyph: 'dice', audience: 'anyone', blurb: 'Points games for trips, game days and hangouts.' },
+  muster: { name: 'Muster', url: 'https://muster.flyingdoublemranch.com', color: '#24292f', glyph: 'pulse', audience: 'owner', blurb: 'Every project you have going, and what Claude is waiting on.' },
   // Ticket Booth's admin page (passcode-protected): every app's bug reports and
   // requests. The "Report a bug" links in each app still go to the public form.
-  feedback: { name: 'Feedback', url: 'https://ticketbooth.netlify.app/admin', color: '#6b6f76', glyph: 'ticket', audience: 'owner', blurb: 'Bug reports and feature requests from every app.',
-    shortcuts: [{ label: 'Report a bug', path: 'https://ticketbooth.netlify.app/' }] },
+  feedback: { name: 'Feedback', url: 'https://tickets.flyingdoublemranch.com/admin', color: '#6b6f76', glyph: 'ticket', audience: 'owner', blurb: 'Bug reports and feature requests from every app.',
+    shortcuts: [{ label: 'Report a bug', path: 'https://tickets.flyingdoublemranch.com/' }] },
 };
 
 export const AUDIENCE = {

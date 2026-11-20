@@ -13,10 +13,10 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 export const env = (k, d) => process.env[k] || d;
 
 export const urls = {
-  galaxyfarm: () => env('GALAXYFARM_URL', 'https://galaxyfarm.netlify.app').replace(/\/$/, ''),
+  galaxyfarm: () => env('GALAXYFARM_URL', 'https://flyingdoublemranch.com').replace(/\/$/, ''),
   kitchenhub: () => env('KITCHENHUB_URL', 'https://us-central1-mykitchenhub-db665.cloudfunctions.net/board').replace(/\/$/, ''),
-  learnleaf: () => env('LEARNLEAF_URL', 'https://learnleaf-organizer.netlify.app').replace(/\/$/, ''),
-  ourden: () => env('OURDEN_URL', 'https://ourden.netlify.app').replace(/\/$/, ''),
+  learnleaf: () => env('LEARNLEAF_URL', 'https://learnleaf.flyingdoublemranch.com').replace(/\/$/, ''),
+  ourden: () => env('OURDEN_URL', 'https://den.flyingdoublemranch.com').replace(/\/$/, ''),
   wander: () => env('WANDER_FUNCTIONS_URL', 'https://us-central1-wander-f10b1.cloudfunctions.net').replace(/\/$/, ''),
 };
 

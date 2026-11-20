@@ -10,4 +10,4 @@ export const APP_NAME = 'Hive';
 export const APP_KEY = 'fridge-board';
 
 // Shared bug-report / feature-request destination for all apps.
-export const FEEDBACK_URL = 'https://ticketbooth.netlify.app/';
+export const FEEDBACK_URL = 'https://tickets.flyingdoublemranch.com/';

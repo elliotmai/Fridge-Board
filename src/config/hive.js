@@ -17,7 +17,7 @@ export const HIVE_FIREBASE = {
 };
 
 /** Where Hive lives. Apps only trust messages from here. */
-export const HIVE_ORIGIN = 'https://fridge-board-7u23.netlify.app';
+export const HIVE_ORIGIN = 'https://hive.flyingdoublemranch.com';
 
 /** Checks Hive passes (netlify/lib/hiveAssertion.mjs). Apps keep a copy. */
 export const HIVE_PUBLIC_KEY = 'MCowBQYDK2VwAyEAD+9fPYhGN9ftY8MGu8oQZdgfSMZL7coC6pZ812weWVE=';
