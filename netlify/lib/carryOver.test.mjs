@@ -68,4 +68,7 @@ test('supabaseAdmin speaks to the core schema with the service key', async () =>
   assert.match(seen[0].url, /\/rest\/v1\/profiles\?select=id&email=eq\.me%40example\.com$/);
   assert.equal(seen[0].init.headers['accept-profile'], 'core');
   assert.equal(seen[0].init.headers.authorization, 'Bearer svc');
+  await supabaseAdmin('https://p.supabase.co', 'sb_secret_x', f).userIdByEmail('a@b.c');
+  assert.equal(seen[1].init.headers.apikey, 'sb_secret_x');
+  assert.equal(seen[1].init.headers.authorization, undefined);
 });

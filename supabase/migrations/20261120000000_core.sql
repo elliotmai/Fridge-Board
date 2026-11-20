@@ -183,7 +183,8 @@ grant select, delete on core.household_invites to authenticated;
 grant select, update (revoked_at, label) on core.api_tokens to authenticated;
 grant all on all tables in schema core to service_role;
 
-revoke execute on all functions in schema core from public;
+-- Supabase grants every new function to anon and authenticated by default; start from none.
+revoke execute on all functions in schema core from public, anon, authenticated;
 -- Signed out, the questions just answer no; other schemas' rules can ask them safely.
 grant execute on function core.is_member(uuid), core.is_owner(uuid), core.my_household(),
   core.shares_household(uuid) to anon, authenticated;

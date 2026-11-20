@@ -52,7 +52,9 @@ export async function checkLegacy(email, password, { apps = LEGACY_APPS, fetch: 
 
 /** Supabase's admin and data APIs, as the service role. */
 export function supabaseAdmin(url, serviceKey, f = fetch) {
-  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, 'content-type': 'application/json' };
+  // New-style secret keys (sb_secret_...) go in `apikey` only; Supabase turns
+  // them into the service role itself. Old JWT keys go in both headers.
+  const headers = { apikey: serviceKey, 'content-type': 'application/json', ...(serviceKey.startsWith('sb_') ? {} : { authorization: `Bearer ${serviceKey}` }) };
   const call = async (path, init = {}) => {
     const r = await f(`${url}${path}`, { ...init, headers: { ...headers, ...init.headers } });
     const body = await r.text();

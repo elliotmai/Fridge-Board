@@ -10,3 +10,6 @@ create or replace function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
+
+-- Made by Supabase when a project is created.
+create or replace function public.rls_auto_enable() returns void language sql security definer as $$ select $$;
