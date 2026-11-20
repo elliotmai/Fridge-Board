@@ -20,6 +20,7 @@
 
 /** Old Firebase projects with email/password sign-in, and their public web keys. */
 export const LEGACY_APPS = {
+  hive: { project: 'hive-aa9c0', key: 'AIzaSyBi5xLBJVPpGQj2qoNc7tPHB-HE3AIDBAE' }, // Hive's own accounts before Supabase
   learnleaf: { project: 'learnleaf-organizer', key: 'AIzaSyA8rr1TEUUZ9b_PqR475mszkoC0aMoHeTE' },
   stimultrack: { project: 'caffeine-tracker-bcd4a', key: 'AIzaSyArUnjG1BLqTbHCQqWruqLZDwy-aoMxgR4' },
   journal: { project: 'journal-together-9234f', key: 'AIzaSyAIJihKqOI3BJjSU7AZmBElHcvDJjeAIaQ' },

@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.20',
+    date: 'November 2026',
+    items: [
+      'Hive accounts have moved to a new home, the first step toward one account for every app. Sign in with the same email and password as before; nothing to reset.',
+      'Households: start one in your Hive account, then invite the people you live with using a one-time code.',
+      'Forgot your password? The reset link now brings you back to Hive to choose a new one.',
+    ],
+  },
+  {
     version: '2026.11.19.5',
     date: 'November 2026',
     items: [

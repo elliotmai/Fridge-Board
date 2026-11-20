@@ -12,6 +12,7 @@
     "test": "node --test src/hive/*.test.js src/lib/*.test.js netlify/lib/*.test.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
     "firebase": "^11.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

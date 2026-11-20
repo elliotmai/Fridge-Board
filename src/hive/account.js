@@ -1,129 +1,157 @@
 import { useEffect, useState } from 'react';
-import { HIVE_FIREBASE } from '@/config/hive';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '@/config/supabase';
 
 /**
- * The Hive account: one sign-in (email and password, or Google), on Hive's own
- * Firebase project, that signs you into every app opened inside Hive (see
- * bridge.js). Apps match you by email, so an email-and-password account counts
- * only once its email is confirmed; until then apps are told nobody is signed in.
+ * The Hive account: one sign-in (email and password, or Google) on Hive's
+ * Supabase project, the same account every app uses once it has moved there
+ * (docs/supabase-migration-plan.md). Apps not yet moved get a pass instead
+ * (bridge.js), matched by email, so only a confirmed email counts.
  *
- * The Firebase config is in src/config/hive.js (public by design). A
- * VITE_HIVE_FIREBASE_* value, if set, overrides it, e.g. to try another project.
- * Firebase loads only when it's first needed.
+ * Accounts from before the move (Hive's old Firebase project, and the apps'
+ * own) keep their passwords: if Supabase doesn't know the password yet,
+ * /api/auth/carry-over checks it against the old project and moves it.
+ *
+ * Supabase loads only when it's first needed.
  */
-const env = import.meta.env || {};
-const cfg = {
-  apiKey: env.VITE_HIVE_FIREBASE_API_KEY || HIVE_FIREBASE.apiKey,
-  authDomain: env.VITE_HIVE_FIREBASE_AUTH_DOMAIN || HIVE_FIREBASE.authDomain,
-  projectId: env.VITE_HIVE_FIREBASE_PROJECT_ID || HIVE_FIREBASE.projectId,
-  appId: env.VITE_HIVE_FIREBASE_APP_ID || HIVE_FIREBASE.appId,
-};
-export const accountsOn = Boolean(cfg.apiKey && cfg.projectId && cfg.authDomain);
+export const accountsOn = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 
 let loading = null;
-function firebase() {
-  loading ??= (async () => {
-    const [{ initializeApp }, fa] = await Promise.all([import('firebase/app'), import('firebase/auth')]);
-    const auth = fa.getAuth(initializeApp(cfg, 'hive'));
-    return { auth, fa };
-  })();
+export function supabase() {
+  loading ??= import('@supabase/supabase-js').then(({ createClient }) =>
+    createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hive-auth' },
+    }));
   return loading;
 }
 
-/** { user, ready }. `user` is { uid, email, name, verified } or null. */
+const confirmed = (u) => Boolean(u?.email_confirmed_at || u?.confirmed_at);
+const shape = (u) => (u ? {
+  uid: u.id, email: u.email,
+  name: u.user_metadata?.display_name || u.user_metadata?.full_name || u.user_metadata?.name || null,
+  verified: confirmed(u),
+} : null);
+
+/**
+ * { user, ready, recovering }. `user` is { uid, email, name, verified } or null.
+ * `recovering` is true after following a reset-password link, until a new
+ * password is set.
+ */
 export function useHiveUser() {
-  const [state, setState] = useState({ user: null, ready: !accountsOn });
+  const [state, setState] = useState({ user: null, ready: !accountsOn, recovering: false });
   useEffect(() => {
     if (!accountsOn) return;
     let off = () => {};
     let live = true;
-    firebase().then(({ auth, fa }) => {
+    supabase().then((sb) => {
       if (!live) return;
-      // onIdTokenChanged, not onAuthStateChanged: it also fires when a refreshed
-      // token shows the email has just been confirmed.
-      off = fa.onIdTokenChanged(auth, (u) => setState({
-        ready: true,
-        user: u ? { uid: u.uid, email: u.email, name: u.displayName, verified: u.emailVerified } : null,
-      }));
-    }).catch(() => live && setState({ user: null, ready: true }));
+      const { data } = sb.auth.onAuthStateChange((event, session) => {
+        setState((s) => ({
+          ready: true,
+          user: shape(session?.user),
+          recovering: event === 'PASSWORD_RECOVERY' ? true : event === 'SIGNED_OUT' ? false : s.recovering,
+        }));
+      });
+      off = () => data.subscription.unsubscribe();
+    }).catch(() => live && setState({ user: null, ready: true, recovering: false }));
     return () => { live = false; off(); };
   }, []);
   return state;
 }
 
+/** Throws Supabase's error, so authMessage can explain it. */
+const must = ({ data, error }) => { if (error) throw error; return data; };
+
 export async function signInWithEmail(email, password) {
-  const { auth, fa } = await firebase();
-  await fa.signInWithEmailAndPassword(auth, email.trim(), password);
+  const sb = await supabase();
+  email = email.trim();
+  const first = await sb.auth.signInWithPassword({ email, password });
+  if (!first.error) return;
+  if (first.error.code !== 'invalid_credentials') throw first.error;
+  // Maybe an account from before the move: let the server bring its password over.
+  const r = await fetch('/api/auth/carry-over', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }),
+  }).catch(() => null);
+  if (!r?.ok) throw first.error;
+  must(await sb.auth.signInWithPassword({ email, password }));
 }
 
-/** New account: sets the name and sends the confirmation email. */
+/** New account: Supabase sends the confirmation email. */
 export async function createAccount(name, email, password) {
-  const { auth, fa } = await firebase();
-  const { user } = await fa.createUserWithEmailAndPassword(auth, email.trim(), password);
-  if (name.trim()) await fa.updateProfile(user, { displayName: name.trim() });
-  await fa.sendEmailVerification(user);
-  await user.getIdToken(true); // so the new name shows straight away
+  const sb = await supabase();
+  const data = must(await sb.auth.signUp({
+    email: email.trim(), password,
+    options: { data: { display_name: name.trim() || undefined }, emailRedirectTo: `${location.origin}/` },
+  }));
+  // With confirmation on, Supabase returns no session and, for an email that
+  // already has an account, a user with no identities.
+  if (data.user && !data.user.identities?.length) throw Object.assign(new Error('exists'), { code: 'user_already_exists' });
+  return { needsConfirm: !data.session };
 }
 
-export async function resendConfirmation() {
-  const { auth, fa } = await firebase();
-  if (auth.currentUser) await fa.sendEmailVerification(auth.currentUser);
+export async function resendConfirmation(email) {
+  const sb = await supabase();
+  must(await sb.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: `${location.origin}/` } }));
 }
 
-/** After clicking the link in the email: refresh, so Hive sees it's confirmed. Returns true if it is. */
+/** After clicking the link in the email: true if this browser now has a confirmed sign-in. */
 export async function checkConfirmed() {
-  const { auth } = await firebase();
-  const u = auth.currentUser;
-  if (!u) return false;
-  await u.reload();
-  await u.getIdToken(true);
-  return u.emailVerified;
+  const sb = await supabase();
+  const { data } = await sb.auth.refreshSession();
+  return confirmed(data?.user);
 }
 
 export async function resetPassword(email) {
-  const { auth, fa } = await firebase();
-  await fa.sendPasswordResetEmail(auth, email.trim());
+  const sb = await supabase();
+  must(await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${location.origin}/` }));
 }
 
-/** Plain-English message for a Firebase Auth error. */
+/** From the reset link: the new password. */
+export async function setNewPassword(password) {
+  const sb = await supabase();
+  must(await sb.auth.updateUser({ password }));
+}
+
+/** Plain-English message for a Supabase Auth error. */
 export function authMessage(e) {
   const code = e?.code || '';
-  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(code)) return 'That email and password don’t match.';
-  if (/email-already-in-use/.test(code)) return 'There’s already a Hive account with that email. Sign in instead.';
-  if (/weak-password/.test(code)) return 'Use a password of at least 6 characters.';
-  if (/invalid-email/.test(code)) return 'That doesn’t look like an email address.';
-  if (/too-many-requests/.test(code)) return 'Too many tries. Wait a minute, then try again.';
-  if (/network-request-failed/.test(code)) return 'Can’t reach the internet right now.';
-  if (/popup-closed|cancelled-popup|user-cancelled/.test(code)) return '';
-  if (/operation-not-allowed/.test(code)) return 'That way of signing in isn’t turned on for Hive yet.';
-  if (/api-key|configuration-not-found|unauthorized-domain|invalid-app/.test(code)) return 'Hive sign-in isn’t set up correctly. Check its Firebase settings in Netlify.';
+  const text = String(e?.message || '');
+  if (code === 'invalid_credentials') return 'That email and password don’t match.';
+  if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
+  if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already a Hive account with that email. Sign in instead.';
+  if (code === 'weak_password') return 'Use a longer password: at least 6 characters.';
+  if (code === 'email_address_invalid' || code === 'validation_failed') return 'That doesn’t look like an email address.';
+  if (/rate_limit|over_.*limit/.test(code)) return 'Too many tries. Wait a minute, then try again.';
+  if (code === 'same_password') return 'That’s your current password. Choose a new one.';
+  if (code === 'signup_disabled' || code === 'provider_disabled') return 'That way of signing in isn’t turned on for Hive yet.';
+  if (/fetch|network/i.test(text)) return 'Can’t reach the internet right now.';
   return 'Something went wrong. Try again.';
 }
 
+/** Google: leaves the page and comes back signed in. */
 export async function signInWithGoogle() {
-  const { auth, fa } = await firebase();
-  const provider = new fa.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  await fa.signInWithPopup(auth, provider);
+  const sb = await supabase();
+  must(await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${location.origin}${location.pathname}`, queryParams: { prompt: 'select_account' } },
+  }));
 }
 
 export async function signOut() {
-  const { auth, fa } = await firebase();
-  await fa.signOut(auth);
+  const sb = await supabase();
+  await sb.auth.signOut();
 }
 
 /**
- * The signed-in Hive user's ID token, for the board's own API to act as them
- * (src/data/api.js). Null when sign-in is off, nobody is signed in, or their
- * email isn't confirmed yet. Waits for a saved sign-in to load first.
+ * The signed-in Hive user's access token, for the board's own API to act as
+ * them (src/data/api.js). Null when nobody is signed in or their email isn't
+ * confirmed. Waits for a saved sign-in to load first.
  */
 export async function idToken() {
   if (!accountsOn) return null;
   try {
-    const { auth } = await firebase();
-    await auth.authStateReady();
-    const u = auth.currentUser;
-    return u && u.emailVerified ? await u.getIdToken() : null;
+    const sb = await supabase();
+    const { data } = await sb.auth.getSession();
+    return data.session && confirmed(data.session.user) ? data.session.access_token : null;
   } catch {
     return null;
   }
@@ -137,16 +165,60 @@ export const USER_CHANGED = 'hive:user-changed';
  * Throws with a readable message when the server says no.
  */
 export async function passFor(app) {
-  if (!accountsOn) return null;
-  const { auth } = await firebase();
-  const u = auth.currentUser;
-  if (!u) return null;
+  const token = await idToken();
+  if (!token) return null;
   const res = await fetch('/api/hive/pass', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${await u.getIdToken()}` },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({ app }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `Hive answered ${res.status}`);
   return body.pass;
+}
+
+/* ------------------------------------------------------------ households -- */
+
+/** My household and its people: { id, name, role, members: [{ id, name, email, role }] } or null. */
+export async function myHousehold() {
+  const sb = await supabase();
+  const core = sb.schema('core');
+  const { data: hid } = await core.rpc('my_household');
+  if (!hid) return null;
+  const [h, m] = await Promise.all([
+    core.from('households').select('id, name').eq('id', hid).single(),
+    core.from('household_members').select('user_id, role').eq('household_id', hid),
+  ]);
+  if (h.error) throw h.error;
+  const ids = (m.data || []).map((x) => x.user_id);
+  const { data: people } = ids.length ? await core.from('profiles').select('id, email, display_name').in('id', ids) : { data: [] };
+  const me = (await sb.auth.getUser()).data.user?.id;
+  const members = (m.data || []).map((x) => {
+    const p = people?.find((y) => y.id === x.user_id) || {};
+    return { id: x.user_id, role: x.role, email: p.email || '', name: p.display_name || p.email || 'Someone', me: x.user_id === me };
+  });
+  return { id: h.data.id, name: h.data.name, role: members.find((x) => x.me)?.role || 'member', members };
+}
+
+export async function createHousehold(name) {
+  const sb = await supabase();
+  return must(await sb.schema('core').rpc('create_household', { name: name.trim() }));
+}
+
+export async function inviteCode(householdId) {
+  const sb = await supabase();
+  return must(await sb.schema('core').rpc('create_invite', { hid: householdId }));
+}
+
+export async function joinHousehold(code) {
+  const sb = await supabase();
+  const r = await sb.schema('core').rpc('join_household', { invite: code.trim() });
+  if (r.error) throw Object.assign(new Error(r.error.message), { code: r.error.code === 'P0002' ? 'bad_invite' : r.error.code });
+  return r.data;
+}
+
+/** Plain-English message for a household error. */
+export function householdMessage(e) {
+  if (e?.code === 'bad_invite') return 'That code doesn’t work. It may be used up or more than a week old.';
+  return authMessage(e);
 }

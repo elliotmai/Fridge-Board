@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  authMessage, checkConfirmed, createAccount, resendConfirmation, resetPassword,
-  signInWithEmail, signInWithGoogle, signOut,
+  authMessage, createAccount, createHousehold, householdMessage, inviteCode, joinHousehold, myHousehold,
+  resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
 /**
- * The Hive account sheet: sign in, create an account, confirm the email, or
- * sign out. Apps trust a Hive account only once its email is confirmed, so a
- * new email-and-password account waits on the "Check your email" step.
+ * The Hive account sheet: sign in, create an account (confirmed by email),
+ * set a new password from a reset link, sign out, and the household: start
+ * one, invite someone with a code, or join with theirs.
  */
-export function AccountSheet({ user, onClose }) {
+export function AccountSheet({ user, recovering, onClose }) {
   const ref = useRef(null);
   useEffect(() => {
     const prev = document.activeElement;
@@ -23,95 +23,157 @@ export function AccountSheet({ user, onClose }) {
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel account" role="dialog" aria-modal="true" aria-label="Hive account" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><h2>Hive account</h2><button className="pill" onClick={onClose}>Close</button></div>
-        {!user ? <SignedOut onDone={onClose} /> : !user.verified ? <Confirm user={user} onDone={onClose} /> : <SignedIn user={user} />}
+        {recovering && user ? <NewPassword /> : !user ? <SignedOut onDone={onClose} /> : <SignedIn user={user} />}
       </div>
     </div>
   );
 }
 
+function useRun() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState({ text: '', bad: false });
+  const run = async (fn, explain = authMessage) => {
+    setBusy(true); setMsg({ text: '', bad: false });
+    try { return await fn(); } catch (e) { const t = explain(e); if (t) setMsg({ text: t, bad: true }); return undefined; } finally { setBusy(false); }
+  };
+  const Msg = () => (msg.text ? <p className={`auth-msg ${msg.bad ? 'bad' : ''}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p> : null);
+  return { busy, run, setMsg, Msg };
+}
+
 function SignedOut({ onDone }) {
-  const [mode, setMode] = useState('in'); // 'in' | 'new' | 'reset'
+  const [mode, setMode] = useState('in'); // 'in' | 'new' | 'reset' | 'sent'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState({ text: '', bad: false });
+  const { busy, run, setMsg, Msg } = useRun();
+  const go = (m) => { setMode(m); setMsg({ text: '' }); };
 
-  const run = async (fn, after) => {
-    setBusy(true); setMsg({ text: '', bad: false });
-    try { await fn(); after?.(); } catch (e) { const t = authMessage(e); if (t) setMsg({ text: t, bad: true }); } finally { setBusy(false); }
-  };
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (mode === 'in') run(() => signInWithEmail(email, password), onDone);
-    else if (mode === 'new') run(() => createAccount(name, email, password));
-    else run(() => resetPassword(email), () => setMsg({ text: `If ${email.trim()} has a Hive account, a link to reset the password is on its way.`, bad: false }));
+    if (mode === 'in') { if ((await run(() => signInWithEmail(email, password).then(() => true))) === true) onDone(); }
+    else if (mode === 'new') { const r = await run(() => createAccount(name, email, password)); if (r?.needsConfirm) go('sent'); }
+    else if (await run(() => resetPassword(email).then(() => true))) setMsg({ text: `If ${email.trim()} has a Hive account, a link to reset the password is on its way.`, bad: false });
   };
+
+  if (mode === 'sent') {
+    return (
+      <div className="confirm">
+        <h3>Check your email</h3>
+        <p>We sent a link to <b>{email.trim()}</b>. Open it on this device to confirm it’s your address, and you’ll come back here signed in.</p>
+        <Msg />
+        <div className="confirm-row">
+          <button className="link-btn" disabled={busy} onClick={async () => { if (await run(() => resendConfirmation(email).then(() => true))) setMsg({ text: 'Sent again. Check your spam folder too.', bad: false }); }}>Send the email again</button>
+          <button className="link-btn" onClick={() => go('in')}>Back to sign in</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <p className="sheet-note">Sign in once, and apps that support Hive sign you in by themselves.</p>
+      <p className="sheet-note">One account for Hive and every app in it. If you already have an account in one of your apps, sign in with that email and password.</p>
       {mode !== 'reset' && (
         <div className="seg" role="tablist" aria-label="Sign in or create an account">
-          <button role="tab" aria-selected={mode === 'in'} onClick={() => { setMode('in'); setMsg({ text: '' }); }}>Sign in</button>
-          <button role="tab" aria-selected={mode === 'new'} onClick={() => { setMode('new'); setMsg({ text: '' }); }}>Create account</button>
+          <button role="tab" aria-selected={mode === 'in'} onClick={() => go('in')}>Sign in</button>
+          <button role="tab" aria-selected={mode === 'new'} onClick={() => go('new')}>Create account</button>
         </div>
       )}
       <form className="auth-form" onSubmit={submit}>
-        {mode === 'new' && (
-          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>
-        )}
+        {mode === 'new' && <label>Name<input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>}
         <label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
         {mode !== 'reset' && (
           <label>Password<input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'new' ? 'new-password' : 'current-password'} /></label>
         )}
-        {msg.text && <p className={`auth-msg ${msg.bad ? 'bad' : ''}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
+        <Msg />
         <button className="pill strong wide" type="submit" disabled={busy}>
           {busy ? 'One moment…' : mode === 'in' ? 'Sign in' : mode === 'new' ? 'Create account' : 'Send reset link'}
         </button>
-        {mode === 'in' && <button type="button" className="link-btn" onClick={() => { setMode('reset'); setMsg({ text: '' }); }}>Forgot your password?</button>}
-        {mode === 'reset' && <button type="button" className="link-btn" onClick={() => { setMode('in'); setMsg({ text: '' }); }}>Back to sign in</button>}
-        {mode === 'new' && <p className="sheet-note">Use the same email as your apps, so Hive finds your accounts. We’ll send a link to confirm it.</p>}
+        {mode === 'in' && <button type="button" className="link-btn" onClick={() => go('reset')}>Forgot your password?</button>}
+        {mode === 'reset' && <button type="button" className="link-btn" onClick={() => go('in')}>Back to sign in</button>}
+        {mode === 'new' && <p className="sheet-note">We’ll send a link to confirm your email.</p>}
       </form>
       {mode !== 'reset' && (
         <>
           <div className="or"><span>or</span></div>
-          <button className="pill wide" disabled={busy} onClick={() => run(signInWithGoogle, onDone)}>Continue with Google</button>
+          <button className="pill wide" disabled={busy} onClick={() => run(signInWithGoogle)}>Continue with Google</button>
         </>
       )}
     </>
   );
 }
 
-function Confirm({ user }) {
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState({ text: '', bad: false });
-  const act = async (fn) => {
-    setBusy(true); setMsg({ text: '', bad: false });
-    try { await fn(); } catch (e) { setMsg({ text: authMessage(e) || 'Something went wrong. Try again.', bad: true }); } finally { setBusy(false); }
-  };
+function NewPassword() {
+  const [password, setPassword] = useState('');
+  const [done, setDone] = useState(false);
+  const { busy, run, Msg } = useRun();
+  if (done) return <p className="auth-msg" role="status">Password changed. You’re signed in.</p>;
   return (
-    <div className="confirm">
-      <h3>Check your email</h3>
-      <p>We sent a link to <b>{user.email}</b>. Open it to confirm this is your address, then come back here.</p>
-      <p className="sheet-note">Until then, apps inside Hive ask you to sign in on their own.</p>
-      {msg.text && <p className={`auth-msg ${msg.bad ? 'bad' : ''}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
-      <button className="pill strong wide" disabled={busy} onClick={() => act(async () => {
-        if (!(await checkConfirmed())) setMsg({ text: 'Not confirmed yet. Open the link in the email first.', bad: true });
-      })}>I’ve confirmed it</button>
-      <div className="confirm-row">
-        <button className="link-btn" disabled={busy} onClick={() => act(async () => { await resendConfirmation(); setMsg({ text: 'Sent again. Check your spam folder too.', bad: false }); })}>Send the email again</button>
-        <button className="link-btn" disabled={busy} onClick={() => signOut()}>Use a different account</button>
-      </div>
-    </div>
+    <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => setNewPassword(password).then(() => true))) setDone(true); }}>
+      <h3>Choose a new password</h3>
+      <label>New password<input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /></label>
+      <Msg />
+      <button className="pill strong wide" type="submit" disabled={busy}>{busy ? 'One moment…' : 'Save password'}</button>
+    </form>
   );
 }
 
 function SignedIn({ user }) {
   return (
-    <div className="set-row">
-      <span><b>{user.name || 'Signed in'}</b><small>{user.email}. Apps that support Hive sign you in by themselves.</small></span>
-      <button className="pill" onClick={() => signOut()}>Sign out</button>
-    </div>
+    <>
+      <div className="set-row">
+        <span><b>{user.name || 'Signed in'}</b><small>{user.email}</small></span>
+        <button className="pill" onClick={() => signOut()}>Sign out</button>
+      </div>
+      <Household />
+    </>
+  );
+}
+
+/** Start a household, see who's in it, invite someone, or join one. */
+function Household() {
+  const [h, setH] = useState(undefined); // undefined: loading; null: none
+  const [name, setName] = useState('Our household');
+  const [code, setCode] = useState('');
+  const [invite, setInvite] = useState('');
+  const { busy, run, Msg } = useRun();
+  const load = useCallback(() => myHousehold().then(setH).catch(() => setH(null)), []);
+  useEffect(() => { load(); }, [load]);
+
+  if (h === undefined) return <p className="sheet-note">Loading your household…</p>;
+
+  if (!h) {
+    return (
+      <>
+        <h3 className="sheet-sub">Household</h3>
+        <p className="sheet-note">The people you share Hive with: shopping, meals, chores, the farm and trips. Personal things, like your journal, stay yours.</p>
+        <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createHousehold(name), householdMessage)) load(); }}>
+          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
+          <button className="pill strong wide" type="submit" disabled={busy}>Start a household</button>
+        </form>
+        <div className="or"><span>or join one</span></div>
+        <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => joinHousehold(code), householdMessage)) load(); }}>
+          <label>Invite code<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" required /></label>
+          <button className="pill wide" type="submit" disabled={busy}>Join</button>
+        </form>
+        <Msg />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h3 className="sheet-sub">{h.name}</h3>
+      {h.members.map((m) => (
+        <div className="set-row" key={m.id}><span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ' · owner' : ''}</small></span></div>
+      ))}
+      {h.role === 'owner' && (
+        invite ? (
+          <p className="auth-msg" role="status">Invite code: <b>{invite}</b>. They enter it in their Hive account. It works once, for a week.</p>
+        ) : (
+          <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => inviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Invite someone</button>
+        )
+      )}
+      <Msg />
+    </>
   );
 }

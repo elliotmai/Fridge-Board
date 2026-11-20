@@ -76,7 +76,9 @@ export function Hive() {
   const wallDark = look.dim || (['honey', 'plain'].includes(look.wallpaper) || !WALLPAPERS[look.wallpaper] && look.wallpaper !== 'photo' ? theme === 'dark' : !!wall.dark);
 
   // One Hive sign-in, handed to apps in frames as short passes (bridge.js).
-  const { user, ready } = useHiveUser();
+  const { user, ready, recovering } = useHiveUser();
+  // Back from a reset-password link: go home and ask for the new password.
+  useEffect(() => { if (recovering) { setView(null); setSheet('account'); } }, [recovering]); // eslint-disable-line react-hooks/exhaustive-deps
   const signedIn = useRef(false);
   // Apps match people by email, so only a confirmed email counts as signed in.
   signedIn.current = !!user?.verified;
@@ -233,7 +235,7 @@ export function Hive() {
         <AddSheet layout={layout} onClose={() => setSheet(null)}
           onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w) => setLayout(addWidget(layout, w))} />
       )}
-      {!view && sheet === 'account' && accountsOn && <AccountSheet user={user} onClose={() => setSheet(null)} />}
+      {!view && sheet === 'account' && accountsOn && <AccountSheet user={user} recovering={recovering} onClose={() => setSheet(null)} />}
       {!view && sheet === 'settings' && (
         <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)} account={account}
           onLook={() => setSheet('look')} onEdit={() => { setSheet(null); setEditing(true); }}
