@@ -37,7 +37,8 @@ do $$ begin
   raise exception 'members must not invite';
 exception when insufficient_privilege then null; end $$;
 
--- stranger: sees nothing, and the used code is spent
+-- stranger: sees nothing (household codes now last and can be reused;
+-- see zz_lasting_code.test.sql for replacing one)
 select set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
 do $$ begin
   assert (select count(*) from core.households) = 0, 'stranger sees no households';
@@ -45,10 +46,6 @@ do $$ begin
   assert (select count(*) from core.profiles) = 1, 'or profiles';
   assert core.my_household() is null, 'and has none';
 end $$;
-do $$ begin
-  perform core.join_household((select code from t));
-  raise exception 'a used code must not work twice';
-exception when no_data_found then null; end $$;
 
 -- nobody but the service role reads legacy_ids
 do $$ begin

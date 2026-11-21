@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  authMessage, createAccount, createHousehold, householdMessage, inviteCode, joinHousehold, myHousehold,
+  authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
   resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
@@ -168,9 +168,12 @@ function Household() {
       ))}
       {h.role === 'owner' && (
         invite ? (
-          <p className="auth-msg" role="status">Invite code: <b>{invite}</b>. They enter it in their Hive account. It works once, for a week.</p>
+          <>
+            <p className="auth-msg" role="status">Household code: <b>{invite}</b>. Anyone who enters it in their Hive account (or in Let&rsquo;s Eat) joins. It doesn&rsquo;t expire; make a new one to stop this one working.</p>
+            <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => newInviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Make a new code</button>
+          </>
         ) : (
-          <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => inviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Invite someone</button>
+          <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => inviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Show household code</button>
         )
       )}
       <Msg />

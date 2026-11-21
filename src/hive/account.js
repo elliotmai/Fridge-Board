@@ -235,6 +235,12 @@ export async function inviteCode(householdId) {
   return must(await sb.schema('core').rpc('create_invite', { hid: householdId }));
 }
 
+/** Replace the household's lasting code; the old one stops working. */
+export async function newInviteCode(householdId) {
+  const sb = await supabase();
+  return must(await sb.schema('core').rpc('reset_invite', { hid: householdId }));
+}
+
 export async function joinHousehold(code) {
   const sb = await supabase();
   const r = await sb.schema('core').rpc('join_household', { invite: code.trim() });
