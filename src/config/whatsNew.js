@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.21',
+    date: 'November 2026',
+    items: ['Your household now has one code that doesn’t expire: anyone who enters it joins. Find it in your account; “Make a new code” stops the old one working.'],
+  },
+  {
     version: '2026.11.20.5',
     date: 'November 2026',
     items: ['Want the dark Hive icon on your iPhone? Switch the phone to dark mode, remove Hive from your home screen, then add it again from Safari.'],
