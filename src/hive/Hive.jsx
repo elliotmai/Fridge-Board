@@ -79,15 +79,17 @@ export function Hive() {
   const { user, ready, recovering } = useHiveUser();
   // Back from a reset-password link: go home and ask for the new password.
   useEffect(() => { if (recovering) { setView(null); setSheet('account'); } }, [recovering]); // eslint-disable-line react-hooks/exhaustive-deps
-  const signedIn = useRef(false);
+  const signedIn = useRef(null);
   // Apps match people by email, so only a confirmed email counts as signed in.
-  signedIn.current = !!user?.verified;
+  // null until the saved session has loaded: an app that says hello sooner
+  // (Hive reopened on #learnleaf) is answered once it has, not told "signed out".
+  signedIn.current = ready ? !!user?.verified : null;
   useEffect(() => startBridge(() => signedIn.current), []);
   const firstAnnounce = useRef(true);
   useEffect(() => {
     if (!ready) return;
-    if (firstAnnounce.current) { firstAnnounce.current = false; return; } // frames say hello themselves
     announce(!!user?.verified);
+    if (firstAnnounce.current) { firstAnnounce.current = false; return; }
     window.dispatchEvent(new Event(USER_CHANGED)); // the board and widgets reload as the new person
   }, [user?.verified, ready]);
   const account = { on: accountsOn, ready, user, open: () => setSheet('account') };

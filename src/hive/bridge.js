@@ -33,13 +33,18 @@ async function answer(frame, signedIn) {
   frame.contentWindow.postMessage(msg, origin);
 }
 
-/** Listen for apps saying hello. Returns a function that stops listening. */
+/**
+ * Listen for apps saying hello. `isSignedIn()` is true, false, or null while
+ * Hive is still loading its session. Returns a function that stops listening.
+ */
 export function startBridge(isSignedIn) {
   const onMessage = (e) => {
     if (e.data?.type !== 'hive:hello') return;
     const frame = frameFor(e.source);
     if (!frame || e.origin !== originOf(frame.dataset.app)) return;
-    answer(frame, isSignedIn());
+    const signedIn = isSignedIn();
+    if (signedIn === null) return; // still loading: announce() answers every frame once it knows
+    answer(frame, signedIn);
   };
   window.addEventListener('message', onMessage);
   return () => window.removeEventListener('message', onMessage);
