@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { followEmailLink } from './emailLink';
 import { SESSION_COOKIE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, sessionCookieOptions } from '@/config/supabase';
 
 /**
@@ -28,6 +29,7 @@ export function supabase() {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
     });
     await adoptOldSession(sb);
+    await followEmailLink(sb);
     return sb;
   });
   return loading;
