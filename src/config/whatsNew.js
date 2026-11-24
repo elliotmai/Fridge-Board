@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.24',
+    date: 'November 2026',
+    items: ['Hive has a calmer new look: bigger time and type you can read across the kitchen, flat colours instead of frosted glass, and a fridge layout for tall screens with the kitchen across the top.'],
+  },
+  {
     version: '2026.11.21',
     date: 'November 2026',
     items: ['Your household now has one code that doesn’t expire: anyone who enters it joins. Find it in your account; “Make a new code” stops the old one working.'],

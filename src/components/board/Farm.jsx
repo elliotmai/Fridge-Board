@@ -33,8 +33,8 @@ export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter
             <div key={k}>
               <div className={`sh ${k === nowSlot ? 'is-now' : ''}`}>
                 {label}
-                {k === nowSlot && <span className="badge now">Now</span>}
-                {late && <span className="badge late">Late</span>}
+                {k === nowSlot && <span className="flag now">Now</span>}
+                {late && <span className="flag late">Late</span>}
                 <span className="by">{byText(k, by)}</span>
               </div>
               {open.map((c) => (

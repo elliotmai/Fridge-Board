@@ -54,7 +54,7 @@ function Breeding({ b, now, phone }) {
         {stops.map((s) => (
           <div key={s.label} className={`stop ${s.state}`}>
             <i />
-            <b>{s.label}{s.state === 'now' && <span className="badge now">Now</span>}</b>
+            <b>{s.label}{s.state === 'now' && <span className="flag now">Now</span>}</b>
             <span>{s.when}</span>
           </div>
         ))}
@@ -212,7 +212,7 @@ export function SitterGuide({ sitter, phone, status }) {
               <div className="care-item" key={`${i.name}-${n}`}>
                 <div className="care-head">
                   {i.name && <b>{i.name}</b>}
-                  {i.safety != null && i.safety >= 3 && <span className="badge late">{i.safetyLabel || `Safety ${i.safety}`}</span>}
+                  {i.safety != null && i.safety >= 3 && <span className="flag late">{i.safetyLabel || `Safety ${i.safety}`}</span>}
                 </div>
                 {i.detail && <p>{i.detail}</p>}
               </div>
