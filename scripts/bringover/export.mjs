@@ -181,6 +181,27 @@ const APPS = {
     return out;
   } },
 
+  /** alcoholtracker/src/importHistory.js: my branches of the Realtime Database, and my parties */
+  alcohol: { project: 'alctracker-b6c8a', async data(project, accts) {
+    const db = `https://${project}-default-rtdb.firebaseio.com`;
+    const read = async (path) => {
+      const r = await fetch(`${db}/${path}.json`, { headers: { authorization: `Bearer ${TOKEN}` } });
+      if (!r.ok) throw new Error(`GET ${db}/${path} → ${r.status} ${(await r.text()).slice(0, 200)}`);
+      return r.json();
+    };
+    const TOPS = ['users', 'friendRequests', 'friendships', 'drinkListShareRequests', 'drinkListShares', 'userParties'];
+    const all = {};
+    for (const top of [...TOPS, 'parties']) all[top] = (await read(top)) || {};
+    const out = {};
+    for (const { legacy_id: uid } of accts) {
+      const tree = {};
+      for (const top of TOPS) drinksFlatten([top, uid], all[top][uid], tree);
+      for (const pid of Object.keys(all.userParties[uid] || {})) drinksFlatten(['parties', pid], all.parties[pid], tree);
+      if (Object.keys(tree).length) out[uid] = tree;
+    }
+    return out;
+  } },
+
   /** sidequest: its data was copied on 20 Nov under old ids; only who-is-who is needed. */
   sidequest: { project: 'sidequest-42196', async data() { return {}; } },
 
@@ -192,6 +213,21 @@ const APPS = {
     return rows;
   } },
 };
+
+/** Drink Tracker's depth and flatten (the same as drinks.depth in the database). */
+function drinksDepth(p) {
+  switch (p[0]) {
+    case 'users': return ['drinks', 'scannedProducts'].includes(p[2]) ? 4 : 3;
+    case 'parties': return ['members', 'entries'].includes(p[2]) ? 4 : 3;
+    default: return 3;
+  }
+}
+export function drinksFlatten(p, value, out = {}) {
+  if (value === null || value === undefined) return out;
+  if (p.length >= drinksDepth(p)) out[p.join('/')] = value;
+  else if (typeof value === 'object' && !Array.isArray(value)) for (const [k, v] of Object.entries(value)) drinksFlatten([...p, k], v, out);
+  return out;
+}
 
 /** stimultrack's toRow, on plain values. */
 export function stimulRow(id, data) {
