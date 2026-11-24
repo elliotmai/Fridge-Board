@@ -13,7 +13,7 @@
   # smart detection shouldn't fail the build over it.
   # Public keys: Supabase publishable key (src/config/supabase.js), Hive's Firebase key,
   # and the old apps' Firebase keys (netlify/lib/carryOver.mjs).
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "sb_publishable_fZo1FUg_j4O1EHH-W2Jr1A_4P8W3o2S,AIzaSyBi5xLBJVPpGQj2qoNc7tPHB-HE3AIDBAE,AIzaSyA8rr1TEUUZ9b_PqR475mszkoC0aMoHeTE,AIzaSyArUnjG1BLqTbHCQqWruqLZDwy-aoMxgR4,AIzaSyAIJihKqOI3BJjSU7AZmBElHcvDJjeAIaQ,AIzaSyA-PPCs494aPCHuPEE6HIs2GgeCdHjviWw,AIzaSyApq0Wj12n2Gn8tjD0HJ-MsR3ON8hbh7QQ"
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "sb_publishable_fZo1FUg_j4O1EHH-W2Jr1A_4P8W3o2S,AIzaSyBi5xLBJVPpGQj2qoNc7tPHB-HE3AIDBAE,AIzaSyA8rr1TEUUZ9b_PqR475mszkoC0aMoHeTE,AIzaSyArUnjG1BLqTbHCQqWruqLZDwy-aoMxgR4,AIzaSyAIJihKqOI3BJjSU7AZmBElHcvDJjeAIaQ,AIzaSyA-PPCs494aPCHuPEE6HIs2GgeCdHjviWw,AIzaSyApq0Wj12n2Gn8tjD0HJ-MsR3ON8hbh7QQ,AIzaSyC1KnocB9ogDmH27IQbjDQe-exvGa8wzsQ,AIzaSyBGb7feMWpPLvrToU7F-QAZOmNrta4KtdU,AIzaSyBFjXetA5vgZBLqpUHJ4OiXtXzfJ5fnE2U"
 
 # Single-page app: send every path to index.html.
 # Apps that have moved to Hive's Supabase project, served at Hive's own

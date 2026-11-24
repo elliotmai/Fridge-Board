@@ -12,6 +12,18 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const env = (k, d) => process.env[k] || d;
 
+/**
+ * Sites that may call Hive's sign-in endpoints from the browser: every app
+ * under the shared domain, and each app's old netlify.app address, which
+ * open tabs and installed home-screen apps keep using after the move
+ * (a 301 only moves fresh page loads).
+ */
+const SHARED_ORIGIN = /^https:\/\/([a-z0-9-]+\.)?flyingdoublemranch\.com$/;
+const OLD_SITES = ['fridge-board-7u23', 'stimultrack', 'wander-tripplanner', 'ourden', 'journaltogether', 'alcoholtracker',
+  'side-quest-games', 'lets-go-eat', 'zntmanager', 'learnleaf-organizer', 'mykitchenhub', 'pool-heater-monitor'];
+const OLD_ORIGIN = new RegExp(`^https://([a-z0-9-]+--)?(${OLD_SITES.join('|')})\\.netlify\\.app$`);
+export const isAppOrigin = (o) => Boolean(o) && (SHARED_ORIGIN.test(o) || OLD_ORIGIN.test(o));
+
 export const urls = {
   galaxyfarm: () => env('GALAXYFARM_URL', 'https://flyingdoublemranch.com').replace(/\/$/, ''),
   kitchenhub: () => env('KITCHENHUB_URL', 'https://us-central1-mykitchenhub-db665.cloudfunctions.net/board').replace(/\/$/, ''),

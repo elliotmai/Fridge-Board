@@ -15,7 +15,7 @@
  */
 import { verifyFirebaseIdToken } from '../lib/firebaseIdToken.mjs';
 import { verifySupabaseToken } from '../lib/supabaseToken.mjs';
-import { env, json } from '../lib/shared.mjs';
+import { env, json, isAppOrigin } from '../lib/shared.mjs';
 
 export const config = { path: '/api/auth/legacy' };
 
@@ -25,13 +25,17 @@ export const LEGACY_PROJECTS = {
   wander: 'wander-f10b1',
   aerologger: 'aerologger-ec6a6',
   sidequest: 'sidequest-42196',
-  // Each app is added here when it moves.
+  journal: 'journal-together-9234f',
+  ourden: 'ourden',
+  stimultrack: 'caffeine-tracker-bcd4a',
+  znt: 'znt-manager',
+  learnleaf: 'learnleaf-organizer',
+  kitchenhub: 'mykitchenhub-db665',
 };
 
-const SHARED = /^https:\/\/([a-z0-9-]+\.)?flyingdoublemranch\.com$/;
 const cors = (req) => {
   const o = req.headers.get('origin');
-  return o && SHARED.test(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
+  return isAppOrigin(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
 };
 
 export async function claim({ app, idToken, accessToken }, { verifyOld = verifyFirebaseIdToken, verifyNew = verifySupabaseToken, db }) {

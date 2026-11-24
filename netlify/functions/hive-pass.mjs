@@ -12,7 +12,7 @@
  */
 import { CATALOG } from '../../src/config/catalog.js';
 import { PASS_SECONDS, signPass } from '../lib/hiveAssertion.mjs';
-import { env, json } from '../lib/shared.mjs';
+import { env, json, isAppOrigin } from '../lib/shared.mjs';
 import { verifySupabaseToken } from '../lib/supabaseToken.mjs';
 
 export const config = { path: '/api/hive/pass' };
@@ -21,10 +21,9 @@ export const config = { path: '/api/hive/pass' };
 export const passApps = () => Object.entries(CATALOG).filter(([, a]) => a.url && !a.native).map(([id]) => id);
 
 /** Apps on the shared domain ask for passes from their own address (outside Hive too). */
-const SHARED = /^https:\/\/([a-z0-9-]+\.)?flyingdoublemranch\.com$/;
 const cors = (req) => {
   const o = req.headers.get('origin');
-  return o && SHARED.test(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
+  return isAppOrigin(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
 };
 
 export default async (req) => {

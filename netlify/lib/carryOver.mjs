@@ -32,8 +32,9 @@ export const LEGACY_APPS = {
   journal: { project: 'journal-together-9234f', key: 'AIzaSyAIJihKqOI3BJjSU7AZmBElHcvDJjeAIaQ' },
   alcohol: { project: 'alctracker-b6c8a', key: 'AIzaSyA-PPCs494aPCHuPEE6HIs2GgeCdHjviWw' },
   aerologger: { project: 'aerologger-ec6a6', key: 'AIzaSyApq0Wj12n2Gn8tjD0HJ-MsR3ON8hbh7QQ' },
-  // KitchenHub, Wander and Our Den read their key from build settings; it is
-  // added here (from the live page) when each one moves.
+  wander: { project: 'wander-f10b1', key: 'AIzaSyC1KnocB9ogDmH27IQbjDQe-exvGa8wzsQ' },
+  ourden: { project: 'ourden', key: 'AIzaSyBGb7feMWpPLvrToU7F-QAZOmNrta4KtdU' },
+  kitchenhub: { project: 'mykitchenhub-db665', key: 'AIzaSyBFjXetA5vgZBLqpUHJ4OiXtXzfJ5fnE2U' },
 };
 
 const IDENTITY = 'https://identitytoolkit.googleapis.com/v1/accounts';
