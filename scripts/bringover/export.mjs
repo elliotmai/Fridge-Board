@@ -16,6 +16,7 @@
  *
  * Read-only against Firebase. Dates become {"$ts": ms}, as the apps store them.
  */
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -184,11 +185,8 @@ const APPS = {
   /** alcoholtracker/src/importHistory.js: my branches of the Realtime Database, and my parties */
   alcohol: { project: 'alctracker-b6c8a', async data(project, accts) {
     const db = `https://${project}-default-rtdb.firebaseio.com`;
-    const read = async (path) => {
-      const r = await fetch(`${db}/${path}.json`, { headers: { authorization: `Bearer ${TOKEN}` } });
-      if (!r.ok) throw new Error(`GET ${db}/${path} → ${r.status} ${(await r.text()).slice(0, 200)}`);
-      return r.json();
-    };
+    // Through curl: it follows the HTTPS proxy settings, which Node's fetch doesn't for every host.
+    const read = async (path) => JSON.parse(execFileSync('curl', ['-sfS', '-H', `authorization: Bearer ${TOKEN}`, `${db}/${path}.json`], { maxBuffer: 1 << 29 }).toString() || 'null');
     const TOPS = ['users', 'friendRequests', 'friendships', 'drinkListShareRequests', 'drinkListShares', 'userParties'];
     const all = {};
     for (const top of [...TOPS, 'parties']) all[top] = (await read(top)) || {};

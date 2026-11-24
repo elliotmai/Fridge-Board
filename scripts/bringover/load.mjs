@@ -9,19 +9,20 @@
  * Needs an access token for api.supabase.com in SUPABASE_ACCESS_TOKEN, or a
  * proxy that adds one. Safe to run again: everything upserts.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const REF = process.env.SUPABASE_PROJECT;
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
 
+// Through curl (stdin for the body): it follows the HTTPS proxy settings, which Node's fetch doesn't for every host.
 async function sql(query) {
-  const r = await fetch(`https://api.supabase.com/v1/projects/${REF}/database/query`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}) },
-    body: JSON.stringify({ query }),
-  });
-  const body = await r.text();
-  if (!r.ok) throw new Error(`database/query → ${r.status} ${body.slice(0, 400)}`);
+  const args = ['-sS', '-w', '\n%{http_code}', '-X', 'POST', '-H', 'content-type: application/json',
+    ...(TOKEN ? ['-H', `authorization: Bearer ${TOKEN}`] : []), '--data-binary', '@-', `https://api.supabase.com/v1/projects/${REF}/database/query`];
+  const out = execFileSync('curl', args, { input: JSON.stringify({ query }), maxBuffer: 1 << 28 }).toString();
+  const cut = out.lastIndexOf('\n');
+  const body = out.slice(0, cut), status = Number(out.slice(cut + 1));
+  if (status < 200 || status >= 300) throw new Error(`database/query → ${status} ${body.slice(0, 400)}`);
   return JSON.parse(body || '[]');
 }
 
