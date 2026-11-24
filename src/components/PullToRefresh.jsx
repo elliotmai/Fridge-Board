@@ -61,7 +61,7 @@ export function PullToRefresh({ children, onRefresh }) {
       >
         <div
           className={[
-            'mt-2 h-6 w-6 rounded-full border-2 border-neutral-300 border-t-brand dark:border-neutral-700 dark:border-t-brand',
+            'mt-2 h-6 w-6 rounded-full border-2 border-line border-t-ink',
             refreshing || pull >= THRESHOLD ? 'animate-spin' : '',
           ].join(' ')}
           style={{ opacity: Math.min(1, pull / THRESHOLD) || (refreshing ? 1 : 0) }}

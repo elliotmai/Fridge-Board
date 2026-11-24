@@ -42,7 +42,7 @@ body {
   }
 }
 .animate-toast-in {
-  animation: toast-in 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  animation: toast-in var(--d-move, 220ms) var(--ease-out, ease-out);
 }
 
 @keyframes pop {
@@ -56,5 +56,5 @@ body {
   }
 }
 .animate-pop {
-  animation: pop 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  animation: pop var(--d-move, 200ms) var(--ease-out, ease-out);
 }

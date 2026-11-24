@@ -6,12 +6,12 @@ import { FEEDBACK_URL } from '@/config/app';
  */
 export function Footer() {
   return (
-    <footer className="flex flex-none items-center justify-center border-t border-black/5 py-2 pb-safe dark:border-white/10">
+    <footer className="flex flex-none items-center justify-center border-t border-line py-2 pb-safe font-sans">
       <a
         href={FEEDBACK_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[11px] font-medium text-neutral-400 transition hover:text-brand dark:text-neutral-500"
+        className="inline-flex min-h-[44px] items-center px-2 text-xs font-semibold text-muted hover:text-ink"
       >
         Report a bug or request a feature
       </a>

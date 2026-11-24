@@ -45,11 +45,11 @@ export function ToastProvider({ children }) {
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex flex-col items-center gap-2 p-4 pb-safe">
         {toasts.map((t) =>
           t.action ? (
-            <div key={t.id} role="status" className="animate-toast-in pointer-events-auto flex max-w-[calc(100%-2rem)] items-center gap-4 rounded-full bg-neutral-900 py-2 pl-5 pr-2 text-[15px] text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900">
+            <div key={t.id} role="status" className="animate-toast-in pointer-events-auto flex max-w-[calc(100%-2rem)] items-center gap-4 rounded-sm bg-ink py-2 pl-5 pr-2 font-sans text-[15px] text-paper shadow-[var(--shadow-float)]">
               <span className="truncate">{t.message}</span>
               <button
                 onClick={() => { t.action.onClick(); dismiss(t.id); }}
-                className="h-10 rounded-full bg-white/15 px-4 font-semibold dark:bg-black/10"
+                className="h-11 rounded-xs px-4 font-bold text-honey underline-offset-4 hover:underline"
               >
                 {t.action.label}
               </button>
@@ -59,14 +59,15 @@ export function ToastProvider({ children }) {
               key={t.id}
               onClick={() => dismiss(t.id)}
               className={[
-                'animate-toast-in pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-sm font-medium shadow-lg backdrop-blur',
+                'animate-toast-in pointer-events-auto max-w-sm rounded-sm bg-ink py-3 pl-4 pr-5 text-left font-sans text-[15px] font-semibold text-paper shadow-[var(--shadow-float)]',
+                // A coloured edge says what kind; the text stays high-contrast.
                 t.type === 'error'
-                  ? 'bg-red-600/90 text-white'
+                  ? 'border-l-4 border-late'
                   : t.type === 'success'
-                    ? 'bg-emerald-600/90 text-white'
+                    ? 'border-l-4 border-ok'
                     : t.type === 'warning'
-                      ? 'bg-amber-500/90 text-black'
-                      : 'bg-neutral-800/90 text-white dark:bg-neutral-200/90 dark:text-black',
+                      ? 'border-l-4 border-honey'
+                      : '',
               ].join(' ')}
             >
               {t.message}

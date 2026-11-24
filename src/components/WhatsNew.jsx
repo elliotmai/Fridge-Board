@@ -56,38 +56,26 @@ export function WhatsNew() {
   const stacked = entries.length > 1;
 
   return (
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-      onClick={dismiss}
-    >
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 font-sans sm:items-center sm:p-6" onClick={dismiss}>
       <div
-        className="animate-pop flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="whats-new-title"
+        className="animate-pop flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-lg bg-paper text-ink shadow-[var(--shadow-float)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 pt-6 text-center">
-          <div className="text-4xl">✨</div>
-          <h2 className="mt-1 text-lg font-semibold text-neutral-900 dark:text-white">
-            What&apos;s new
-          </h2>
-          {!stacked && latest.date && (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">{latest.date}</p>
-          )}
+        <div className="px-6 pt-6">
+          <h2 id="whats-new-title" className="text-2xl font-extrabold tracking-tight">What&apos;s new in Hive</h2>
+          {!stacked && latest.date && <p className="mt-1 text-sm font-semibold text-muted">{latest.date}</p>}
         </div>
 
-        <div className="flex flex-col gap-4 overflow-y-auto px-6 py-4">
+        <div className="flex flex-col gap-5 overflow-y-auto px-6 py-4">
           {entries.map((entry) => (
             <div key={entry.version} className="flex flex-col gap-2">
-              {stacked && entry.date && (
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                  {entry.date}
-                </p>
-              )}
-              <ul className="flex flex-col gap-2">
+              {stacked && entry.date && <p className="text-sm font-bold text-muted">{entry.date}</p>}
+              <ul className="flex flex-col gap-3">
                 {entry.items.map((item, i) => (
-                  <li
-                    key={i}
-                    className="rounded-2xl border border-black/5 bg-neutral-50 px-4 py-3 text-sm leading-snug text-neutral-800 dark:border-white/5 dark:bg-neutral-800 dark:text-neutral-100"
-                  >
+                  <li key={i} className="border-l-[3px] border-honey pl-3 text-base leading-snug">
                     {item}
                   </li>
                 ))}
@@ -96,10 +84,10 @@ export function WhatsNew() {
           ))}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 pt-2">
           <button
             onClick={dismiss}
-            className="w-full rounded-2xl bg-brand px-4 py-3 font-medium text-white transition active:scale-[0.98]"
+            className="h-12 w-full rounded-sm bg-ink px-4 font-bold text-paper transition-transform duration-75 active:scale-[0.98]"
           >
             Got it
           </button>
