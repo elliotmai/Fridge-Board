@@ -164,7 +164,7 @@ function Household() {
     <>
       <h3 className="sheet-sub">{h.name}</h3>
       {h.members.map((m) => (
-        <div className="set-row" key={m.id}><span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ' · owner' : ''}</small></span></div>
+        <div className="set-row" key={m.id}><span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ', owner' : ''}</small></span></div>
       ))}
       {h.role === 'owner' && (
         invite ? (

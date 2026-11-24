@@ -28,6 +28,17 @@ export function AppIcon({ id, custom, size, badge }) {
   );
 }
 
+/** The time and date, large: the first thing read from across the kitchen. */
+function DayClock({ now }) {
+  const [, t, ap] = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).match(/^(.*?)\s?([AP]M)?$/i) || [];
+  return (
+    <div className="day-clock">
+      <b>{t}{ap && <small>{ap.toLowerCase()}</small>}</b>
+      <span>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+    </div>
+  );
+}
+
 function FolderIcon({ apps, custom, badge }) {
   return (
     <span className="icon folder-icon">
@@ -80,6 +91,12 @@ export function Home({
   const rows = Math.max(1, Math.floor((box.h - 16) / rowPx(icon, look)));
   const pages = useMemo(() => (box.h ? pack(layout.grid, cols, rows) : [[]]), [layout.grid, cols, rows, box.h]);
   const total = pages.length + (look.library ? 1 : 0);
+  // A page that isn't full shares out the spare height (rows up to 1.7x), so a
+  // wall display isn't half empty: widgets grow and show more.
+  const rowsShown = (pg) => {
+    const used = pg.length ? Math.max(...pg.map((c) => c.row + c.h - 1)) : rows;
+    return Math.min(rows, Math.max(used, Math.ceil((box.h - 16) / (rowPx(icon, look) * 1.7))));
+  };
 
   const goToPage = (n) => {
     const el = pager.current;
@@ -320,7 +337,7 @@ export function Home({
   const menuActions = (m) => {
     const { item, zone } = m;
     const close = () => setMenu(null);
-    const editHome = { label: 'Edit Home Screen', icon: UI.grid, onSelect: () => { close(); setEditing(true); } };
+    const editHome = { label: 'Edit home screen', icon: UI.grid, onSelect: () => { close(); setEditing(true); } };
     if (item.k === 'widget') {
       return [
         { label: 'Small', icon: UI.size, checked: item.size === 's', onSelect: () => { close(); setLayout((l) => setWidgetSize(l, item.key, 's')); } },
@@ -328,7 +345,7 @@ export function Home({
         { label: 'Large', icon: UI.size, checked: item.size === 'l', onSelect: () => { close(); setLayout((l) => setWidgetSize(l, item.key, 'l')); } },
         { divider: true },
         editHome,
-        { label: 'Remove Widget', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } },
+        { label: 'Remove widget', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } },
       ];
     }
     if (item.k === 'folder') {
@@ -346,13 +363,13 @@ export function Home({
       ...shortcuts,
       ...(shortcuts.length ? [{ divider: true }] : []),
       ...(canFrame && look.inside !== false ? [{
-        label: inTab ? 'Open Inside Hive' : 'Open in Its Own Tab', icon: UI.arrow,
+        label: inTab ? 'Open inside Hive' : 'Open in its own tab', icon: UI.arrow,
         onSelect: () => { close(); onSetExternal(item.key, !inTab); },
       }] : []),
-      { label: 'Edit Icon', icon: UI.palette, onSelect: () => { close(); onEditIcon(item.key); } },
+      { label: 'Edit icon', icon: UI.palette, onSelect: () => { close(); onEditIcon(item.key); } },
       ...(zone === 'library'
-        ? (onHome ? [] : [{ label: 'Add to Home Screen', icon: UI.plus, onSelect: () => { close(); onAddToHome(item.key); } }])
-        : [editHome, { label: 'Remove from Home Screen', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } }]),
+        ? (onHome ? [] : [{ label: 'Add to home screen', icon: UI.plus, onSelect: () => { close(); onAddToHome(item.key); } }])
+        : [editHome, { label: 'Remove from home screen', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } }]),
     ];
   };
 
@@ -370,16 +387,21 @@ export function Home({
             <span className="grow" />
             <button className="pill strong" onClick={() => setEditing(false)}>Done</button>
           </>
-        ) : wantsSignIn ? (
-          <button className="pill ghost signin-pill" onClick={account.open}>{account.user ? 'Confirm your email' : 'Sign in to Hive'}</button>
-        ) : null}
+        ) : (
+          <>
+            <DayClock now={now} />
+            {wantsSignIn && (
+              <button className="signin-link signin-pill" onClick={account.open}><i aria-hidden="true" />{account.user ? 'Confirm your email' : 'Sign in'}</button>
+            )}
+          </>
+        )}
       </div>
 
       <div className="pager" ref={pager} onScroll={onScroll} onPointerDown={(e) => onPointerDown(e, null, null)}>
         {pages.map((pg, p) => (
           <section className="page" key={p} data-zone="grid" data-page={p} data-last={pg.length ? Math.max(...pg.map((c) => c.index)) : -1}
             aria-label={`Page ${p + 1} of ${pages.length}`}>
-            <div className="page-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+            <div className="page-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rowsShown(pg)}, minmax(0, 1fr))` }}>
               {pg.map((c) => tile(c.item, 'grid', c.index, { gridColumn: `${c.col} / span ${c.w}`, gridRow: `${c.row} / span ${c.h}` }))}
             </div>
           </section>

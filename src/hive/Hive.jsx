@@ -66,7 +66,7 @@ export function Hive() {
   const [paths, setPaths] = useState({}); // app id → { path, n } for shortcuts
   const [recentApps, setRecentApps] = useStored('hive.recent', []);
 
-  // How the home screen looks (Settings → Wallpaper & Home Screen).
+  // How the home screen looks (Settings → Wallpaper & home screen).
   const [storedLook, setStoredLook] = useStored('hive.look', DEFAULT_LOOK);
   const look = { ...DEFAULT_LOOK, ...storedLook };
   const setLook = useCallback((f) => setStoredLook((l) => (typeof f === 'function' ? f({ ...DEFAULT_LOOK, ...l }) : f)), [setStoredLook]);

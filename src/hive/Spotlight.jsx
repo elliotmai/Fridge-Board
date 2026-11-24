@@ -116,8 +116,8 @@ export function search(query, { data, now, custom = {} }) {
     .map((id) => ({ key: `app:${id}`, app: id, title: appLook(id, custom).name, sub: CATALOG[id].blurb })), 8);
 
   add('Settings', [
-    { key: 'act:wallpaper', action: 'wallpaper', app: 'settings', title: 'Wallpaper & Home Screen', words: 'wallpaper background photo icons dock columns badges look theme dark' },
-    { key: 'act:edit', action: 'edit', app: 'settings', title: 'Edit Home Screen', words: 'edit arrange move rearrange widgets folders' },
+    { key: 'act:wallpaper', action: 'wallpaper', app: 'settings', title: 'Wallpaper & home screen', words: 'wallpaper background photo icons dock columns badges look theme dark' },
+    { key: 'act:edit', action: 'edit', app: 'settings', title: 'Edit home screen', words: 'edit arrange move rearrange widgets folders' },
     { key: 'act:account', action: 'account', app: 'settings', title: 'Hive account', words: 'sign in account email password log out' },
     { key: 'act:settings', action: 'settings', app: 'settings', title: 'Settings', words: 'settings preferences fridge board idle' },
   ].filter((a) => has(a.title, q) || has(a.words, q)), 3);
@@ -127,12 +127,12 @@ export function search(query, { data, now, custom = {} }) {
   const todos = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
   add('Tasks', todos.filter((t) => has(t.name, q) || has(t.tag, q)).map((t) => ({
     key: t.key, ...(t.source === 'learnleaf' ? { app: 'learnleaf', path: APPS.learnleaf.paths.tasks } : google.tasks),
-    title: t.name, sub: [t.tag, t.due ? when(t.due, now) : ''].filter(Boolean).join(' · '),
+    title: t.name, sub: [t.tag, t.due ? when(t.due, now) : ''].filter(Boolean).join(', '),
   })));
 
   const { shown } = dedupeEvents(data.events || [], data.trips || []);
   add('Calendar', shown.filter((e) => has(e.title, q) || has(e.location, q)).map((e) => ({
-    key: `ev:${e.id}`, ...google.day(eventDays(e).first), title: e.title, sub: [when(eventDays(e).first, now), e.location].filter(Boolean).join(' · '),
+    key: `ev:${e.id}`, ...google.day(eventDays(e).first), title: e.title, sub: [when(eventDays(e).first, now), e.location].filter(Boolean).join(', '),
   })));
 
   add('Trips', (data.trips || []).filter((t) => has(t.name, q) || has(t.dest, q)).map((t) => ({
@@ -140,7 +140,7 @@ export function search(query, { data, now, custom = {} }) {
   })));
 
   add('Shopping', (data.shopping || []).filter((i) => has(i.name, q)).map((i) => ({
-    key: `shop:${i.id}`, app: 'kitchenhub', path: APPS.kitchenhub.paths.shopping, title: i.name, sub: [i.qty, i.section].filter(Boolean).join(' · '),
+    key: `shop:${i.id}`, app: 'kitchenhub', path: APPS.kitchenhub.paths.shopping, title: i.name, sub: [i.qty, i.section].filter(Boolean).join(', '),
   })));
 
   add('Meals', (data.meals || []).filter((m) => has(m.name, q)).map((m) => ({
@@ -149,7 +149,7 @@ export function search(query, { data, now, custom = {} }) {
   })));
 
   add('Chores', (data.chores || []).filter((c) => has(c.title, q) || has(c.detail, q)).map((c) => ({
-    key: `chore:${c.id}`, app: 'galaxyfarm', path: APPS.galaxyfarm.paths.chores, title: c.title, sub: [c.detail, c.done ? 'Done' : ''].filter(Boolean).join(' · '),
+    key: `chore:${c.id}`, app: 'galaxyfarm', path: APPS.galaxyfarm.paths.chores, title: c.title, sub: [c.detail, c.done ? 'Done' : ''].filter(Boolean).join(', '),
   })));
 
   return groups;

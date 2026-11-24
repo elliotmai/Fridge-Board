@@ -38,7 +38,7 @@ function Toggle({ label, hint, checked, onChange }) {
   );
 }
 
-/** Wallpaper & Home Screen. Every change shows on the home screen behind the sheet as you make it. */
+/** Wallpaper & home screen. Every change shows on the home screen behind the sheet as you make it. */
 export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
   const ref = useSheet(onClose);
   const { theme, setTheme } = useTheme();
@@ -64,8 +64,8 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
 
   return (
     <div className="scrim hive-layer see-through" onClick={onClose}>
-      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Wallpaper and Home Screen" ref={ref} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><h2>Wallpaper &amp; Home Screen</h2><button className="pill" onClick={onClose}>Done</button></div>
+      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Wallpaper and home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><h2>Wallpaper &amp; home screen</h2><button className="pill" onClick={onClose}>Done</button></div>
 
         <h3 className="sheet-sub">Wallpaper</h3>
         <div className="walls">
@@ -96,7 +96,7 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
         <Toggle label="Open apps inside Hive" checked={look.inside !== false} onChange={set('inside')}
           hint="On: every app opens inside Hive. Off: every app opens in its own tab. To choose for one app, press and hold its icon." />
 
-        <h3 className="sheet-sub">Home Screen</h3>
+        <h3 className="sheet-sub">Home screen</h3>
         <Toggle label="Dock" checked={look.dock} onChange={set('dock')} />
         <Toggle label="Search" hint="Swipe down, or tap the dots, to search apps and everything in them." checked={look.search} onChange={set('search')} />
         <Toggle label="App Library" hint="A last page with every app, grouped." checked={look.library} onChange={set('library')} />
@@ -121,7 +121,7 @@ export function IconEditor({ id, layout, setLayout, onClose }) {
   return (
     <div className="scrim hive-layer see-through" onClick={onClose}>
       <div className="sheet-panel" role="dialog" aria-modal="true" aria-label={`Edit ${now.name} icon`} ref={ref} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><h2>Edit Icon</h2><button className="pill" onClick={onClose}>Done</button></div>
+        <div className="sheet-head"><h2>Edit icon</h2><button className="pill" onClick={onClose}>Done</button></div>
         <div className="icon-preview"><AppIcon id={id} custom={custom} size={88} /><b>{now.name}</b></div>
 
         <label className="auth-form"><span className="field-label">Name</span>

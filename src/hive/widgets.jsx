@@ -117,7 +117,7 @@ function Today({ data, now, size }) {
       <div className="w-now">
         <div>
           <div className="w-big">{wx.now}°</div>
-          <div className="w-sub">{size !== 's' && wx.desc && <span className="w-desc">{wx.desc} · </span>}H {d0.hi}° L {d0.lo}°</div>
+          <div className="w-sub">{size !== 's' && wx.desc && <span className="w-desc">{wx.desc}, </span>}H {d0.hi}° L {d0.lo}°</div>
         </div>
         {size === 'l' && <div className="w-clock"><b>{clock(now)}</b><span>{fmt(now, { weekday: 'long', month: 'short', day: 'numeric' })}</span></div>}
         {size === 'm' ? tabs : <W />}
@@ -195,7 +195,7 @@ function Shopping({ data, size }) {
       <div className="w-count">{left.length ? <><b>{left.length}</b> to buy</> : <b>List is empty</b>}</div>
       <Scroll label="Shopping list"><ul className="w-list">
         {[...left, ...got].map((i) => (
-          <Check key={i.id} on={i.bought} label={i.name} onToggle={() => act.item(i)} sub={size !== 's' ? [i.qty, i.why && `for ${i.why}`].filter(Boolean).join(' · ') : i.qty}>{i.name}</Check>
+          <Check key={i.id} on={i.bought} label={i.name} onToggle={() => act.item(i)} sub={size !== 's' ? [i.qty, i.why && `for ${i.why}`].filter(Boolean).join(', ') : i.qty}>{i.name}</Check>
         ))}
       </ul></Scroll>
       {size !== 's' && (
@@ -220,10 +220,10 @@ function Tasks({ data, now }) {
   const rows = [...all].sort((a, b) => Number(done.has(a.key)) - Number(done.has(b.key)));
   return (
     <>
-      <div className="w-count"><b>{left}</b> to do{over > 0 && <span className="w-warn"> · {over} overdue</span>}</div>
+      <div className="w-count"><b>{left}</b> to do{over > 0 && <span className="w-warn">, {over} overdue</span>}</div>
       <Scroll label="To do"><ul className="w-list">{rows.map((t) => (
         <Check key={t.key} on={done.has(t.key)} label={t.name} onToggle={() => act.todo(t, done.has(t.key))}
-          sub={[dueLabel(t), t.time, t.tag].filter(Boolean).join(' · ')} tone={t.n != null && t.n < 0 ? 'w-warn' : ''}>
+          sub={[dueLabel(t), t.time, t.tag].filter(Boolean).join(', ')} tone={t.n != null && t.n < 0 ? 'w-warn' : ''}>
           {t.name}
         </Check>
       ))}</ul></Scroll>
@@ -271,7 +271,7 @@ function Dinner({ data, onOpen }) {
             <li key={`${m.d}-${m.name}`} className={m.d === 0 ? 'w-tonight' : ''}>
               <button className="w-act w-link" onClick={() => onOpen({ path: m.recipe ? APPS.kitchenhub.paths.recipe(m.recipe) : APPS.kitchenhub.paths.mealPlan })}>
                 <span className="w-when">{day(m.d)}</span>
-                <span className="w-text">{m.name}{r && <small>{[r.time, r.cal && `${r.cal} cal`].filter(Boolean).join(' · ')}</small>}</span>
+                <span className="w-text">{m.name}{r && <small>{[r.time, r.cal && `${r.cal} cal`].filter(Boolean).join(', ')}</small>}</span>
               </button>
             </li>
           );
@@ -293,7 +293,7 @@ function Trip({ data, now, onOpen }) {
           <li key={t.id}>
             <button className="w-act w-link" onClick={() => onOpen({ path: APPS.wander.paths.trip(t.id) })}>
               <span className="w-when">{when(t)}</span>
-              <span className="w-text">{t.name}<small>{[t.dest, t.startD && `${short(t.startD)}${t.endD && +t.endD !== +t.startD ? `–${short(t.endD)}` : ''}`].filter(Boolean).join(' · ')}</small></span>
+              <span className="w-text">{t.name}<small>{[t.dest, t.startD && `${short(t.startD)}${t.endD && +t.endD !== +t.startD ? `–${short(t.endD)}` : ''}`].filter(Boolean).join(', ')}</small></span>
             </button>
           </li>
         ))}

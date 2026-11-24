@@ -60,7 +60,7 @@ export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
   return (
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Add to the home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><h2>Add to Home</h2><button className="pill" onClick={onClose}>Close</button></div>
+        <div className="sheet-head"><h2>Add to home screen</h2><button className="pill" onClick={onClose}>Close</button></div>
         <h3 className="sheet-sub">Widgets</h3>
         {widgets.length ? (
           <div className="add-list">
@@ -117,10 +117,10 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
           )}
         </div>
         <button className="set-row set-link" onClick={onLook}>
-          <span><b>Wallpaper &amp; Home Screen</b><small>Wallpaper, icon size, columns, dock, badges.</small></span><span className="chev" aria-hidden="true">›</span>
+          <span><b>Wallpaper &amp; home screen</b><small>Wallpaper, icon size, columns, dock, badges.</small></span><span className="chev" aria-hidden="true">›</span>
         </button>
         <button className="set-row set-link" onClick={onEdit}>
-          <span><b>Edit Home Screen</b><small>Or press and hold any empty space.</small></span><span className="chev" aria-hidden="true">›</span>
+          <span><b>Edit home screen</b><small>Or press and hold any empty space.</small></span><span className="chev" aria-hidden="true">›</span>
         </button>
         <label className="set-row">
           <span><b>Open to</b><small>On the fridge tablet, Fridge Board keeps it working like before.</small></span>
