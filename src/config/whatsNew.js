@@ -11,6 +11,7 @@ export const WHATS_NEW = [
     items: [
       'Signed in, your widgets and board show only your own data: empty is shown as empty, and an app that can’t be reached says so, with Retry. Samples are only for when nobody is signed in.',
       'Drinks on the fridge: tap Drinks, pick who you are, and add a drink to Drink Tracker in one tap.',
+      'Connect Google Calendar & Tasks right in Hive: Account, Connect, and Google brings you back connected. Hive, its widgets and Our Den all use that one connection, and Account says whether it’s working.',
     ],
   },
   {

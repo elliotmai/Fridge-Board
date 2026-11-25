@@ -11,6 +11,8 @@ import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
 import { accountsOn, USER_CHANGED, useHiveUser } from './account';
+import { connectGoogle } from './googleConnect';
+import { connectRequest } from './googleReturn';
 import { AccountSheet } from './AccountSheet';
 import { announce, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
@@ -94,6 +96,19 @@ export function Hive() {
     window.dispatchEvent(new Event(USER_CHANGED)); // the board and widgets reload as the new person
   }, [user?.verified, ready]);
   const account = { on: accountsOn, ready, user, open: () => setSheet('account') };
+
+  // `?connect=google&back=…`: another app (Our Den) sent someone to connect
+  // Google. Signed in, straight to Google; otherwise sign in first.
+  useEffect(() => {
+    if (!ready) return;
+    const asked = connectRequest(location.search, location.origin);
+    if (!asked) return;
+    const url = new URL(location.href);
+    url.searchParams.delete('connect'); url.searchParams.delete('back');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    if (!user?.verified) { setSheet('account'); return; }
+    connectGoogle({ back: asked.back }).catch(() => setSheet('account'));
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, act } = useLiveBoard();
   const now = new Date(useTick(30000));
