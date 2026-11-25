@@ -14,8 +14,9 @@ import { APPS } from './apps.js';
  *   native    built into Hive itself instead of opened in a frame.
  *   shortcuts quick actions in the long-press menu: [{ label, path }], opened
  *             at that path inside the app.
- *   frame     false = always opens in its own tab. Cattle Graph and Our Den
- *             send X-Frame-Options: DENY, so a frame would stay blank.
+ *   frame     false = always opens in its own tab: for an app that refuses
+ *             to be shown inside another site. None do today; each app's
+ *             frame-ancestors lists Hive (checked 2026-11-25).
  *
  * Apps with no `frame` key open inside Hive, with "Open in its own tab" always
  * one tap away. Each app's own sign-in still applies until the shared Hive
