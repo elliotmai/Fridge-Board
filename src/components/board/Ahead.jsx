@@ -1,4 +1,5 @@
 import { appLink } from '@/config/apps';
+import { GOOGLE_CONNECT_URL, GOOGLE_NOT_CONNECTED } from '@/config/google';
 import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
 import { Countdown, Freshness, OpenIn } from './bits';
 import { Bed, Car, Cow, Pin, Plane, Right, Tick, Train, Warn } from './Icons';
@@ -183,6 +184,9 @@ export function ComingUp({ tl, todoDone, onToggleTodo, hiddenEvents, phone, stat
         {empty && <p className="empty-note">Nothing coming up in the next two weeks.</p>}
         {/Sign in|Confirm/.test(status.calendar?.reason || '') && status.calendar.status === 'sample' && (
           <p className="tl-foot">{status.calendar.reason.replace('this', 'your own calendar and Google Tasks')}. The ones above are samples.</p>
+        )}
+        {status.calendar?.reason === GOOGLE_NOT_CONNECTED && (
+          <p className="tl-foot"><a href={GOOGLE_CONNECT_URL} target="_blank" rel="noopener noreferrer">Connect Google Calendar &amp; Tasks</a> to see yours here.</p>
         )}
         {hiddenEvents > 0 && <p className="tl-foot">{plural(hiddenEvents, 'calendar event')} matched a Wander trip, so {hiddenEvents === 1 ? 'it shows' : 'they show'} as the trip.</p>}
       </div>

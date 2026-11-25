@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { GOOGLE_CONNECT_URL } from '@/config/google';
 import {
   authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
   resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
@@ -123,6 +124,10 @@ function SignedIn({ user }) {
       <div className="set-row">
         <span><b>{user.name || 'Signed in'}</b><small>{user.email}</small></span>
         <button className="pill" onClick={() => signOut()}>Sign out</button>
+      </div>
+      <div className="set-row">
+        <span><b>Google Calendar &amp; Tasks</b><small>On your board and widgets. Connect once; it stays connected.</small></span>
+        <a className="pill" href={GOOGLE_CONNECT_URL} target="_blank" rel="noopener noreferrer">Connect</a>
       </div>
       <Household />
     </>

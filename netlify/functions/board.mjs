@@ -27,6 +27,7 @@
  */
 import { env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
 import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { GOOGLE_NOT_CONNECTED } from '../../src/config/google.js';
 
 // Travel is looked up for every trip starting this soon (or under way): it decides
 // which trips are the owner's own, so a trip without a lookup can't be shown.
@@ -139,7 +140,12 @@ async function google(where, user) {
   let headers;
   try { headers = passHeader(user, 'ourden'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
   const tz = where.tz || 'UTC';
-  const d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000);
+  let d;
+  try { d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000); } catch (e) {
+    // 409: this person hasn't connected Google yet (or Google revoked it).
+    if (e instanceof SourceError && e.status === 409) return { status: 'unconfigured', reason: GOOGLE_NOT_CONNECTED };
+    throw e;
+  }
   return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
 }
 
