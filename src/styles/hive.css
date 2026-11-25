@@ -394,22 +394,11 @@ button.day-clock:active { transform: scale(.98); }
 .spot-row.active { background: color-mix(in srgb, var(--honey) 14%, transparent); box-shadow: inset 3px 0 0 var(--honey); }
 .spot-empty { color: var(--muted); margin: var(--s6) var(--s1) 0; }
 
-/* ---------- the zoom between an icon and its app (Launch.jsx) ---------- */
-/* The app grows out of its icon: Launch.jsx writes transform and clip-path on
-   the app's own view each frame, with a copy of the icon on top fading into it. */
-.launch {
-  position: fixed; inset: 0; z-index: 31; pointer-events: none; overflow: hidden;
-  background: var(--c); color: #fff; will-change: clip-path, opacity;
-}
-.launch-glyph { position: absolute; left: 0; top: 0; width: 120px; height: 120px; transform-origin: 50% 50%; will-change: transform; }
-.launch-glyph svg { width: 100%; height: 100%; display: block; }
-.launch-scrim { position: fixed; inset: 0; z-index: 29; pointer-events: none; background: #000; opacity: 0; will-change: opacity; }
-.launch-template { visibility: hidden; } /* an app view carries its own copy (.launch-cover) */
-.launch-cover { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: var(--c, #555); color: #fff; will-change: opacity; }
-.launch-cover .launch-glyph { will-change: transform; }
-.zooming { transform-origin: 0 0; will-change: transform, clip-path; transition: none !important; }
-.hive-view.board-view.zooming { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: var(--bg); }
-.home-view { transform-origin: 50% 50%; }
+/* ---------- opening and closing an app: a fade through paper (Launch.jsx) ---------- */
+.app-veil { position: fixed; inset: 0; z-index: 40; pointer-events: none; background: var(--bg); opacity: 0; will-change: opacity; }
+.app-fading { will-change: opacity; transition: none !important; }
+/* Fridge Board is in the page flow; while it fades it sits over the home screen. */
+.hive-view.board-view.app-fading { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: var(--bg); }
 
 /* ---------- sheets, folders ---------- */
 .scrim { position: fixed; inset: 0; z-index: 60; background: var(--scrim); display: grid; place-items: end center; animation: fade var(--d-quick) var(--ease-out); }

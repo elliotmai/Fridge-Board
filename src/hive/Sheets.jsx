@@ -251,9 +251,7 @@ export function AppFrame({ id, visible, onHome, path }) {
     const moved = start.current.y - e.clientY;
     start.current = null;
     setPull(0);
-    // Swiped up: the zoom home carries on from about where the swipe left the app.
-    if (moved > 70) onHome({ startAt: 1 - Math.min(1, moved / 260) * 0.45 });
-    else if (Math.abs(moved) < 6) onHome();
+    if (moved > 70 || Math.abs(moved) < 6) onHome();
   };
   const k = Math.min(1, pull / 260);
   return (

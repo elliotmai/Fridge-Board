@@ -21,7 +21,8 @@ or timing.
    tablet) get the single `--shadow-float`. No blur, no glass.
 4. **Motion answers a touch.** Nothing moves on its own except the clock and a
    finished timer. (A stack that turns by itself swaps what it shows without
-   animating.) Presses respond in under 100 ms; things that open grow from
+   animating.) Presses respond in under 100 ms; apps fade through the paper
+   colour (one veil's opacity, ~240ms in, ~200ms out); menus and folders grow from
    where they came from; pages follow the finger. No bounce, no jiggle: only
    a hard flick may carry a few pixels past its page, as momentum.
    `prefers-reduced-motion` turns every transition into an instant change.
@@ -101,7 +102,6 @@ layout, where the whole board must fit one screen).
 | `--d-press` | 90ms | Press-in on any button |
 | `--d-quick` | 160ms | Colour and state changes, checks |
 | `--d-move` | 240ms | Menus, folders, sheets in |
-| `--d-zoom` | 340ms | An app growing out of its icon |
 | `--ease-out` | cubic-bezier(.2, 0, 0, 1) | Things arriving |
 | `--ease-in` | cubic-bezier(.4, 0, 1, 1) | Things leaving |
 

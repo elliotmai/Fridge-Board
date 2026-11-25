@@ -61,7 +61,6 @@
   --d-press: 90ms;
   --d-quick: 160ms;
   --d-move: 240ms;
-  --d-zoom: 340ms;
   --d-settle: 300ms; /* a tile sliding into its new place */
   --ease-out: cubic-bezier(.2, 0, 0, 1);
   --ease-in: cubic-bezier(.4, 0, 1, 1);
@@ -96,5 +95,5 @@
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --d-press: 0ms; --d-quick: 0ms; --d-move: 0ms; --d-zoom: 0ms; --d-settle: 0ms; }
+  :root { --d-press: 0ms; --d-quick: 0ms; --d-move: 0ms; --d-settle: 0ms; }
 }
