@@ -15,6 +15,7 @@ export const WHATS_NEW = [
       'Drop a widget on another to make a stack. Swipe it, or let it turn to what matters now: chores in the morning, dinner later.',
       'A clock screen for the fridge: the time, big, with two widget stacks, red at night. Tap the clock on a tablet, or set it to show when the screen is left alone.',
       'Customize more: icon styles, colours from your wallpaper, dot badges, compact rows, a line under the clock, and new pages wherever you like.',
+      'Connect Google Calendar & Tasks right in Hive: Account, Connect, and Google brings you back connected. Hive, its widgets and Our Den all use that one connection, and Account says whether it’s working.',
     ],
   },
   {

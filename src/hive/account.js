@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { followEmailLink } from './emailLink';
+import { hasPending } from './googleReturn';
 import { SESSION_COOKIE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, sessionCookieOptions } from '@/config/supabase';
 
 /**
@@ -30,6 +31,8 @@ export function supabase() {
     });
     await adoptOldSession(sb);
     await followEmailLink(sb);
+    // Back from Connect Google (googleConnect.js): hand Google's tokens to the server.
+    if (hasPending(sessionStorage)) import('./googleConnect').then((m) => m.finishGoogleConnect(sb)).catch(() => {});
     return sb;
   });
   return loading;

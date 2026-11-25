@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { GOOGLE_CONNECT_URL } from '@/config/google';
+import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
   authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
   resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
@@ -125,11 +125,42 @@ function SignedIn({ user }) {
         <span><b>{user.name || 'Signed in'}</b><small>{user.email}</small></span>
         <button className="pill" onClick={() => signOut()}>Sign out</button>
       </div>
-      <div className="set-row">
-        <span><b>Google Calendar &amp; Tasks</b><small>On your board and widgets. Connect once; it stays connected.</small></span>
-        <a className="pill" href={GOOGLE_CONNECT_URL} target="_blank" rel="noopener noreferrer">Connect</a>
-      </div>
+      <GoogleRow />
       <Household />
+    </>
+  );
+}
+
+/**
+ * Google Calendar & Tasks: connect in one tap (googleConnect.js). What it says
+ * comes from the server, which checks with Google each time the sheet opens.
+ */
+function GoogleRow() {
+  const [s, setS] = useState(undefined); // undefined: checking
+  const [note, setNote] = useState(() => takeGoogleResult());
+  const { busy, run, Msg } = useRun();
+  const check = useCallback(() => { setS(undefined); googleStatus().then(setS).catch((e) => setS({ connected: false, failed: true, reason: e.message })); }, []);
+  useEffect(() => {
+    check();
+    const on = () => { setNote(takeGoogleResult()); check(); };
+    window.addEventListener(GOOGLE_CHANGED, on);
+    return () => window.removeEventListener(GOOGLE_CHANGED, on);
+  }, [check]);
+  const problems = s?.connected ? [['Calendar', s.calendar], ['Tasks', s.tasks]].filter(([, v]) => v !== undefined && v !== true) : [];
+  const line = s === undefined ? 'Checking with Google…'
+    : s.connected && !problems.length ? 'Connected: your calendar and tasks are on your board and widgets.'
+      : s.connected ? problems.map(([n, why]) => `Connected, but Google won’t share ${n}: ${why}`).join(' ')
+        : s.failed ? `Couldn’t check: ${s.reason}` : 'On your board and widgets. Connect once; it stays connected.';
+  return (
+    <>
+      <div className="set-row">
+        <span><b>Google Calendar &amp; Tasks</b><small role="status">{line}</small></span>
+        <button className="pill" disabled={busy || s === undefined} onClick={() => run(() => connectGoogle(), (e) => (e.code === 'signed_out' ? e.message : authMessage(e)))}>
+          {busy ? 'Opening Google…' : s?.connected ? 'Reconnect' : 'Connect'}
+        </button>
+      </div>
+      {note && <p className={`auth-msg ${note.ok ? '' : 'bad'}`} role={note.ok ? 'status' : 'alert'}>{note.message}</p>}
+      <Msg />
     </>
   );
 }
