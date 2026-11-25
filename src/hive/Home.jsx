@@ -537,9 +537,11 @@ function HomeScreen({
     const close = () => setMenu(null);
     const editHome = { label: 'Edit home screen', icon: UI.grid, onSelect: () => { close(); setEditing(true); } };
     const at = layout.grid.findIndex((i) => i.key === item.key);
-    const pageStart = zone === 'grid' && at > 0 && (layout.grid[at - 1].k === 'break'
+    // Always an array: spread into every menu below, so `false` here (the dock,
+    // or the first tile) used to throw and blank the whole home screen.
+    const pageStart = !(zone === 'grid' && at > 0) ? [] : layout.grid[at - 1].k === 'break'
       ? [{ label: 'Join the page before', icon: UI.grid, onSelect: () => { close(); setLayout((l) => setPageBreak(l, item.key, false)); } }]
-      : [{ label: 'Start a new page here', icon: UI.grid, onSelect: () => { close(); setLayout((l) => setPageBreak(l, item.key, true)); } }]);
+      : [{ label: 'Start a new page here', icon: UI.grid, onSelect: () => { close(); setLayout((l) => setPageBreak(l, item.key, true)); } }];
     const sizes = isWidgetLike(item) ? [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']].map(([s, name]) => ({
       label: name, icon: UI.size, checked: item.size === s, onSelect: () => { close(); setLayout((l) => setWidgetSize(l, item.key, s)); },
     })) : [];
