@@ -617,3 +617,4 @@ div.add-row:hover { background: none; }
   .ctx-preview { transform: none; }
   .tile-btn:focus-visible .icon, .widget-wrap:focus-visible .widget { transform: none; }
 }
+.row-actions, .set-row > .row-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

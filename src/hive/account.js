@@ -153,6 +153,7 @@ export async function setNewPassword(password) {
 export function authMessage(e) {
   const code = e?.code || '';
   const text = String(e?.message || '');
+  if (code === 'empty_name') return 'Type a name first.';
   if (code === 'invalid_credentials') return 'That email and password don’t match.';
   if (code === 'carry_over_emailed') return 'Almost there: we emailed you a link to finish signing in. Open it on this device.';
   if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
@@ -251,6 +252,22 @@ export async function myHousehold() {
     return { id: x.user_id, role: x.role, email: p.email || '', name: p.display_name || p.email || 'Someone', me: x.user_id === me };
   });
   return { id: h.data.id, name: h.data.name, role: members.find((x) => x.me)?.role || 'member', members };
+}
+
+/**
+ * My name as housemates see it, everywhere in Hive and the apps: the profile
+ * (what household lists read) and the sign-in's own metadata (what `user.name`
+ * reads). Only the name: the database lets nobody change anything else.
+ */
+export async function setMyName(name) {
+  const clean = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  if (!clean) throw Object.assign(new Error('empty'), { code: 'empty_name' });
+  const sb = await supabase();
+  const me = (await sb.auth.getUser()).data.user?.id;
+  if (!me) throw Object.assign(new Error('signed out'), { code: 'signed_out' });
+  must(await sb.schema('core').from('profiles').update({ display_name: clean }).eq('id', me));
+  must(await sb.auth.updateUser({ data: { display_name: clean } }));
+  return clean;
 }
 
 export async function createHousehold(name) {

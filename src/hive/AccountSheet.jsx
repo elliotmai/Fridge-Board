@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
   authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
-  resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
+  resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
 /**
@@ -119,14 +119,39 @@ function NewPassword() {
 }
 
 function SignedIn({ user }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name || '');
+  const [shown, setShown] = useState(user.name || '');
+  const [round, setRound] = useState(0); // reloads the household list after a rename
+  const { busy, run, Msg } = useRun();
+  const save = async (e) => {
+    e.preventDefault();
+    const saved = await run(() => setMyName(name));
+    if (saved) { setShown(saved); setName(saved); setEditing(false); setRound((n) => n + 1); }
+  };
   return (
     <>
-      <div className="set-row">
-        <span><b>{user.name || 'Signed in'}</b><small>{user.email}</small></span>
-        <button className="pill" onClick={() => signOut()}>Sign out</button>
-      </div>
+      {editing ? (
+        <form className="auth-form" onSubmit={save}>
+          <label>Your name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoComplete="name" autoFocus required /></label>
+          <div className="row-actions">
+            <button className="pill strong" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+            <button className="pill" type="button" disabled={busy} onClick={() => { setName(shown); setEditing(false); }}>Cancel</button>
+          </div>
+          <small className="sheet-note">What your household sees in Hive, the fridge board and the apps.</small>
+        </form>
+      ) : (
+        <div className="set-row">
+          <span><b>{shown || 'Add your name'}</b><small>{user.email}</small></span>
+          <span className="row-actions">
+            <button className="pill" onClick={() => setEditing(true)}>{shown ? 'Edit name' : 'Add name'}</button>
+            <button className="pill" onClick={() => signOut()}>Sign out</button>
+          </span>
+        </div>
+      )}
+      <Msg />
       <GoogleRow />
-      <Household />
+      <Household key={round} />
     </>
   );
 }
