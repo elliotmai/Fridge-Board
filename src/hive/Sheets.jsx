@@ -3,8 +3,8 @@ import { AUDIENCE, CATALOG, appIds, appLook, appUrl } from '@/config/catalog';
 import { FEEDBACK_URL } from '@/config/app';
 import { useTheme } from '@/context/ThemeContext';
 import { AppIcon } from './Home';
-import { placedApps, placedWidgets } from './layout';
-import { WIDGETS, widgetIds } from './widgets';
+import { placedApps, placedWidgets, setStack, unstack } from './layout';
+import { Widget, WIDGETS, widgetIds } from './widgets';
 
 /** Close on Escape and put focus inside, like any dialog. */
 function useDialog(onClose) {
@@ -50,8 +50,36 @@ export function FolderView({ folder, origin, custom, badges = {}, editing, onOpe
   );
 }
 
-/** The App Library: every app and widget not on the home screen yet. */
-export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
+const SIZE_NAMES = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
+const DEFAULT_SIZE = { today: 'm' };
+
+/** One widget in the picker: a live preview at the size you choose, and Add. */
+function WidgetPick({ w, data, now, custom, onAdd }) {
+  const [size, setSize] = useState(DEFAULT_SIZE[w] || 's');
+  const def = WIDGETS[w];
+  return (
+    <div className="pick">
+      <div className={`pick-preview size-${size}`} aria-hidden="true" inert="">
+        <Widget w={w} size={size} data={data} now={now} color={appLook(def.app, custom).color} onOpen={() => {}} still />
+      </div>
+      <div className="pick-foot">
+        <span><b>{def.label}</b><small>From {CATALOG[def.app].name}</small></span>
+        <div className="seg seg-mini" role="radiogroup" aria-label={`${def.label} size`}>
+          {SIZE_NAMES.map(([s, name]) => (
+            <button key={s} role="radio" aria-checked={size === s} onClick={() => setSize(s)}>{name}</button>
+          ))}
+        </div>
+        <button className="pill strong" onClick={() => onAdd(w, size)}>Add widget</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Add to the home screen: a widget gallery with live previews (pick a size,
+ * see it with today's data), then every app not on the home screen yet.
+ */
+export function AddSheet({ layout, data, now, custom = {}, onAddApp, onAddWidget, onClose }) {
   const ref = useDialog(onClose);
   const onHome = placedApps(layout);
   const widgetsOn = placedWidgets(layout);
@@ -59,20 +87,14 @@ export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
   const widgets = widgetIds.filter((w) => !widgetsOn.has(w));
   return (
     <div className="scrim hive-layer" onClick={onClose}>
-      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Add to the home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
+      <div className="sheet-panel sheet-wide" role="dialog" aria-modal="true" aria-label="Add to the home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><h2>Add to home screen</h2><button className="pill" onClick={onClose}>Close</button></div>
         <h3 className="sheet-sub">Widgets</h3>
         {widgets.length ? (
-          <div className="add-list">
-            {widgets.map((w) => (
-              <button key={w} className="add-row" onClick={() => onAddWidget(w)}>
-                <AppIcon id={WIDGETS[w].app} size={40} />
-                <span><b>{WIDGETS[w].label}</b><small>From {CATALOG[WIDGETS[w].app].name}</small></span>
-                <span className="add-plus" aria-hidden="true">+</span>
-              </button>
-            ))}
+          <div className="picks">
+            {widgets.map((w) => <WidgetPick key={w} w={w} data={data} now={now} custom={custom} onAdd={onAddWidget} />)}
           </div>
-        ) : <p className="sheet-note">Every widget is on your home screen.</p>}
+        ) : <p className="sheet-note">Every widget is on your home screen. To make room, drop one widget on another: they become a stack.</p>}
         <h3 className="sheet-sub">Apps</h3>
         {apps.length ? (
           <div className="add-list">
@@ -86,6 +108,63 @@ export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
             ))}
           </div>
         ) : <p className="sheet-note">Every app is on your home screen. Remove one with the minus badge to see it here.</p>}
+      </div>
+    </div>
+  );
+}
+
+/** A stack's widgets: their order, take one out, add one, and whether it turns by itself. */
+export function StackSheet({ stack, layout, setLayout, onClose }) {
+  const ref = useDialog(onClose);
+  const free = widgetIds.filter((w) => !placedWidgets(layout).has(w));
+  const order = (from, to) => {
+    const ws = [...stack.widgets];
+    const [w] = ws.splice(from, 1);
+    ws.splice(to, 0, w);
+    setLayout((l) => setStack(l, stack.key, { widgets: ws }));
+  };
+  return (
+    <div className="scrim hive-layer" onClick={onClose}>
+      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Edit stack" ref={ref} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><h2>Edit stack</h2><button className="pill" onClick={onClose}>Done</button></div>
+        <label className="set-row">
+          <span><b>Turn by itself</b><small>Shows what matters now: chores in the morning, dinner from mid-afternoon, an event about to start. Turning it by hand holds for half an hour.</small></span>
+          <input type="checkbox" className="switch-input" checked={stack.rotate} onChange={(e) => setLayout((l) => setStack(l, stack.key, { rotate: e.target.checked }))} />
+        </label>
+        <h3 className="sheet-sub">In this stack, top first</h3>
+        <div className="add-list">
+          {stack.widgets.map((w, i) => (
+            <div key={w} className="add-row">
+              <AppIcon id={WIDGETS[w].app} size={40} />
+              <span><b>{WIDGETS[w].label}</b><small>From {CATALOG[WIDGETS[w].app].name}</small></span>
+              <span className="row-tools">
+                <button className="tool" disabled={i === 0} onClick={() => order(i, i - 1)} aria-label={`Move ${WIDGETS[w].label} up`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18V6M7 11l5-5 5 5" /></svg>
+                </button>
+                <button className="tool" disabled={i === stack.widgets.length - 1} onClick={() => order(i, i + 1)} aria-label={`Move ${WIDGETS[w].label} down`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M7 13l5 5 5-5" /></svg>
+                </button>
+                <button className="tool" onClick={() => { setLayout((l) => unstack(l, stack.key, w)); if (stack.widgets.length <= 2) onClose(); }} aria-label={`Take ${WIDGETS[w].label} out of the stack`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+        {free.length > 0 && (
+          <>
+            <h3 className="sheet-sub">Add to this stack</h3>
+            <div className="add-list">
+              {free.map((w) => (
+                <button key={w} className="add-row" onClick={() => setLayout((l) => setStack(l, stack.key, { add: w }))}>
+                  <AppIcon id={WIDGETS[w].app} size={40} />
+                  <span><b>{WIDGETS[w].label}</b><small>From {CATALOG[WIDGETS[w].app].name}</small></span>
+                  <span className="add-plus" aria-hidden="true">+</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -117,7 +196,7 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
           )}
         </div>
         <button className="set-row set-link" onClick={onLook}>
-          <span><b>Wallpaper &amp; home screen</b><small>Wallpaper, icon size, columns, dock, badges.</small></span><span className="chev" aria-hidden="true">›</span>
+          <span><b>Wallpaper &amp; home screen</b><small>Wallpaper, colours, icons, columns, dock, badges, the clock screen.</small></span><span className="chev" aria-hidden="true">›</span>
         </button>
         <button className="set-row set-link" onClick={onEdit}>
           <span><b>Edit home screen</b><small>Or press and hold any empty space.</small></span><span className="chev" aria-hidden="true">›</span>
@@ -127,11 +206,16 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
           <select value={settings.start} onChange={(e) => setSettings((s) => ({ ...s, start: e.target.value }))}>
             <option value="home">Home screen</option>
             <option value="board">Fridge Board</option>
+            <option value="clock">Clock screen</option>
           </select>
         </label>
         <label className="set-row">
-          <span><b>Go back to Fridge Board when left alone</b><small>After 2 minutes on the home screen, or 15 minutes in another app.</small></span>
-          <input type="checkbox" checked={settings.idleToBoard} onChange={(e) => setSettings((s) => ({ ...s, idleToBoard: e.target.checked }))} />
+          <span><b>When left alone</b><small>After 2 minutes on the home screen, or 15 minutes in an app.</small></span>
+          <select value={settings.idle} onChange={(e) => setSettings((s) => ({ ...s, idle: e.target.value, idleToBoard: e.target.value === 'board' }))}>
+            <option value="board">Go to Fridge Board</option>
+            <option value="clock">Show the clock screen</option>
+            <option value="off">Stay where it is</option>
+          </select>
         </label>
         <label className="set-row">
           <span><b>Theme</b></span>

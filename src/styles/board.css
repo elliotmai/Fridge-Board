@@ -26,7 +26,7 @@
 /* ---------- header ---------- */
 .top { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .clock { display: flex; align-items: baseline; gap: 16px; }
-.time { font-size: var(--t-clock); font-weight: 800; letter-spacing: -0.04em; line-height: .95; }
+.time { font-family: var(--font-clock); font-variant-numeric: tabular-nums; font-size: var(--t-clock); font-weight: 700; letter-spacing: -0.04em; line-height: .95; }
 .time small { font-size: .3em; font-weight: 600; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
 .date { font-size: clamp(17px, 1.6vw, 26px); color: var(--muted); font-weight: 600; }
 .wx { display: flex; align-items: center; gap: 22px; }

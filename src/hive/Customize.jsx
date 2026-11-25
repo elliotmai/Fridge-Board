@@ -4,7 +4,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { AppIcon } from './Home';
 import { GLYPHS } from './glyphs';
 import { setCustom } from './layout';
+import { DEFAULT_REST } from './ClockScreen';
 import { WALLPAPERS, photoToWallpaper } from './look';
+import { WIDGETS, widgetIds } from './widgets';
 
 /** Escape closes, focus goes inside, and back where it was after. */
 function useSheet(onClose) {
@@ -39,12 +41,20 @@ function Toggle({ label, hint, checked, onChange }) {
 }
 
 /** Wallpaper & home screen. Every change shows on the home screen behind the sheet as you make it. */
-export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
+export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose, onShowClock }) {
   const ref = useSheet(onClose);
   const { theme, setTheme } = useTheme();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const set = (k) => (v) => setLook((l) => ({ ...l, [k]: v }));
+  const rest = { ...DEFAULT_REST, ...look.rest };
+  const setRest = (patch) => setLook((l) => ({ ...l, rest: { ...DEFAULT_REST, ...l.rest, ...patch } }));
+  const toggleSlot = (n, w) => {
+    const slots = rest.slots.map((s) => s.filter((x) => x !== w));
+    if (!rest.slots[n].includes(w)) slots[n] = [...slots[n], w];
+    setRest({ slots });
+  };
+  const badgeMode = !look.badges ? 'off' : look.badgeStyle || 'count';
 
   const pick = async (e) => {
     const file = e.target.files?.[0];
@@ -84,24 +94,49 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
         {photo && look.wallpaper === 'photo' && <button className="link-btn" onClick={() => { setPhoto(null); set('wallpaper')('honey'); }}>Remove your photo</button>}
         {err && <p className="auth-msg bad" role="alert">{err}</p>}
         <Toggle label="Dim wallpaper" hint="Darker behind the icons, easier on the eyes at night." checked={look.dim} onChange={set('dim')} />
+        <Toggle label="Colour from wallpaper" hint="The dock, folders and page dots take their colour from the wallpaper or your photo." checked={look.wallColour !== false} onChange={set('wallColour')} />
 
         <h3 className="sheet-sub">Icons</h3>
+        <div className="set-row stack"><span><b>Style</b><small>Dark and tinted keep each symbol, so apps stay easy to find.</small></span>
+          <Seg label="Icon style" value={look.iconStyle || 'colour'} onChange={set('iconStyle')} options={[['colour', 'Colour'], ['dark', 'Dark'], ['tinted', 'Tinted']]} /></div>
         <div className="set-row stack"><span><b>Size</b></span><Seg label="Icon size" value={look.iconSize} onChange={set('iconSize')} options={[['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]} /></div>
         <div className="set-row stack"><span><b>Columns</b><small>Auto fits the screen: 4 on a phone, more on a tablet.</small></span>
           <Seg label="Columns" value={look.cols} onChange={set('cols')} options={[['auto', 'Auto'], ['4', '4'], ['5', '5'], ['6', '6'], ['8', '8']]} /></div>
+        <div className="set-row stack"><span><b>Rows</b><small>Compact fits another row on most screens.</small></span>
+          <Seg label="Row spacing" value={look.density || 'roomy'} onChange={set('density')} options={[['roomy', 'Roomy'], ['compact', 'Compact']]} /></div>
         <Toggle label="Show names under icons" checked={look.labels} onChange={set('labels')} />
-        <Toggle label="Badges" hint="Counts on icons, like chores left or things to buy." checked={look.badges} onChange={set('badges')} />
+        <div className="set-row stack"><span><b>Badges</b><small>What&apos;s waiting in an app, like chores left or things to buy.</small></span>
+          <Seg label="Badges" value={badgeMode} onChange={(v) => setLook((l) => ({ ...l, badges: v !== 'off', badgeStyle: v === 'off' ? l.badgeStyle : v }))}
+            options={[['count', 'Numbers'], ['dot', 'Dot'], ['off', 'Off']]} /></div>
 
         <h3 className="sheet-sub">Apps</h3>
         <Toggle label="Open apps inside Hive" checked={look.inside !== false} onChange={set('inside')}
           hint="On: every app opens inside Hive. Off: every app opens in its own tab. To choose for one app, press and hold its icon." />
 
         <h3 className="sheet-sub">Home screen</h3>
+        <Toggle label="Line under the clock" hint="The next thing that matters: an event soon, tonight's dinner, chores left, the weather." checked={look.glance !== false} onChange={set('glance')} />
         <Toggle label="Dock" checked={look.dock} onChange={set('dock')} />
         <Toggle label="Search" hint="Swipe down, or tap the dots, to search apps and everything in them." checked={look.search} onChange={set('search')} />
         <Toggle label="App Library" hint="A last page with every app, grouped." checked={look.library} onChange={set('library')} />
         <div className="set-row stack"><span><b>Appearance</b></span>
           <Seg label="Theme" value={theme} onChange={setTheme} options={[['light', 'Light'], ['dark', 'Dark']]} /></div>
+
+        <h3 className="sheet-sub">Clock screen</h3>
+        <p className="sheet-note">For a wall display: the time, big, and two stacks of widgets that turn to what matters by the hour. Set it to show when the screen is left alone in Hive settings, or tap the clock on a tablet.</p>
+        <div className="set-row stack"><span><b>Shows</b></span>
+          <Seg label="Clock screen shows" value={rest.face} onChange={(v) => setRest({ face: v })} options={[['stacks', 'Clock and widgets'], ['clock', 'Clock only']]} /></div>
+        <Toggle label="Red at night" hint="Dim red from 9 pm to 6 am, so it doesn't light up the room." checked={rest.night} onChange={(v) => setRest({ night: v })} />
+        {rest.face === 'stacks' && [0, 1].map((n) => (
+          <div className="set-row stack" key={n}>
+            <span><b>{n === 0 ? 'First stack' : 'Second stack'}</b><small>{rest.slots[n]?.length ? rest.slots[n].map((w) => WIDGETS[w]?.label).filter(Boolean).join(', ') : 'Empty'}</small></span>
+            <div className="chips" role="group" aria-label={`${n === 0 ? 'First' : 'Second'} stack widgets`}>
+              {widgetIds.map((w) => (
+                <button key={w} className="chip-btn" aria-pressed={!!rest.slots[n]?.includes(w)} onClick={() => toggleSlot(n, w)}>{WIDGETS[w].label}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {onShowClock && <button className="pill wide" onClick={onShowClock}>Show the clock screen now</button>}
       </div>
     </div>
   );

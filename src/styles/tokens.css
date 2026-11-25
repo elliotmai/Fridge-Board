@@ -24,6 +24,8 @@
 
   /* type */
   --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* The clock only: signage letters with an open zero (Atkinson's zero is slashed, which reads as Ø across a room). */
+  --font-clock: "Barlow Semi Condensed", var(--font);
   --t-xs: 12px;
   --t-sm: 14px;
   --t-md: 16px;
@@ -46,10 +48,13 @@
   --d-quick: 160ms;
   --d-move: 240ms;
   --d-zoom: 340ms;
+  --d-settle: 300ms; /* a tile sliding into its new place */
   --ease-out: cubic-bezier(.2, 0, 0, 1);
   --ease-in: cubic-bezier(.4, 0, 1, 1);
 
   --focus: var(--honey);
+  /* Hive's chrome (dock, folders, page dots, tinted icons); the wallpaper's colour when chosen. */
+  --accent: var(--honey);
 }
 
 :root.dark {
@@ -77,5 +82,5 @@
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --d-press: 0ms; --d-quick: 0ms; --d-move: 0ms; --d-zoom: 0ms; }
+  :root { --d-press: 0ms; --d-quick: 0ms; --d-move: 0ms; --d-zoom: 0ms; --d-settle: 0ms; }
 }

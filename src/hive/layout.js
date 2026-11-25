@@ -2,16 +2,22 @@
  * The home screen layout and every change to it, as plain functions with no
  * React, so they can be tested on their own (layout.test.js).
  *
- *   { v: 2, grid: Item[], dock: Item[], custom: { [appId]: { name?, color?, glyph? } } }
+ *   { v: 3, grid: Item[], dock: Item[], custom: { [appId]: { name?, color?, glyph? } } }
  *
  *   Item = { k: 'app', key: 'kitchenhub' }
  *        | { k: 'widget', key: 'w:chores', w: 'chores', size: 's' | 'm' | 'l' }
+ *        | { k: 'stack', key: 's:1', size, widgets: ['dinner', 'shopping'], rotate: true }
  *        | { k: 'folder', key: 'f:1', name: 'Farm', apps: ['galaxyfarm', 'znt'] }
+ *        | { k: 'break', key: 'b:1' }   a page starts here, on every screen
+ *
+ * Version 3 added stacks and page breaks; version 1 and 2 layouts load as they
+ * are (every v2 item is still valid).
  *
  * `grid` is one ordered list; `pack` lays it out into pages for the screen
  * it's on, so the same layout fits a phone, a tablet, or a turned tablet.
  * An app is in at most one place. Apps that are nowhere are in the App
- * Library. Folders hold apps only; the dock holds apps only.
+ * Library. Folders hold apps only; the dock holds apps only. A widget is in
+ * at most one place too: on its own or in one stack.
  */
 export const DOCK_MAX = 4;
 
@@ -22,18 +28,23 @@ const DEFAULT_SIZE = { today: 'm' };
 const app = (key) => ({ k: 'app', key });
 const widget = (w, size = DEFAULT_SIZE[w] || 's') => ({ k: 'widget', key: `w:${w}`, w, size: SIZES[size] ? size : 's' });
 const folder = (key, name, apps) => ({ k: 'folder', key, name, apps });
+const stack = (key, size, widgets, rotate = true) => ({ k: 'stack', key, size: SIZES[size] ? size : 's', widgets, rotate: rotate !== false });
+const pageBreak = (key) => ({ k: 'break', key });
+const uid = (p) => `${p}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+/** Items that take a widget's footprint on the grid. */
+export const isWidgetLike = (i) => i?.k === 'widget' || i?.k === 'stack';
 
 export function defaultLayout() {
   return {
-    v: 2,
+    v: 3,
     grid: [
-      widget('today'), widget('chores'), widget('calendar'),
+      widget('today'), widget('chores'), stack('s:day', 's', ['dinner', 'tasks', 'calendar']),
       folder('f:farm', 'Farm', ['galaxyfarm', 'znt', 'cattlegraph']),
       app('letseat'), app('pool'), app('property'),
       app('ourden'), app('journal'), app('sidequest'), app('aerologger'),
       folder('f:health', 'Health', ['stimultrack', 'alcohol']),
       app('muster'), app('feedback'), app('settings'),
-      widget('tasks'), widget('dinner'), widget('trip'), widget('shopping'), widget('breeding'),
+      widget('trip'), widget('shopping'), widget('breeding'),
     ],
     dock: [app('board'), app('kitchenhub'), app('wander'), app('learnleaf')],
     custom: {},
@@ -50,7 +61,7 @@ export function placedApps(layout) {
   return out;
 }
 
-export const placedWidgets = (layout) => new Set(layout.grid.filter((i) => i.k === 'widget').map((i) => i.w));
+export const placedWidgets = (layout) => new Set(layout.grid.flatMap((i) => (i.k === 'widget' ? [i.w] : i.k === 'stack' ? i.widgets : [])));
 
 /** Find an item by key, including an app inside a folder. */
 export function locate(layout, key) {
@@ -65,18 +76,23 @@ export function locate(layout, key) {
 
 const clone = (l) => ({
   ...l,
-  grid: l.grid.map((i) => (i.k === 'folder' ? { ...i, apps: [...i.apps] } : { ...i })),
+  grid: l.grid.map((i) => (i.k === 'folder' ? { ...i, apps: [...i.apps] } : i.k === 'stack' ? { ...i, widgets: [...i.widgets] } : { ...i })),
   dock: [...l.dock],
   custom: { ...(l.custom || {}) },
 });
 
-/** A folder left with one app turns back into that app, in the same spot. */
+/**
+ * A folder left with one app turns back into that app, and a stack left with
+ * one widget into that widget, in the same spot. Page breaks at the start or
+ * end, or two in a row, mean nothing, so they go.
+ */
 function tidy(l) {
   for (const zone of ['grid', 'dock']) {
     l[zone] = l[zone]
-      .map((i) => (i.k === 'folder' && i.apps.length === 1 ? app(i.apps[0]) : i))
-      .filter((i) => i.k !== 'folder' || i.apps.length > 0);
+      .map((i) => (i.k === 'folder' && i.apps.length === 1 ? app(i.apps[0]) : i.k === 'stack' && i.widgets.length === 1 ? widget(i.widgets[0], i.size) : i))
+      .filter((i) => (i.k !== 'folder' || i.apps.length > 0) && (i.k !== 'stack' || i.widgets.length > 0));
   }
+  l.grid = l.grid.filter((i, n, all) => i.k !== 'break' || (n > 0 && n < all.length - 1 && all[n - 1].k !== 'break'));
   return l;
 }
 
@@ -120,8 +136,9 @@ export function merge(layout, key, targetKey, nameFor = () => 'Folder') {
   if (key === targetKey) return layout;
   const from = locate(layout, key);
   const to = locate(layout, targetKey);
+  if (from && to && isWidgetLike(from.item) && isWidgetLike(to.item)) return stackOnto(layout, key, targetKey);
   if (!from || !to || from.item.k !== 'app' || to.folder) return layout;
-  if (to.item.k === 'widget') return layout;
+  if (isWidgetLike(to.item) || to.item.k === 'break') return layout;
   if (to.item.k === 'folder' && to.item.apps.includes(key)) return layout;
   const [l] = detach(layout, key);
   const at = locate(l, targetKey);
@@ -136,6 +153,59 @@ export function merge(layout, key, targetKey, nameFor = () => 'Folder') {
     const [f] = l.dock.splice(at.index, 1);
     l.grid.unshift(f);
   }
+  return tidy(l);
+}
+
+/**
+ * Drop a widget (or a whole stack) onto another widget or stack: they become
+ * one stack in the target's spot, at the target's size, with what was dropped
+ * on top (showing).
+ */
+function stackOnto(layout, key, targetKey) {
+  const [l, moved] = detach(layout, key);
+  const at = locate(l, targetKey);
+  if (!moved || !at) return layout;
+  const target = l.grid[at.index];
+  const add = moved.k === 'stack' ? moved.widgets : [moved.w];
+  const under = target.k === 'stack' ? target.widgets : [target.w];
+  l.grid[at.index] = stack(target.k === 'stack' ? target.key : uid('s'), target.size, [...add, ...under.filter((w) => !add.includes(w))], target.k === 'stack' ? target.rotate : true);
+  return tidy(l);
+}
+
+/** Take one widget out of a stack; it goes just after the stack, at the stack's size. */
+export function unstack(layout, stackKey, w) {
+  const l = clone(layout);
+  const i = l.grid.findIndex((x) => x.key === stackKey && x.k === 'stack');
+  if (i < 0 || !l.grid[i].widgets.includes(w)) return layout;
+  const s = l.grid[i];
+  l.grid[i] = { ...s, widgets: s.widgets.filter((x) => x !== w) };
+  l.grid.splice(i + 1, 0, widget(w, s.size));
+  return tidy(l);
+}
+
+/** Change a stack: its order (`widgets`, the same widgets), whether it turns by itself, or drop one widget. */
+export function setStack(layout, stackKey, patch) {
+  const l = clone(layout);
+  const i = l.grid.findIndex((x) => x.key === stackKey && x.k === 'stack');
+  if (i < 0) return layout;
+  const s = l.grid[i];
+  const next = { ...s };
+  if (Array.isArray(patch.widgets) && patch.widgets.length === s.widgets.length && patch.widgets.every((w) => s.widgets.includes(w))) next.widgets = [...patch.widgets];
+  if (typeof patch.rotate === 'boolean') next.rotate = patch.rotate;
+  if (patch.drop) next.widgets = s.widgets.filter((w) => w !== patch.drop);
+  if (patch.add && !placedWidgets(l).has(patch.add)) next.widgets = [...s.widgets, patch.add];
+  l.grid[i] = next;
+  return tidy(l);
+}
+
+/** Start a new page at this item (on every screen), or join it back to the page before. */
+export function setPageBreak(layout, key, on) {
+  const l = clone(layout);
+  const i = l.grid.findIndex((x) => x.key === key);
+  if (i < 0) return layout;
+  const before = l.grid[i - 1];
+  if (on && before?.k !== 'break') l.grid.splice(i, 0, pageBreak(uid('b')));
+  if (!on && before?.k === 'break') l.grid.splice(i - 1, 1);
   return tidy(l);
 }
 
@@ -176,7 +246,7 @@ export function addWidget(layout, w, size) {
 export function setWidgetSize(layout, key, size) {
   if (!SIZES[size]) return layout;
   const l = clone(layout);
-  l.grid = l.grid.map((i) => (i.key === key && i.k === 'widget' ? { ...i, size } : i));
+  l.grid = l.grid.map((i) => (i.key === key && isWidgetLike(i) ? { ...i, size } : i));
   return l;
 }
 
@@ -205,16 +275,29 @@ export function setCustom(layout, appId, patch) {
  * one. So pages never have holes a later icon could have filled, and a big
  * widget moves at most one page. Widgets bigger than a page shrink to fit it.
  *
+ * A page break always starts a new page, whatever the screen.
+ *
  * Returns [[{ item, index, col, row, w, h }]], cells counted from 1.
  */
 export function pack(grid, cols, rows) {
   const C = Math.max(1, cols), R = Math.max(1, rows);
-  let queue = grid.map((item, index) => {
-    const [w0, h0] = item.k === 'widget' ? SIZES[item.size] || SIZES.s : [1, 1];
-    return { item, index, w: Math.min(w0, C), h: Math.min(h0, R) };
+  // Page breaks cut the list into sections; each section packs into its own pages.
+  const sections = [[]];
+  grid.forEach((item, index) => {
+    if (item.k === 'break') { if (sections[sections.length - 1].length) sections.push([]); return; }
+    const [w0, h0] = isWidgetLike(item) ? SIZES[item.size] || SIZES.s : [1, 1];
+    sections[sections.length - 1].push({ item, index, w: Math.min(w0, C), h: Math.min(h0, R) });
   });
   const pages = [];
-  while (queue.length || !pages.length) {
+  for (const section of sections) if (section.length || !pages.length) packSection(section, C, R, pages);
+  return pages;
+}
+
+function packSection(section, C, R, pages) {
+  let queue = section;
+  let first = true;
+  while (queue.length || first) {
+    first = false;
     const used = Array.from({ length: R }, () => Array(C).fill(false));
     const page = [], waiting = [];
     let free = R * C;
@@ -236,7 +319,6 @@ export function pack(grid, cols, rows) {
     pages.push(page);
     queue = waiting;
   }
-  return pages;
 }
 
 /**
@@ -245,13 +327,18 @@ export function pack(grid, cols, rows) {
  * unreadable starts fresh.
  */
 export function normalize(stored, appIds, widgetIds) {
-  if (!stored || ![1, 2].includes(stored.v) || !Array.isArray(stored.grid) || !Array.isArray(stored.dock)) return defaultLayout();
+  if (!stored || ![1, 2, 3].includes(stored.v) || !Array.isArray(stored.grid) || !Array.isArray(stored.dock)) return defaultLayout();
   const seen = new Set();
   const okApp = (k) => appIds.includes(k) && !seen.has(k) && seen.add(k);
   const clean = (list, inDock) => list.flatMap((i) => {
     if (i?.k === 'app') return okApp(i.key) ? [app(i.key)] : [];
     if (inDock) return [];
-    if (i?.k === 'widget') return widgetIds.includes(i.w) && !seen.has(i.key) && seen.add(i.key) ? [widget(i.w, i.size)] : [];
+    if (i?.k === 'widget') return widgetIds.includes(i.w) && !seen.has(`w:${i.w}`) && seen.add(`w:${i.w}`) ? [widget(i.w, i.size)] : [];
+    if (i?.k === 'stack' && Array.isArray(i.widgets)) {
+      const ws = i.widgets.filter((w) => widgetIds.includes(w) && !seen.has(`w:${w}`) && seen.add(`w:${w}`));
+      return ws.length ? [stack(String(i.key), i.size, ws, i.rotate)] : [];
+    }
+    if (i?.k === 'break') return [pageBreak(String(i.key))];
     if (i?.k === 'folder' && Array.isArray(i.apps)) {
       const apps = i.apps.filter(okApp);
       return apps.length ? [folder(String(i.key), String(i.name || 'Folder'), apps)] : [];
@@ -266,5 +353,5 @@ export function normalize(stored, appIds, widgetIds) {
   for (const [id, c] of Object.entries(stored.custom && typeof stored.custom === 'object' ? stored.custom : {})) {
     if (appIds.includes(id) && c && typeof c === 'object') custom[id] = c;
   }
-  return tidy({ v: 2, grid, dock, custom });
+  return tidy({ v: 3, grid, dock, custom });
 }

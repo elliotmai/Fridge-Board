@@ -13,14 +13,15 @@ import { accountsOn, USER_CHANGED, useHiveUser } from './account';
 import { AccountSheet } from './AccountSheet';
 import { announce, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
+import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
 import { LaunchLayer, reducedMotion } from './Launch';
 import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
-import { DEFAULT_LOOK, WALLPAPERS } from './look';
-import { AddSheet, AppFrame, FolderView, HiveSettings } from './Sheets';
+import { DEFAULT_LOOK, WALLPAPERS, accentFor } from './look';
+import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet } from './Sheets';
 import { Spotlight } from './Spotlight';
 import { WidgetActions } from './live';
-import { useLiveBoard, widgetIds } from './widgets';
+import { WIDGETS, signals, useLiveBoard, widgetIds } from './widgets';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -34,8 +35,15 @@ function firstSettings() {
   let hadBoard = false;
   try { hadBoard = !!localStorage.getItem(`${APP_KEY}.boardKey`); } catch { /* ignore */ }
   const wide = window.matchMedia?.('(min-width: 760px)').matches;
-  return { start: hadBoard && wide ? 'board' : 'home', idleToBoard: hadBoard && wide };
+  return { start: hadBoard && wide ? 'board' : 'home', idle: hadBoard && wide ? 'board' : 'off' };
 }
+
+/**
+ * What a screen does when left alone: 'board' (back to Fridge Board), 'clock'
+ * (the clock screen) or 'off'. Settings saved before the clock screen existed
+ * had a yes/no `idleToBoard`; that still means what it meant.
+ */
+export const idleOf = (s) => s.idle ?? (s.idleToBoard ? 'board' : 'off');
 
 const viewFromHash = () => {
   const h = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
@@ -50,12 +58,15 @@ const viewFromHash = () => {
 export function Hive() {
   const phone = useIsPhone();
   const [s, setSettings] = useStored('hive.settings', firstSettings());
+  const idle = idleOf(s);
+  const [resting, setResting] = useState(() => s.start === 'clock' && !viewFromHash());
 
   const [stored, setStored] = useStored('hive.layout', null);
   const layout = useMemo(() => normalize(stored ?? defaultLayout(), appIds, widgetIds), [stored]);
   const setLayout = useCallback((next) => setStored(typeof next === 'function' ? next(layout) : next), [layout, setStored]);
 
   const [view, setView] = useState(() => viewFromHash() ?? (s.start === 'board' ? 'board' : null));
+  const [stackEdit, setStackEdit] = useState(null);
   const [recent, setRecent] = useState(() => (view && view !== 'board' ? [view] : []));
   const [boardOpened, setBoardOpened] = useState(view === 'board');
   const [editing, setEditing] = useState(false);
@@ -73,6 +84,7 @@ export function Hive() {
   const [photo, setPhoto] = useStored('hive.wallpaperPhoto', null);
   const { theme } = useTheme();
   const wall = look.wallpaper === 'photo' && photo ? { css: `center / cover no-repeat url(${photo.dataUrl})`, dark: photo.dark } : WALLPAPERS[look.wallpaper] || WALLPAPERS.honey;
+  const accent = accentFor(look, photo);
   const wallDark = look.dim || (['honey', 'plain'].includes(look.wallpaper) || !WALLPAPERS[look.wallpaper] && look.wallpaper !== 'photo' ? theme === 'dark' : !!wall.dark);
 
   // One Hive sign-in, handed to apps in frames as short passes (bridge.js).
@@ -96,6 +108,8 @@ export function Hive() {
 
   const { data, act } = useLiveBoard();
   const now = new Date(useTick(30000));
+  const minute = Math.floor(now.getTime() / 60000);
+  const sig = useMemo(() => signals(data, now), [data, minute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Badges: what's waiting in each app, from the same feed as the widgets.
   const badges = useMemo(() => {
@@ -171,19 +185,31 @@ export function Hive() {
     if (a.dir === 'open') navigate(a.id);
   }, [navigate]);
 
-  // On the fridge: drift back to the board when nobody is using the screen.
+  // On the fridge: when nobody is using the screen, drift back to the board,
+  // or show the clock screen.
   const touched = useRef(Date.now());
   useEffect(() => {
-    if (!s.idleToBoard) return;
+    if (idle === 'off' || resting) return;
     const touch = () => (touched.current = Date.now());
     ['pointerdown', 'keydown'].forEach((e) => document.addEventListener(e, touch, true));
     const id = setInterval(() => {
-      if (view === 'board') return;
+      if (idle === 'board' && view === 'board') return;
       const limit = view ? IDLE_APP_MS : IDLE_HOME_MS;
-      if (Date.now() - touched.current > limit) { touched.current = Date.now(); open('board'); }
+      if (Date.now() - touched.current < limit) return;
+      touched.current = Date.now();
+      if (idle === 'board') open('board');
+      else { if (view) goHome(); setEditing(false); setSheet(null); setFolder(null); setResting(true); }
     }, 15000);
     return () => { clearInterval(id); ['pointerdown', 'keydown'].forEach((e) => document.removeEventListener(e, touch, true)); };
-  }, [s.idleToBoard, view, open]);
+  }, [idle, view, open, resting, goHome]);
+  const stopResting = useCallback(() => setResting(false), []);
+  const openWidget = useCallback((w, to) => {
+    const def = WIDGETS[w];
+    const url = to?.url || (!to?.path && def.url);
+    setResting(false);
+    if (url) window.open(url, '_blank', 'noopener');
+    else open(def.app, null, to?.path || def.path);
+  }, [open]);
 
   const folderItem = folder && locate(layout, folder.key)?.item;
   const onBoard = view === 'board';
@@ -195,7 +221,7 @@ export function Hive() {
   };
 
   return (
-    <div className="hive">
+    <div className="hive" data-icons={look.iconStyle || 'colour'} data-badges={look.badgeStyle || 'count'} style={accent ? { '--accent': accent } : undefined}>
       {boardOpened && (
         <div className="hive-view" hidden={!onBoard}>
           {phone
@@ -209,7 +235,8 @@ export function Hive() {
       <div className="hive-view home-view" hidden={!!view} style={{ '--wall': wall.css }}>
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
         <WidgetActions.Provider value={act}>
-        <Home layout={layout} setLayout={setLayout} data={data} now={now} look={look} badges={badges} dark={wallDark}
+        <Home layout={layout} setLayout={setLayout} data={data} now={now} sig={sig} look={look} badges={badges} dark={wallDark}
+          onEditStack={setStackEdit} onClock={() => setResting(true)}
           editing={editing} setEditing={setEditing} onOpen={open}
           onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
           onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
@@ -229,17 +256,26 @@ export function Hive() {
           onOpen={open} onAction={spotAction} onClose={() => setSheet(null)} />
       )}
       {!view && sheet === 'look' && (
-        <AppearanceSheet look={look} setLook={setLook} photo={photo} setPhoto={setPhoto} onClose={() => setSheet(null)} />
+        <AppearanceSheet look={look} setLook={setLook} photo={photo} setPhoto={setPhoto} onClose={() => setSheet(null)}
+          onShowClock={() => { setSheet(null); setResting(true); }} />
       )}
       {!view && iconEdit && <IconEditor id={iconEdit} layout={layout} setLayout={setLayout} onClose={() => setIconEdit(null)} />}
       {anim && <LaunchLayer key={anim.key} anim={anim} custom={layout.custom} onDone={onAnimDone} />}
       {!view && sheet === 'add' && (
         <AddSheet layout={layout} onClose={() => setSheet(null)}
-          onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w) => setLayout(addWidget(layout, w))} />
+          data={data} now={now} custom={layout.custom}
+          onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w, size) => setLayout(addWidget(layout, w, size))} />
+      )}
+      {!view && stackEdit && locate(layout, stackEdit)?.item.k === 'stack' && (
+        <StackSheet stack={locate(layout, stackEdit).item} layout={layout} setLayout={setLayout} onClose={() => setStackEdit(null)} />
+      )}
+      {resting && (
+        <ClockScreen data={data} now={now} sig={sig} rest={look.rest} custom={layout.custom}
+          onOpenWidget={openWidget} onClose={stopResting} />
       )}
       {!view && sheet === 'account' && accountsOn && <AccountSheet user={user} recovering={recovering} onClose={() => setSheet(null)} />}
       {!view && sheet === 'settings' && (
-        <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)} account={account}
+        <HiveSettings settings={{ ...s, idle }} setSettings={(f) => setSettings(f({ ...s, idle }))} onClose={() => setSheet(null)} account={account}
           onLook={() => setSheet('look')} onEdit={() => { setSheet(null); setEditing(true); }}
           onResetLayout={() => setStored(defaultLayout())} />
       )}
