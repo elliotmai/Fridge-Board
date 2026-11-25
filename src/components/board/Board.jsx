@@ -4,7 +4,7 @@ import { useKitchenTimers } from '@/context/KitchenTimers';
 import { stepKey } from '@/lib/kitchenTimers';
 import { USER_CHANGED } from '@/hive/account';
 import { callApi, setKey, takeKeyFromUrl } from '@/data/api';
-import { loadBoard, REFRESH_MS } from '@/data/sources';
+import { loadBoard, REFRESH_MS, RETRY_EVENT } from '@/data/sources';
 import { useIsPhone } from '@/hooks/useMedia';
 import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
@@ -13,6 +13,7 @@ import { dedupeEvents, mergeTodos, timeline } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
 import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
+import { DrinksSheet } from './DrinksSheet';
 import { Farm } from './Farm';
 import { AwayBanner, Header } from './Header';
 import { Meals, Shopping } from './Kitchen';
@@ -43,6 +44,7 @@ export function Board({ onHome }) {
   const [folds, setFolds] = useState([]);
   const [peek, setPeek] = useState(null);
   const [drawer, setDrawer] = useState(false);
+  const [drinks, setDrinks] = useState(false);
   const [cook, setCook] = useState(null);
   // KitchenHub's timers, shared with every screen in the household
   // (src/context/KitchenTimers.jsx). Here they are keyed the board's way:
@@ -67,7 +69,11 @@ export function Board({ onHome }) {
     const vis = () => { if (!document.hidden) reload(); };
     document.addEventListener('visibilitychange', vis);
     window.addEventListener(USER_CHANGED, reload);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); window.removeEventListener(USER_CHANGED, reload); };
+    window.addEventListener(RETRY_EVENT, reload);
+    return () => {
+      clearInterval(id); document.removeEventListener('visibilitychange', vis);
+      window.removeEventListener(USER_CHANGED, reload); window.removeEventListener(RETRY_EVENT, reload);
+    };
   }, [reload]);
 
   const hasTimers = Object.keys(timers).length > 0;
@@ -90,7 +96,7 @@ export function Board({ onHome }) {
     ['pointerdown', 'keydown'].forEach((e) => document.addEventListener(e, touch, true));
     const id = setInterval(() => {
       if (Date.now() - lastTouch.current < IDLE_MS || cook) return;
-      setPeek(null); setDrawer(false); setFolds([]);
+      setPeek(null); setDrawer(false); setDrinks(false); setFolds([]);
       document.querySelectorAll('[data-scroll]').forEach((s) => (s.scrollTop = 0));
       lastTouch.current = Date.now();
     }, 15000);
@@ -223,8 +229,9 @@ export function Board({ onHome }) {
 
   return (
     <div className="fb">
-      <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} onHome={onHome} phone={phone} />
-      {data.locked && <LockBanner reason={data.locked} onSave={saveKey} />}
+      <Header now={now} weather={data.weather} weatherStatus={data.status.weather} sitter={sitter} onToggleSitter={toggleSitter} onOpenSettings={() => setDrawer(true)} onHome={onHome} phone={phone}
+        onDrinks={data.signedIn && !sitter ? () => setDrinks(true) : null} />
+      {data.locked && <LockBanner reason={data.locked} onSave={saveKey} signedIn={data.signedIn} />}
       <AwayBanner trip={ts.away} sitter={sitter} onTurnOff={toggleSitter} />
       <main className={`board ${sitter ? 'sitter' : ''}`}>
         <Farm chores={data.chores} done={done} onToggle={toggleChore} now={now} folds={folds} onFold={fold} phone={phone} sitter={sitter} status={data.status.chores} />
@@ -247,6 +254,7 @@ export function Board({ onHome }) {
         <CookMode cook={cook} recipe={data.recipes[cook.id]} timers={timers} now={tick} onGo={goStep} onClose={closeCook}
           onToggleTimer={toggleTimer} onJump={jumpToTimer} onGather={(n) => setCook((c) => ({ ...c, gathered: toggleIn(c.gathered, n) }))} />
       )}
+      {drinks && <DrinksSheet onClose={() => setDrinks(false)} />}
       {drawer && <SettingsDrawer opts={opts} setOpts={setOpts} now={now} onClose={() => setDrawer(false)} onReset={reset} onSaveKey={saveKey} home={data.home} />}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '@/components/board/Board';
+import { OPEN_ACCOUNT } from '@/components/board/bits';
 import { Footer } from '@/components/Footer';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { APP_KEY } from '@/config/app';
@@ -165,6 +166,13 @@ export function Hive() {
     else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setView(null); }
     if (leaving && !reducedMotion()) setAnim({ id: leaving, dir: 'close', rect: null, key: Date.now() });
   }, [view]);
+
+  // "Connect Google" and the like, from a widget or the board: Hive → Account.
+  useEffect(() => {
+    const on = () => { if (view) goHome(); setFolder(null); setSheet(accountsOn ? 'account' : 'settings'); };
+    window.addEventListener(OPEN_ACCOUNT, on);
+    return () => window.removeEventListener(OPEN_ACCOUNT, on);
+  }, [view, goHome]);
 
   const onAnimDone = useCallback((a) => {
     if (a.cleared) { setAnim((cur) => (cur?.key === a.key ? null : cur)); return; }

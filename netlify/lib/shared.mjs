@@ -37,13 +37,22 @@ export const json = (status, body, extra = {}) =>
 
 const digest = (s) => createHash('sha256').update(String(s)).digest();
 
-/** Returns a 401 Response when the request lacks the board key, otherwise null. */
-export function requireKey(req) {
+/** True when the request carries the board key. */
+export function keyMatches(req) {
   const want = env('BOARD_ACCESS_KEY');
-  if (!want) return json(401, { error: 'locked', reason: 'Set BOARD_ACCESS_KEY on the Fridge Board site' });
   const got = req.headers.get('x-board-key') || '';
   // Compare digests so length differences don't leak through timing.
-  if (!got || !timingSafeEqual(digest(got), digest(want))) return json(401, { error: 'locked', reason: 'Enter the board key' });
+  return Boolean(want && got && timingSafeEqual(digest(got), digest(want)));
+}
+
+/**
+ * Returns a 401 Response when the request lacks the board key, otherwise null.
+ * Most routes use boardGate (netlify/lib/household.mjs) instead, which also
+ * lets in a signed-in member of a household.
+ */
+export function requireKey(req) {
+  if (!env('BOARD_ACCESS_KEY')) return json(401, { error: 'locked', reason: 'Set BOARD_ACCESS_KEY on the Fridge Board site' });
+  if (!keyMatches(req)) return json(401, { error: 'locked', reason: 'Enter the board key' });
   return null;
 }
 

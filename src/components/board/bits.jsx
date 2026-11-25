@@ -1,4 +1,5 @@
 import { APPS, appLink } from '@/config/apps';
+import { retryBoard } from '@/data/sources';
 import { Chevron, Right, Tick } from './Icons';
 
 export function CheckRow({ checked, onToggle, children, late, end }) {
@@ -43,9 +44,30 @@ export function Freshness({ s }) {
   if (!s || s.status === 'live') return null;
   const stale = s.status === 'stale';
   const when = stale && s.at ? ` Last updated ${new Date(s.at).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.` : '';
+  const label = stale ? 'Not updating' : s.status === 'sample' ? 'Sample' : s.status === 'error' ? 'Couldn’t reach it' : s.connect === 'google' ? 'Not connected' : 'Off';
   return (
-    <span className={`fresh ${stale ? 'stale' : ''}`} title={`${s.reason || ''}${when}`.trim()}>
-      {stale ? 'Not updating' : 'Sample'}
+    <span className={`fresh ${stale || s.status === 'error' ? 'stale' : ''}`} title={`${s.reason || ''}${when}`.trim()}>
+      {label}
     </span>
+  );
+}
+
+/** Opens Hive's Account sheet (src/hive/Hive.jsx listens), e.g. to connect Google. */
+export const OPEN_ACCOUNT = 'hive:open-account';
+export const openAccount = () => window.dispatchEvent(new Event(OPEN_ACCOUNT));
+
+/**
+ * What a section or widget shows instead of its data when it has none to
+ * show: "Couldn't reach GalaxyFarm" with Retry, or why it's off ("Connect
+ * Google", with a way to do it). Never sample data.
+ */
+export function Unavailable({ s, className = '' }) {
+  if (!s || (s.status !== 'error' && s.status !== 'off')) return null;
+  return (
+    <div className={`unavail ${className}`} role="status">
+      <p>{s.connect === 'google' ? 'Connect Google to see your calendar and Google Tasks' : s.reason}</p>
+      {s.status === 'error' && <button className="w-act unavail-btn" onClick={retryBoard}>Retry</button>}
+      {s.connect === 'google' && <button className="w-act unavail-btn" onClick={openAccount}>Connect Google</button>}
+    </div>
   );
 }

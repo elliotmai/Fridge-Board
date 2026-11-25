@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { dayFrom, wd } from '@/lib/dates';
-import { CheckRow, Fold, Freshness, OpenIn } from './bits';
+import { CheckRow, Fold, Freshness, OpenIn, Unavailable } from './bits';
 import { Play, Plus, Right } from './Icons';
 
 export function Meals({ meals, recipes, expiring, onCook, onPeek, phone, status }) {
   const today = meals.filter((m) => m.d === 0);
   const dinner = today.find((m) => m.type === 'Dinner');
   const r = dinner?.recipe && recipes[dinner.recipe];
+  const off = status?.status === 'error' || status?.status === 'off';
+  if (off) {
+    return (
+      <div className="kcol">
+        <div className="zh"><h2>Meals</h2><Freshness s={status} />{phone && <OpenIn app="kitchenhub" path="mealPlan" />}</div>
+        <Unavailable s={status} />
+      </div>
+    );
+  }
   return (
     <div className="kcol">
       <div className="zh"><h2>Meals</h2><Freshness s={status} />{phone && <OpenIn app="kitchenhub" path="mealPlan" />}</div>
@@ -40,7 +49,7 @@ export function Meals({ meals, recipes, expiring, onCook, onPeek, phone, status 
             );
           })}
         </div>
-        <div className="sh">Use soon</div>
+        {expiring.length > 0 && <div className="sh">Use soon</div>}
         <div className="soon">
           {expiring.map((e) => (
             <span key={e.name} className={e.days <= 1 ? 'urgent' : ''}>{e.name}<b>{e.days <= 1 ? 'today' : `${e.days} days`}</b></span>
@@ -59,6 +68,14 @@ export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds
   const offers = quick.filter(([n]) => !names.has(n.toLowerCase())).slice(0, 2);
   const sections = [...new Set(open.map((i) => i.section))];
   const submit = (e) => { e.preventDefault(); const v = text.trim(); if (!v) return; onAdd(v); setText(''); };
+  if (status?.status === 'error' || status?.status === 'off') {
+    return (
+      <div className="kcol">
+        <div className="zh"><h2>Shopping</h2><Freshness s={status} />{phone && <OpenIn app="kitchenhub" path="shopping" />}</div>
+        <Unavailable s={status} />
+      </div>
+    );
+  }
   return (
     <div className="kcol">
       <div className="zh">

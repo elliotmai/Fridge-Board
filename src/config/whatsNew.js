@@ -6,6 +6,14 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.25',
+    date: 'November 2026',
+    items: [
+      'Signed in, your widgets and board show only your own data: empty is shown as empty, and an app that can’t be reached says so, with Retry. Samples are only for when nobody is signed in.',
+      'Drinks on the fridge: tap Drinks, pick who you are, and add a drink to Drink Tracker in one tap.',
+    ],
+  },
+  {
     version: '2026.11.24',
     date: 'November 2026',
     items: ['Hive has a calmer new look: bigger time and type you can read across the kitchen, flat colours instead of frosted glass, and a fridge layout for tall screens with the kitchen across the top.'],

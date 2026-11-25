@@ -6,11 +6,12 @@
  *   POST /api/timers        { label, minutes, key? } → KitchenHub POST /api/board/timers
  *   POST /api/timers/:id    { stop: true }           → KitchenHub POST /api/board/timers/:id
  *
- * Same board key as /api/board; as the signed-in Hive user when there is one,
+ * Same access as /api/board (the board key, or a signed-in household member); as the signed-in Hive user when there is one,
  * KITCHENHUB_TOKEN otherwise. The token never leaves this function.
  */
-import { json, requireKey, urls } from '../lib/shared.mjs';
-import { asUser, hiveUser } from '../lib/hiveUser.mjs';
+import { json, urls } from '../lib/shared.mjs';
+import { asUser } from '../lib/hiveUser.mjs';
+import { boardGate } from '../lib/household.mjs';
 
 async function forward(url, { method, headers, body }) {
   const res = await fetch(url, {
@@ -24,8 +25,9 @@ async function forward(url, { method, headers, body }) {
 }
 
 export default async (req, context) => {
-  const locked = requireKey(req);
-  if (locked) return locked;
+  const gate = await boardGate(req);
+  if (!gate.ok) return gate.response;
+  const { user } = gate;
   const id = context.params?.id;
   let body;
   if (req.method === 'POST') {
@@ -39,7 +41,7 @@ export default async (req, context) => {
     ? { stop: body?.stop === true }
     : body && { label: typeof body.label === 'string' ? body.label.slice(0, 120) : '', minutes: Number(body.minutes), ...(typeof body.key === 'string' ? { key: body.key.slice(0, 200) } : {}) };
   try {
-    return await asUser(await hiveUser(req), 'kitchenhub', 'KITCHENHUB_TOKEN', (headers) => forward(url, { method: req.method, headers, body: send }));
+    return await asUser(user, 'kitchenhub', 'KITCHENHUB_TOKEN', (headers) => forward(url, { method: req.method, headers, body: send }));
   } catch (e) {
     if (e.unconfigured) return json(401, { error: e.message });
     console.error('timers failed:', e);

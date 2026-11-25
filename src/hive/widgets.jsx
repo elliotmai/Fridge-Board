@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { APPS } from '@/config/apps';
-import { Freshness } from '@/components/board/bits';
+import { Freshness, openAccount, Unavailable } from '@/components/board/bits';
 import { WX } from '@/components/board/Icons';
 import { DAY, daysBetween, fmt, md, plural, startOf, wd } from '@/lib/dates';
 
@@ -35,6 +35,13 @@ export const WIDGETS = {
 };
 export const widgetIds = Object.keys(WIDGETS);
 
+const unusable = (s) => (s?.status === 'error' || s?.status === 'off' ? s : null);
+/** The status to show instead of the widget's body, when it has nothing real to show. */
+function unavailable(w, d) {
+  if (w === 'tasks') return unusable(d.status.tasks) && unusable(d.status.gtasks) ? d.status.tasks : null;
+  return unusable(WIDGETS[w].status(d));
+}
+
 /**
  * `onOpen(to)` opens the widget's app; `to` ({ path }) opens a
  * particular thing instead, like one recipe or one calendar day.
@@ -53,7 +60,9 @@ export function Widget({ w, size, data, now, onOpen, color, still }) {
         <UI.chevron />
       </button>
       <div className="widget-body" onClick={onBody}>
-        {data ? <def.Body data={data} now={now} size={sz} onOpen={onOpen} /> : <span className="widget-wait">Loading</span>}
+        {!data ? <span className="widget-wait">Loading</span>
+          : unavailable(w, data) ? <Unavailable s={unavailable(w, data)} className="w-unavail" />
+            : <def.Body data={data} now={now} size={sz} onOpen={onOpen} />}
       </div>
     </div>
   );
@@ -214,7 +223,11 @@ function Tasks({ data, now }) {
   const act = useWidgetActions();
   const all = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
   const done = new Set(data.todosDone || []);
-  if (!all.length) return <Empty big="Nothing to do" sub="Nothing due this week" />;
+  const g = data.status.gtasks;
+  const note = g?.connect === 'google'
+    ? <button className="w-act w-note" onClick={openAccount}>Connect Google to add your Google Tasks</button>
+    : unusable(g) || unusable(data.status.tasks) ? <p className="w-note">{(unusable(g) || data.status.tasks).reason}</p> : null;
+  if (!all.length) return <><Empty big="Nothing to do" sub="Nothing due this week" />{note}</>;
   const over = all.filter((t) => t.n != null && t.n < 0 && !done.has(t.key)).length;
   const left = all.filter((t) => !done.has(t.key)).length;
   const rows = [...all].sort((a, b) => Number(done.has(a.key)) - Number(done.has(b.key)));
@@ -227,6 +240,7 @@ function Tasks({ data, now }) {
           {t.name}
         </Check>
       ))}</ul></Scroll>
+      {note}
     </>
   );
 }

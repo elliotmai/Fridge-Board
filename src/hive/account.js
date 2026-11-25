@@ -182,12 +182,26 @@ export async function signOut() {
  * them (src/data/api.js). Null when nobody is signed in or their email isn't
  * confirmed. Waits for a saved sign-in to load first.
  */
-export async function idToken() {
+export async function idToken(opts) {
+  return (await hiveSession(opts))?.token || null;
+}
+
+/**
+ * { token, uid } for the signed-in, confirmed Hive user, or null. A token that
+ * is about to run out (or `fresh`: the server said it had) is refreshed first:
+ * a tablet left alone can hold one past its hour, and the board would then be
+ * read as nobody.
+ */
+export async function hiveSession({ fresh = false } = {}) {
   if (!accountsOn) return null;
   try {
     const sb = await supabase();
-    const { data } = await sb.auth.getSession();
-    return data.session && confirmed(data.session.user) ? data.session.access_token : null;
+    let { data: { session } } = await sb.auth.getSession();
+    if (session && (fresh || (session.expires_at || 0) * 1000 < Date.now() + 60000)) {
+      const r = await sb.auth.refreshSession();
+      session = r.data?.session || (fresh ? null : session);
+    }
+    return session && confirmed(session.user) ? { token: session.access_token, uid: session.user.id } : null;
   } catch {
     return null;
   }

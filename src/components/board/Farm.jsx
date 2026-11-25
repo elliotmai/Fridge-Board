@@ -1,5 +1,5 @@
 import { SLOTS } from '@/lib/derive';
-import { CheckRow, Fold, Freshness, OpenIn } from './bits';
+import { CheckRow, Fold, Freshness, OpenIn, Unavailable } from './bits';
 import { DoneCircle } from './Icons';
 
 const byText = (k, by) => (k === 'owed' ? '' : by === 24 ? 'by bedtime' : `by ${by > 12 ? by - 12 : by} ${by >= 12 ? 'pm' : 'am'}`);
@@ -12,6 +12,7 @@ export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter
   for (const [k, [, by]] of Object.entries(SLOTS)) {
     if (k !== 'owed' && hour < by && chores.some((c) => c.slot === k && !done.includes(c.id))) { nowSlot = k; break; }
   }
+  const off = status?.status === 'error' || status?.status === 'off';
   return (
     <section className="zone farm" aria-label="Farm chores">
       <div className="zh">
@@ -20,9 +21,11 @@ export function Farm({ chores, done, onToggle, now, folds, onFold, phone, sitter
         <span className="count"><b>{doneItems.length}</b> of {total} done</span>
         {phone && <OpenIn app="galaxyfarm" path={sitter ? 'housesitter' : 'chores'} />}
       </div>
-      <div className="meter"><i style={{ width: `${(doneItems.length / total) * 100}%` }} /></div>
+      <div className="meter"><i style={{ width: `${total ? (doneItems.length / total) * 100 : 0}%` }} /></div>
       <div className="scroll" data-scroll>
-        {doneItems.length === total && <div className="slot-done"><DoneCircle /><b>Every chore is done.</b></div>}
+        <Unavailable s={status} />
+        {!off && !total && <p className="empty-note">No chores today.</p>}
+        {total > 0 && doneItems.length === total && <div className="slot-done"><DoneCircle /><b>Every chore is done.</b></div>}
         {Object.entries(SLOTS).map(([k, [label, by]]) => {
           const items = chores.filter((c) => c.slot === k);
           if (!items.length) return null;
