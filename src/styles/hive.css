@@ -475,3 +475,4 @@ p.w-note { text-decoration: none; }
   .folder-open, .ctx-menu, .ctx-preview, .spot-panel, .spot, .sheet-panel, .scrim, .ctx-scrim, .badge-remove, .badge-out { animation: none !important; }
   .ctx-preview { transform: none; }
 }
+.row-actions, .set-row > .row-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
