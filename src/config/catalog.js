@@ -24,9 +24,9 @@ import { APPS } from './apps.js';
 export const CATALOG = {
   board: { name: 'Fridge Board', color: '#2f7a4a', glyph: 'board', audience: 'household', native: true, blurb: 'Chores, meals, shopping, trips and breeding on one screen.' },
   settings: { name: 'Settings', color: '#8e8e93', glyph: 'gear', audience: 'anyone', native: true, blurb: 'Your Hive account, wallpaper, and how the home screen looks.' },
-  // GalaxyFarm signs in with a cookie, which Safari refuses to a site shown
-  // inside another one: on iPhone it can't stay signed in inside Hive yet.
-  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
+  // hive: signs you in with your Hive account (a pass), inside Hive and on its
+  // own address. Its sign-in cookie is fine in Hive's frame: the same site.
+  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, hive: true, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
   cattlegraph: { name: 'Cattle Graph', url: 'https://cattle.flyingdoublemranch.com', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
@@ -34,7 +34,8 @@ export const CATALOG = {
     shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
   letseat: { name: "Let's Eat", url: 'https://letseat.flyingdoublemranch.com', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
   pool: { name: 'Pool Heater', url: 'https://pool.flyingdoublemranch.com', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
-  property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
+  // hive: existing Property Care accounts sign in with Hive (inside Hive and on its own address).
+  property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', hive: true, color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
   ourden: { name: 'Our Den', url: 'https://den.flyingdoublemranch.com', color: '#4b3b78', glyph: 'moon', audience: 'invite', blurb: 'A private space for two, across the distance.' },
   wander: { name: 'Wander', url: APPS.wander.url, color: '#2c5e9e', glyph: 'plane', audience: 'anyone', blurb: 'Trips, itineraries and live flights.' },
   // hive: signs you in with your Hive account when opened inside Hive.
