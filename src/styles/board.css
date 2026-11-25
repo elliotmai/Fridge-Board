@@ -611,3 +611,5 @@ a.entry h3::after { content: ""; }
 
 /* Prominent numbers: open-zero digits (see --font-num in tokens.css). */
 .wx-temp, .zh .count b, .countdown b, .fold b { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.sheet-close { position: absolute; top: 10px; right: max(14px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; border-radius: 50%; background: var(--sunken); color: var(--ink, inherit); font-size: 28px; line-height: 1; display: grid; place-content: center; }
+.sheet-close:active { transform: scale(.94); }
