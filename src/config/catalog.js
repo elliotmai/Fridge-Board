@@ -26,7 +26,7 @@ export const CATALOG = {
   settings: { name: 'Settings', color: '#8e8e93', glyph: 'gear', audience: 'anyone', native: true, blurb: 'Your Hive account, wallpaper, and how the home screen looks.' },
   // GalaxyFarm signs in with a cookie, which Safari refuses to a site shown
   // inside another one: on iPhone it can't stay signed in inside Hive yet.
-  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
+  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, start: '/admin', color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
   cattlegraph: { name: 'Cattle Graph', url: 'https://cattle.flyingdoublemranch.com', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
@@ -85,10 +85,14 @@ export function appLook(id, custom = {}) {
   return { name: c.name || a.name || id, color: c.color || a.color || '#777', glyph: c.glyph || a.glyph };
 }
 
-/** Where a shortcut path goes: an absolute URL as is, else under the app's own address. */
+/**
+ * Where a shortcut path goes: an absolute URL as is, else under the app's own
+ * address. With no path, the app's `start` page (its owner view), if it has one.
+ */
 export function appUrl(id, path = '') {
   const a = CATALOG[id];
   if (!a?.url) return null;
+  path = path || a.start || '';
   if (/^https?:\/\//.test(path)) return path;
   try { return new URL(path || '', a.url.endsWith('/') ? a.url : `${a.url}/`).href.replace(/\/$/, path ? '' : '/'); } catch { return a.url; }
 }
