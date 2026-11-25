@@ -116,3 +116,24 @@ test('only GET and POST', async () => {
   const r = await handleDrinks(new Request('http://x/api/drinks/m', { method: 'DELETE' }), PARTNER, deps());
   assert.equal(r.status, 405);
 });
+
+test('quick options: top 3 by count, 3 recent not in the top, everything for search', () => {
+  const distinct = [
+    { type: 'Beer', name: 'Yuengling', quantity: 12, count: 5 },
+    { type: 'Beer', name: 'Miller Lite', quantity: 12, count: 134 },
+    { type: 'Spirit', name: 'Lychee Soju', quantity: 6, count: 113 },
+    { type: 'Wine', name: '', quantity: 5, count: 40 },
+    { type: 'Nope', name: 'bad', quantity: 5, count: 999 },
+  ];
+  const recent = [
+    { type: 'Beer', name: 'Miller Lite', quantity: 12 },
+    { type: 'Cocktail', name: 'Margarita', quantity: 8 },
+    { type: 'Beer', name: 'Yuengling', quantity: 12 },
+    { type: 'Spirit', name: 'Rye', quantity: 1.5 },
+    { type: 'Other', name: 'Twisted Tea', quantity: 12 },
+  ];
+  const o = quickOptions(distinct, recent);
+  assert.deepEqual(o.favorites.map((d) => d.name || d.type), ['Miller Lite', 'Lychee Soju', 'Wine']);
+  assert.deepEqual(o.recent.map((d) => d.name), ['Margarita', 'Yuengling', 'Rye']);
+  assert.deepEqual(o.all.map((d) => d.name || d.type), ['Miller Lite', 'Lychee Soju', 'Wine', 'Yuengling']);
+});

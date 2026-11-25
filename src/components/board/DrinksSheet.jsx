@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
 import { callApi } from '@/data/api';
 
@@ -23,6 +23,16 @@ export function DrinksSheet({ onClose }) {
   const [who, setWho] = useState(null);
   const [opts, setOpts] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
+  // Search: every drink they've logged, then the plain types; any part of the name or type.
+  const found = useMemo(() => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length || !opts?.all) return [];
+    const plain = (opts.types || []).map((t) => ({ type: t.type, name: '', quantity: t.quantity }));
+    return [...opts.all, ...plain]
+      .filter((d) => { const s = `${d.name} ${d.type}`.toLowerCase(); return words.every((w) => s.includes(w)); })
+      .slice(0, 8);
+  }, [q, opts]);
 
   useEffect(() => {
     callApi('/api/drinks').then((r) => {
@@ -39,7 +49,7 @@ export function DrinksSheet({ onClose }) {
   useEffect(() => { if (who) loadOpts(who); }, [who?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p) => setWho({ id: p.id, name: p.name });
-  const notMe = () => { setWho(null); setOpts(null); };
+  const notMe = () => { setWho(null); setOpts(null); setQ(''); };
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -89,9 +99,16 @@ export function DrinksSheet({ onClose }) {
             </div>
             {!opts && <p className="sub">Loading…</p>}
             {opts?.error && <p className="sub">{opts.error}</p>}
-            {opts?.favorites?.length > 0 && <><div className="sh">Favourites</div><div className="drink-chips">{opts.favorites.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
-            {opts?.recent?.length > 0 && <><div className="sh">Recent</div><div className="drink-chips">{opts.recent.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
-            {opts?.types && <><div className="sh">Quick add</div><div className="drink-chips">{opts.types.map((d) => <Chip key={d.type} d={{ type: d.type, name: '', quantity: d.quantity }} />)}</div></>}
+            {opts && !opts.error && (
+              <input className="drink-search" type="search" value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder={`Search ${who.name}’s drinks`} aria-label={`Search ${who.name}’s drinks`} />
+            )}
+            {q.trim() && (found.length
+              ? <div className="drink-chips">{found.map((d) => <Chip key={label(d)} d={d} />)}</div>
+              : <p className="sub">Nothing called “{q.trim()}” yet. Add it in Drink Tracker.</p>)}
+            {!q.trim() && opts?.favorites?.length > 0 && <><div className="sh">Top 3</div><div className="drink-chips">{opts.favorites.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
+            {!q.trim() && opts?.recent?.length > 0 && <><div className="sh">Recent</div><div className="drink-chips">{opts.recent.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
+            {!q.trim() && opts?.types && <><div className="sh">Quick add</div><div className="drink-chips">{opts.types.map((d) => <Chip key={d.type} d={{ type: d.type, name: '', quantity: d.quantity }} />)}</div></>}
           </>
         )}
 

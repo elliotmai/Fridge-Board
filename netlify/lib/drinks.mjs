@@ -72,23 +72,30 @@ export function buildDrink(input, { now = new Date(), tz = 'America/Chicago' } =
 }
 
 /**
- * One-tap options for a person: their favourites (the app's distinctDrinks,
- * most-used first), then their latest drinks not already among them, then the
- * plain drink types.
+ * One-tap options for a person: their top drinks (the app's distinctDrinks,
+ * most-logged first), their latest drinks not already among the top, every
+ * drink they've logged (for search, most-logged first), and the plain types.
  */
-export function quickOptions(distinct, recent, { favorites = 6, latest = 3 } = {}) {
+export function quickOptions(distinct, recent, { top = 3, latest = 3, all = 400 } = {}) {
   const key = (d) => `${d.type}|${(d.name || '').toLowerCase()}|${d.quantity}`;
   const ok = (d) => d && TYPES.has(d.type) && Number(d.quantity) > 0 && Number(d.quantity) <= MAX_OZ;
   const shape = (d) => ({ type: d.type, name: d.name || '', quantity: Number(d.quantity) });
-  const fav = (Array.isArray(distinct) ? distinct : Object.values(distinct || {})).filter(ok).slice(0, favorites).map(shape);
-  const seen = new Set(fav.map(key));
+  const list = (Array.isArray(distinct) ? distinct : Object.values(distinct || {})).filter(ok)
+    .map((d, i) => ({ d, i, n: Number(d.count) || 0 }))
+    .sort((a, b) => b.n - a.n || a.i - b.i)
+    .map((x) => x.d);
+  const unique = [];
+  const once = new Set();
+  for (const d of list) { if (!once.has(key(d))) { once.add(key(d)); unique.push(shape(d)); } }
+  const favorites = unique.slice(0, top);
+  const seen = new Set(favorites.map(key));
   const rec = [];
   for (const d of recent || []) {
     if (!ok(d) || seen.has(key(d))) continue;
     seen.add(key(d)); rec.push(shape(d));
     if (rec.length >= latest) break;
   }
-  return { favorites: fav, recent: rec, types: DRINK_TYPES };
+  return { favorites, recent: rec, all: unique.slice(0, all), types: DRINK_TYPES };
 }
 
 /**
@@ -96,7 +103,7 @@ export function quickOptions(distinct, recent, { favorites = 6, latest = 3 } = {
  * stand in for them):
  *
  *   GET  /api/drinks             → { people: [{ id, name, me }] } in my household
- *   GET  /api/drinks/:member     → { favorites, recent, types, today }
+ *   GET  /api/drinks/:member     → { favorites (top 3), recent (3), all, types, today }
  *   POST /api/drinks/:member     { type, name?, quantity, tz? } → { ok, drink }
  *
  * deps: session(req) → { user }, household(uid) → id | null,
