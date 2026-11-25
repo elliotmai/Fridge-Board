@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { APP_KEY } from '@/config/app';
 import { useToast } from '@/context/ToastContext';
 import { callApi } from '@/data/api';
 
@@ -8,21 +7,11 @@ import { callApi } from '@/data/api';
  * adds a drink to that person's Drink Tracker (netlify/functions/drinks.mjs
  * checks you're signed in, and that they're in your household).
  *
- * Who you are is kept for this board session in this tab (sessionStorage),
- * and forgotten after a while untouched, so the next person at the fridge
- * isn't logged as you. "Not you?" switches straight away.
+ * It asks who you are every time it opens, so the next person at the fridge
+ * is never logged as you. While it's open you can add several drinks for the
+ * same person, or switch with "Not you?".
  */
-const WHO = `${APP_KEY}.drinks.who`;
-const FORGET_MS = 20 * 60 * 1000;
 const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } };
-
-function readWho() {
-  try {
-    const w = JSON.parse(sessionStorage.getItem(WHO) || 'null');
-    return w && Date.now() - w.at < FORGET_MS ? w : null;
-  } catch { return null; }
-}
-function saveWho(w) { try { w ? sessionStorage.setItem(WHO, JSON.stringify({ ...w, at: Date.now() })) : sessionStorage.removeItem(WHO); } catch { /* ignore */ } }
 
 const EMOJI = { Beer: '🍺', Wine: '🍷', Cocktail: '🍸', Spirit: '🥃', Other: '🍹' };
 const label = (d) => `${d.name || d.type} · ${d.quantity} oz`;
@@ -31,7 +20,7 @@ export function DrinksSheet({ onClose }) {
   const { toast } = useToast();
   const [people, setPeople] = useState(null); // null: loading
   const [error, setError] = useState('');
-  const [who, setWho] = useState(readWho);
+  const [who, setWho] = useState(null);
   const [opts, setOpts] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,8 +28,6 @@ export function DrinksSheet({ onClose }) {
     callApi('/api/drinks').then((r) => {
       if (!r.ok) { setError(r.data?.error || 'Couldn’t reach Drink Tracker'); setPeople([]); return; }
       setPeople(r.data.people);
-      // The remembered person must still be in the household.
-      setWho((w) => (w && r.data.people.some((p) => p.id === w.id) ? w : null));
     });
   }, []);
 
@@ -51,8 +38,14 @@ export function DrinksSheet({ onClose }) {
   }, []);
   useEffect(() => { if (who) loadOpts(who); }, [who?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const choose = (p) => { const w = { id: p.id, name: p.name }; saveWho(w); setWho(w); };
-  const notMe = () => { saveWho(null); setWho(null); setOpts(null); };
+  const choose = (p) => setWho({ id: p.id, name: p.name });
+  const notMe = () => { setWho(null); setOpts(null); };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const add = async (d) => {
     if (busy) return;
@@ -60,7 +53,6 @@ export function DrinksSheet({ onClose }) {
     const r = await callApi(`/api/drinks/${encodeURIComponent(who.id)}`, { method: 'POST', body: { type: d.type, name: d.name || '', quantity: d.quantity, tz: tz() } });
     setBusy(false);
     if (!r.ok) { toast(r.data?.error || 'Couldn’t add that drink', { type: 'error', duration: 5000 }); return; }
-    saveWho(who); // still you: keep remembering
     setOpts((o) => (o ? { ...o, today: (o.today || 0) + 1 } : o));
     toast(`${d.name || d.type} added for ${who.name}. Fix or remove it in Drink Tracker.`, { duration: 5000 });
   };
@@ -76,6 +68,7 @@ export function DrinksSheet({ onClose }) {
       <div className="scrim" onClick={onClose} />
       <div className="sheet drinks-sheet" role="dialog" aria-modal="true" aria-labelledby="drinksTitle">
         <div className="grab" />
+        <button className="sheet-close" onClick={onClose} aria-label="Close">×</button>
         <span className="when">Drink Tracker</span>
         <h3 id="drinksTitle">{who ? `Add a drink for ${who.name}` : 'Who’s having a drink?'}</h3>
 
