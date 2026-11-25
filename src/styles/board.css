@@ -613,3 +613,4 @@ a.entry h3::after { content: ""; }
 .wx-temp, .zh .count b, .countdown b, .fold b { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .sheet-close { position: absolute; top: 10px; right: max(14px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; border-radius: 50%; background: var(--sunken); color: var(--ink, inherit); font-size: 28px; line-height: 1; display: grid; place-content: center; }
 .sheet-close:active { transform: scale(.94); }
+.drink-search { width: 100%; box-sizing: border-box; min-height: 52px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--sunken); padding: 0 16px; font-size: 18px; color: inherit; }
