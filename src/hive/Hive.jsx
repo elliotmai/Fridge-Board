@@ -22,6 +22,7 @@ import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet } from './Shee
 import { Spotlight } from './Spotlight';
 import { WidgetActions } from './live';
 import { WIDGETS, signals, useLiveBoard, widgetIds } from './widgets';
+import { homeView, showView, viewIn } from './nav';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -45,10 +46,9 @@ function firstSettings() {
  */
 const idleOf = (s) => s.idle ?? (s.idleToBoard ? 'board' : 'off');
 
-const viewFromHash = () => {
-  const h = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
-  return CATALOG[h] && CATALOG[h].frame !== false ? h : null; // apps that can't be framed open in a tab, never here
-};
+// Apps that can't be framed open in a tab, never here.
+const isView = (h) => !!CATALOG[h] && CATALOG[h].frame !== false;
+const viewFromHash = () => viewIn(window.location, isView);
 
 /**
  * Hive: a home screen of every app. Fridge Board runs natively inside it; the
@@ -126,11 +126,10 @@ export function Hive() {
     };
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The hash is the source of truth for which app is open. `pushed` means Hive
-  // itself opened the app, so going home is just "back".
-  const pushed = useRef(false);
+  // The address is the source of truth for which app is open (nav.js); the
+  // back gesture changes it, and Hive follows.
   useEffect(() => {
-    const on = () => { const v = viewFromHash(); if (!v) pushed.current = false; setView(v); };
+    const on = () => setView(viewFromHash());
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
@@ -161,10 +160,7 @@ export function Hive() {
   }, [view]);
 
   const navigate = useCallback((id) => {
-    if (viewFromHash() === id) return;
-    pushed.current = !viewFromHash();
-    if (pushed.current) window.location.hash = id;
-    else { window.history.replaceState(null, '', `#${id}`); setView(id); }
+    if (showView(window, id, isView)) setView(id); // no hashchange follows
   }, []);
 
   /** Open an app; `path` opens it at a page, for shortcuts and search results. */
@@ -193,8 +189,8 @@ export function Hive() {
 
   /** Go home now, without a fade. */
   const leaveApp = useCallback(() => {
-    if (pushed.current && viewFromHash()) window.history.back();
-    else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setView(null); }
+    homeView(window); // always the home screen: never history.back() (nav.js)
+    setView(null);
   }, []);
 
   /** Go home from an app: the cover fades over it, Hive goes home under it, and it fades off. */
