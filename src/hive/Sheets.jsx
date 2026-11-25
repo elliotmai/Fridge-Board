@@ -317,33 +317,20 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
 }
 
 /**
- * A non-native app, full screen inside Hive. The bar at the bottom is the
- * home indicator: swipe it up (the app shrinks with your finger) or tap it to
- * go home. The top bar has Home, Reload and Open in its own tab.
+ * A non-native app, full screen inside Hive. The top bar has Home, Reload and
+ * Open in its own tab. (No swipe-up home bar at the bottom: it fought the
+ * device's own home gesture.)
  */
 export function AppFrame({ id, visible, onHome, path }) {
   const a = CATALOG[id];
   const [nonce, setNonce] = useState(0);
-  const [pull, setPull] = useState(0);
-  const start = useRef(null);
   const src = appUrl(id, path?.path);
   // A fresh load (reload, or a shortcut to another page) isn't ready until it loads; an app not online yet is ready at once.
   useEffect(() => { if (a.url) forgetFrame(id); else markFrameReady(id); }, [id, nonce, path?.n, a.url]);
-  const onDown = (e) => { start.current = { y: e.clientY, id: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId); };
-  const onMove = (e) => { if (start.current?.id === e.pointerId) setPull(Math.max(0, start.current.y - e.clientY)); };
-  const onUp = (e) => {
-    if (start.current?.id !== e.pointerId) return;
-    const moved = start.current.y - e.clientY;
-    start.current = null;
-    setPull(0);
-    if (moved > 70 || Math.abs(moved) < 6) onHome();
-  };
-  const k = Math.min(1, pull / 260);
   return (
     // Parked, not removed, when not showing: kept laid out and loaded (hidden
     // with visibility), so opening it again is instant and costs no layout.
-    <div className={`frame-view ${visible ? '' : 'parked'}`} data-app-view={id} aria-hidden={visible ? undefined : 'true'} inert={visible ? undefined : ''}
-      style={pull ? { transform: `translateY(${-pull * 0.5}px) scale(${1 - k * 0.22})`, borderRadius: `${16 + k * 24}px`, transition: 'none' } : undefined}>
+    <div className={`frame-view ${visible ? '' : 'parked'}`} data-app-view={id} aria-hidden={visible ? undefined : 'true'} inert={visible ? undefined : ''}>
       <div className="frame-bar" style={{ '--c': a.color }}>
         <button className="frame-home" onClick={onHome} aria-label="Back to the Hive home screen">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Home
@@ -371,10 +358,6 @@ export function AppFrame({ id, visible, onHome, path }) {
           <p>It will open right here once it&apos;s online.</p>
         </div>
       )}
-      <button className="home-indicator" aria-label="Swipe up or tap to go home"
-        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { start.current = null; setPull(0); }}>
-        <i />
-      </button>
     </div>
   );
 }
