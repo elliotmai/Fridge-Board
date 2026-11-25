@@ -11,6 +11,10 @@ export const WHATS_NEW = [
     items: [
       'Signed in, your widgets and board show only your own data: empty is shown as empty, and an app that can’t be reached says so, with Retry. Samples are only for when nobody is signed in.',
       'Drinks on the fridge: tap Drinks, pick who you are, and add a drink to Drink Tracker in one tap.',
+      'Pages follow your finger and glide into place, and icons slide aside as you drag.',
+      'Widget stacks: Add to home screen → Add a stack and tick the widgets you want, or choose Stack with… on any widget (its menu, or the badge while editing). Dragging one widget onto another still works. Swipe a stack, or let it turn to what matters now: chores in the morning, dinner later.',
+      'A clock screen for the fridge: the time, big, with two widget stacks, red at night. Tap the clock on a tablet, or set it to show when the screen is left alone.',
+      'Customize more: icon styles, colours from your wallpaper, dot badges, compact rows, a line under the clock, and new pages wherever you like.',
       'Connect Google Calendar & Tasks right in Hive: Account, Connect, and Google brings you back connected. Hive, its widgets and Our Den all use that one connection, and Account says whether it’s working.',
     ],
   },

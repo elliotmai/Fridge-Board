@@ -1,3 +1,4 @@
+import { markFrameReady } from './frameReady';
 import { CATALOG } from '@/config/catalog';
 import { passFor } from './account';
 
@@ -41,6 +42,7 @@ export function startBridge(isSignedIn) {
   const onMessage = (e) => {
     if (e.data?.type !== 'hive:hello') return;
     const frame = frameFor(e.source);
+    if (frame?.dataset.app) markFrameReady(frame.dataset.app); // it's up: the open can reveal it
     if (!frame || e.origin !== originOf(frame.dataset.app)) return;
     const signedIn = isSignedIn();
     if (signedIn === null) return; // still loading: announce() answers every frame once it knows
