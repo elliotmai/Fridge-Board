@@ -108,49 +108,32 @@ export function supabaseAdmin(url, serviceKey, f = fetch) {
 }
 
 /**
- * The whole step. Returns one of:
- *   { ok: true, how: 'password' }            sign in with the same password now
- *   { ok: true, how: 'token', token }        sign in with verifyOtp({ token_hash: token, type: 'magiclink' })
- *   { ok: true, how: 'email' }               a link is on its way to their inbox
- *   { ok: false, reason }                    reason is for logs; the page says "wrong email or password"
+ * The whole step. Returns:
+ *   { ok: true, how: 'password' }   sign in with the same password now
+ *   { ok: false, reason }           reason is for logs; the page says "wrong email or password"
+ *
+ * One account per email, one password (the owner's call, 2026-11-25):
+ * everyone's old accounts were combined by email into one Hive account ahead
+ * of time (scripts/bringover/combine-accounts.mjs, app_metadata.legacy), with
+ * their data from every app already attached. The first old password that any
+ * of their old apps accepts becomes their Hive password; from then on that is
+ * the only password, everywhere. An account that already has its own Hive
+ * password is never touched here. Whether an old app had confirmed the email
+ * no longer matters.
  */
-export async function carryOver(email, password, { admin, check = checkLegacy, redirectTo } = {}) {
+export async function carryOver(email, password, { admin, check = checkLegacy } = {}) {
   email = String(email || '').trim().toLowerCase();
   if (!email || !password) return { ok: false, reason: 'missing' };
-  const hits = await check(email, password);
-  if (!hits.length) return { ok: false, reason: 'no old app knows this password' };
-  const verified = hits.some((h) => h.verified);
 
   let id = await admin.userIdByEmail(email);
-  let result;
-  if (!id && verified) {
-    id = (await admin.createUser(email, password)).id;
-    result = { ok: true, how: 'password' };
-  } else if (!id) {
-    // Unconfirmed old account: the account is made by the emailed link, not this password.
-    await admin.sendSignInLink(email, redirectTo, { create: true });
-    return { ok: true, how: 'email' }; // linked to the old account on a later sign-in, once the person exists
-  } else {
-    const u = await admin.getUser(id);
-    const confirmed = Boolean(u.email_confirmed_at || u.confirmed_at);
-    if (u.app_metadata?.legacy === true && verified) {
-      await admin.setPassword(id, password, u.app_metadata);
-      result = { ok: true, how: 'password' };
-    } else if (u.app_metadata?.legacy === true) {
-      // Unconfirmed old account: the password proves nothing, so it isn't kept. The email decides.
-      if (confirmed) await admin.sendSignInLink(email, redirectTo); else await admin.sendConfirmation(email, redirectTo);
-      result = { ok: true, how: 'email' };
-    } else if (!confirmed) {
-      // Made by an earlier carry-over and still waiting on its confirmation email.
-      await admin.sendConfirmation(email, redirectTo);
-      result = { ok: true, how: 'email' };
-    } else if (verified) {
-      result = { ok: true, how: 'token', token: await admin.signInToken(email) };
-    } else {
-      await admin.sendSignInLink(email, redirectTo);
-      result = { ok: true, how: 'email' };
-    }
-  }
+  const u = id ? await admin.getUser(id) : null;
+  if (u && u.app_metadata?.legacy !== true) return { ok: false, reason: 'has its own Hive password' };
+
+  const hits = await check(email, password);
+  if (!hits.length) return { ok: false, reason: 'no old app knows this password' };
+
+  if (!id) id = (await admin.createUser(email, password)).id;
+  else await admin.setPassword(id, password, u.app_metadata);
   await admin.linkLegacy(hits.map((h) => ({ app: h.app, legacy_id: h.uid, user_id: id })));
-  return result;
+  return { ok: true, how: 'password' };
 }

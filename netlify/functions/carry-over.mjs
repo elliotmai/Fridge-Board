@@ -20,7 +20,6 @@ export const config = { path: '/api/auth/carry-over' };
 const NO = { ok: false, error: 'Wrong email or password.' };
 
 /** Apps' own sites that may ask (inside Hive they're same-origin and need nothing). */
-const HIVE = 'https://hive.flyingdoublemranch.com';
 const cors = (req) => {
   const o = req.headers.get('origin');
   return isAppOrigin(o) ? { 'access-control-allow-origin': o, vary: 'origin' } : {};
@@ -42,10 +41,7 @@ async function handle(req) {
   let body;
   try { body = await req.json(); } catch { return json(400, NO); }
   try {
-    // Where an emailed link should bring them back: the asking site, if it's one of ours.
-    const from = req.headers.get('origin');
-    const redirectTo = `${isAppOrigin(from) ? from : HIVE}/`;
-    const r = await carryOver(body?.email, body?.password, { admin: supabaseAdmin(url, key), redirectTo });
+    const r = await carryOver(body?.email, body?.password, { admin: supabaseAdmin(url, key) });
     if (!r.ok) {
       console.info(`[carry-over] refused: ${r.reason}`);
       // A flat delay, so this is no faster a way to guess passwords than signing in.

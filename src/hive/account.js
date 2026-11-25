@@ -110,7 +110,16 @@ export async function createAccount(name, email, password) {
   }));
   // With confirmation on, Supabase returns no session and, for an email that
   // already has an account, a user with no identities.
-  if (data.user && !data.user.identities?.length) throw Object.assign(new Error('exists'), { code: 'user_already_exists' });
+  if (data.user && !data.user.identities?.length) {
+    // Everyone who used an older app already has an account (combined by
+    // email). If this password is theirs, or an old app's, just sign them in.
+    try {
+      await signInWithEmail(email, password);
+      return { needsConfirm: false };
+    } catch {
+      throw Object.assign(new Error('exists'), { code: 'user_already_exists' });
+    }
+  }
   return { needsConfirm: !data.session };
 }
 
@@ -144,7 +153,7 @@ export function authMessage(e) {
   if (code === 'invalid_credentials') return 'That email and password don’t match.';
   if (code === 'carry_over_emailed') return 'Almost there: we emailed you a link to finish signing in. Open it on this device.';
   if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
-  if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already a Hive account with that email. Sign in instead.';
+  if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already an account with that email. Sign in with a password you’ve used in any of the apps, or reset it.';
   if (code === 'weak_password') return 'Use a longer password: at least 6 characters.';
   if (code === 'email_address_invalid' || code === 'validation_failed') return 'That doesn’t look like an email address.';
   if (/rate_limit|over_.*limit/.test(code)) return 'Too many tries. Wait a minute, then try again.';

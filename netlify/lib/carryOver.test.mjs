@@ -47,43 +47,31 @@ test('a wrong password changes nothing', async () => {
   assert.deepEqual(admin.did, []);
 });
 
-test('no account yet, confirmed old email: made with that password', async () => {
-  const admin = fakeAdmin();
-  assert.deepEqual(await carryOver(' Me@Example.com ', 'right', { admin, check }), { ok: true, how: 'password' });
-  assert.equal(admin.users['new-me@example.com'].password, 'right');
-  assert.deepEqual(admin.did, ['create', 'link:a']);
+test('no account yet: made with whichever old password works, confirmed or not', async () => {
+  for (const pw of ['right', 'other']) {
+    const admin = fakeAdmin();
+    assert.deepEqual(await carryOver(' Me@Example.com ', pw, { admin, check }), { ok: true, how: 'password' });
+    assert.equal(admin.users['new-me@example.com'].password, pw);
+    assert.equal(admin.did[0], 'create');
+  }
 });
 
-test('no account yet, unconfirmed old email: only an emailed link can make it', async () => {
-  const admin = fakeAdmin();
-  assert.deepEqual(await carryOver('me@example.com', 'other', { admin, check }), { ok: true, how: 'email' });
-  assert.deepEqual(admin.did, ['linkEmail+create']);
-  assert.deepEqual(admin.users, {}, 'no account, and so no password, until the email is followed');
+test('a combined account (no Hive password yet) takes the first old password that works, then only that one', async () => {
+  const admin = fakeAdmin(confirmedUser({ password: null, app_metadata: { legacy: true } }));
+  assert.deepEqual(await carryOver('me@example.com', 'other', { admin, check }), { ok: true, how: 'password' });
+  assert.equal(admin.users.u1.password, 'other');
+  assert.deepEqual(admin.did, ['setPassword', 'link:u']);
+  // the account now has its own password: another old password no longer opens it
+  assert.equal((await carryOver('me@example.com', 'right', { admin, check })).ok, false);
+  assert.equal(admin.users.u1.password, 'other');
 });
 
-test('a second old password, confirmed: signed in by token, Hive password untouched', async () => {
+test('an account with its own Hive password is never changed or opened by an old password', async () => {
   const admin = fakeAdmin(confirmedUser());
-  assert.deepEqual(await carryOver('me@example.com', 'right', { admin, check }), { ok: true, how: 'token', token: 'hashed' });
+  const r = await carryOver('me@example.com', 'right', { admin, check });
+  assert.equal(r.ok, false);
   assert.equal(admin.users.u1.password, 'mine');
-  assert.deepEqual(admin.did, ['token', 'link:a']);
-});
-
-test('a second old password, unconfirmed: only an emailed link, never a sign-in', async () => {
-  const admin = fakeAdmin(confirmedUser());
-  assert.deepEqual(await carryOver('me@example.com', 'other', { admin, check }), { ok: true, how: 'email' });
-  assert.equal(admin.users.u1.password, 'mine');
-  assert.ok(!admin.did.includes('token') && !admin.did.includes('setPassword'));
-});
-
-test('an imported account gets a confirmed old password, but never an unconfirmed one', async () => {
-  const a = fakeAdmin(confirmedUser({ password: null, app_metadata: { legacy: true } }));
-  assert.deepEqual(await carryOver('me@example.com', 'right', { admin: a, check }), { ok: true, how: 'password' });
-  assert.equal(a.users.u1.password, 'right');
-
-  const b = fakeAdmin(confirmedUser({ password: null, app_metadata: { legacy: true } }));
-  assert.deepEqual(await carryOver('me@example.com', 'other', { admin: b, check }), { ok: true, how: 'email' });
-  assert.equal(b.users.u1.password, null);
-  assert.ok(b.did.includes('linkEmail'));
+  assert.deepEqual(admin.did, []);
 });
 
 test('supabaseAdmin speaks to the core schema with the service key', async () => {
