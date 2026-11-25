@@ -9,6 +9,7 @@ export const WHATS_NEW = [
     version: '2026.11.25',
     date: 'November 2026',
     items: [
+      'Let’s Eat is part of KitchenHub now: its tile opens KitchenHub’s events, where its events, recipes and shopping list are, and pressing and holding KitchenHub’s icon has an Events shortcut.',
       'Signed in, your widgets and board show only your own data: empty is shown as empty, and an app that can’t be reached says so, with Retry. Samples are only for when nobody is signed in.',
       'Drinks on the fridge: tap Drinks, pick who you are, and add a drink to Drink Tracker in one tap.',
       'Pages follow your finger and glide into place, and icons slide aside as you drag.',
