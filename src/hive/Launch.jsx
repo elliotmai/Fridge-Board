@@ -4,10 +4,13 @@ import { Fallback, GLYPHS } from './glyphs';
 
 export const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-// The zoom's spring: critically damped (no bounce), and slower than a page
-// turn so the grow reads clearly. ~450ms to open, ~400ms to close.
+// Opening rides a critically damped spring (no bounce), ~450ms. Closing is a
+// 500ms decelerating curve: a spring from rest does most of its travel in the
+// first 150ms, which read as the app blinking into a tile; this keeps the app
+// big and visible early and lands slowly into the icon.
 const OPEN_RESPONSE = 0.46;
-const CLOSE_RESPONSE = 0.4;
+const CLOSE_MS = 500;
+const CLOSE_EASE = [0.33, 0.05, 0.1, 1];
 const FADE_MS = 160; // reduced motion: a cross-fade instead
 const HOME_SCALE = 0.07; // the home screen sinks back this much while an app grows
 // On a wall-sized screen (the fridge: 1920×1080 either way) the home screen
@@ -21,6 +24,21 @@ const GLYPH = 120; // px: the glyph is drawn at this size and scaled
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp01 = (t) => Math.max(0, Math.min(1, t));
 const smooth = (a, b, t) => { const x = clamp01((t - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+/** CSS cubic-bezier timing, solved for x (Newton, then bisection). */
+function bezier([x1, y1, x2, y2]) {
+  const f = (a, b, t) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  const d = (a, b, t) => 3 * a * (1 - t) ** 2 + 6 * (b - a) * t * (1 - t) + 3 * (1 - b) * t * t;
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 6; i++) { const dx = f(x1, x2, t) - x, dd = d(x1, x2, t); if (Math.abs(dx) < 1e-5 || !dd) break; t -= dx / dd; }
+    if (t < 0 || t > 1 || Math.abs(f(x1, x2, t) - x) > 1e-3) { let lo = 0, hi = 1; t = x; for (let i = 0; i < 30; i++) { if (f(x1, x2, t) < x) lo = t; else hi = t; t = (lo + hi) / 2; } }
+    return f(y1, y2, t);
+  };
+}
+const closeCurve = bezier(CLOSE_EASE);
 
 /** An element's box if it's showing on screen right now. */
 function onScreen(el, vw, vh) {
@@ -56,7 +74,8 @@ function findIcon(keys, vw, vh) {
  * it is. Each frame writes transform, clip-path and opacity straight to the
  * elements; React doesn't re-render while it runs.
  *
- *   zoom: { id, dir: 'open' | 'close', from?: Element, keys: [appKey, folderKey?], tab?: url }
+ *   zoom: { id, dir: 'open' | 'close', from?: Element, keys: [appKey, folderKey?], tab?: url,
+ *           startAt?: 0..1 }   where a close starts (the home bar already shrank the app part way)
  *   onTab(url)    a tab app: called once the grow has filled the screen
  *   onSettled(z)  the zoom has come to rest at its end
  */
@@ -73,7 +92,7 @@ export function LaunchLayer({ zoom, custom, onSettled, onTab }) {
     const vw = window.innerWidth, vh = window.innerHeight;
     const appEl = zoom.tab ? null : document.querySelector(`[data-app-view="${CSS.escape(zoom.id)}"]`);
     const home = document.querySelector('.home-view');
-    st.current = { p: zoom.dir === 'open' ? 0 : 1, v: 0, raf: 0, last: 0, vw, vh, appEl, home, icon: null, r0: null, fade: false, tabbed: false, fadeMode: reducedMotion(), cover: null, coverGlyph: null };
+    st.current = { p: zoom.dir === 'open' ? 0 : clamp01(zoom.startAt ?? 1), v: 0, co: zoom.dir === 'open' ? 1 : 0, raf: 0, last: 0, vw, vh, appEl, home, icon: null, r0: null, fade: false, tabbed: false, fadeMode: reducedMotion(), cover: null, coverGlyph: null };
     // Phones and tablets: the home screen sinks back and dims behind the app.
     st.current.behind = vw * vh <= SCALE_MAX_PX;
     if (home && st.current.behind) home.style.willChange = 'transform'; // its own layer while it sinks back, so it isn't repainted each frame
@@ -147,8 +166,10 @@ export function LaunchLayer({ zoom, custom, onSettled, onTab }) {
       s.appEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${k})`;
       s.appEl.style.clipPath = `inset(${t}px ${vw - l - R.w / k}px ${vh - t - R.h / k}px ${l}px round ${rad / k}px)`;
       s.appEl.style.opacity = s.fade ? String(smooth(0, 0.5, q)) : '';
-      // The icon copy, inside the app: its colour fades into the content as it fills.
-      if (s.cover) s.cover.style.opacity = String(1 - smooth(0.35, 0.9, q));
+      // The icon copy, inside the app: its colour fades into the content as it
+      // fills, and back over it only in the last stretch of a close, so the
+      // app itself is what you see shrinking. (s.co follows; set in step.)
+      if (s.cover) s.cover.style.opacity = String(s.co);
       if (s.coverGlyph) {
         const g = lerp((Math.min(r0.w, r0.h) * 0.52) / GLYPH, Math.min(vw, vh) * 0.3 / GLYPH, q) / k;
         s.coverGlyph.style.transform = `translate3d(${vw / 2 - GLYPH / 2}px, ${vh / 2 - GLYPH / 2}px, 0) scale(${g})`;
@@ -165,6 +186,9 @@ export function LaunchLayer({ zoom, custom, onSettled, onTab }) {
     }
     if (scrim.current && s.behind) scrim.current.style.opacity = String(HOME_DIM * q);
   }
+
+  /** How much of the icon's colour covers the app at progress q, going this way. */
+  const coverFor = (q, opening) => (opening ? 1 - smooth(0.25, 0.7, q) : 1 - smooth(0.02, 0.36, q));
 
   function reset(s) {
     s.cover?.remove();
@@ -186,17 +210,26 @@ export function LaunchLayer({ zoom, custom, onSettled, onTab }) {
       const from = s.homeAnim ? getComputedStyle(s.home).transform : 'none';
       s.homeAnim?.cancel();
       s.homeAnim = s.home.animate([{ transform: from === 'none' ? `scale(${1 - HOME_SCALE * clamp01(s.p)})` : from }, { transform: `scale(${1 - HOME_SCALE * target})` }],
-        { duration: (opening ? OPEN_RESPONSE : CLOSE_RESPONSE) * 1000, easing: 'cubic-bezier(.25, .8, .25, 1)', fill: 'forwards' });
+        { duration: opening ? OPEN_RESPONSE * 1000 : CLOSE_MS, easing: opening ? 'cubic-bezier(.25, .8, .25, 1)' : `cubic-bezier(${CLOSE_EASE.join(', ')})`, fill: 'forwards' });
     }
-    const k = (2 * Math.PI / (opening ? OPEN_RESPONSE : CLOSE_RESPONSE)) ** 2;
+    // Closing: a timed curve from wherever it is now (all the way from the app: 500ms).
+    const t0 = performance.now(), p0 = s.p, dur = Math.max(220, CLOSE_MS * p0);
+    const k = (2 * Math.PI / OPEN_RESPONSE) ** 2;
     const c = 2 * Math.sqrt(k); // critically damped
     s.last = performance.now();
     const step = (now) => {
       let dt = Math.min(0.05, (now - s.last) / 1000);
+      const dts = dt;
       s.last = now;
       if (s.fadeMode) {
         s.p += Math.sign(target - s.p) * (dt * 1000) / FADE_MS;
         if ((target === 1 && s.p >= 1) || (target === 0 && s.p <= 0)) s.p = target;
+      } else if (!opening) {
+        const u = Math.min(1, (now - t0) / dur);
+        const next = p0 * (1 - closeCurve(u));
+        s.v = dts ? (next - s.p) / dts : 0; // kept, so an open that interrupts carries on smoothly
+        s.p = next;
+        if (u >= 1) { s.p = 0; s.v = 0; }
       } else {
         while (dt > 0) {
           const h = Math.min(dt, 1 / 240);
@@ -205,11 +238,13 @@ export function LaunchLayer({ zoom, custom, onSettled, onTab }) {
           dt -= h;
         }
       }
+      // The colour follows its target with a short lag, so turning around mid-way never jumps.
+      s.co += (coverFor(clamp01(s.p), opening) - s.co) * (1 - Math.exp(-dts / 0.05));
       const { zoom: z, onTab: tab } = latest.current;
       // A tab app opens once the grow has (nearly) filled the screen, then the tile shrinks home behind it.
       if (z.tab && opening && !s.tabbed && s.p > 0.94) { s.tabbed = true; tab?.(z); }
       if (Math.abs(s.p - target) < 0.002 && Math.abs(s.v) < 0.02) {
-        s.p = target; s.v = 0;
+        s.p = target; s.v = 0; s.co = opening ? 0 : 1; // lands exactly as the icon (or the app)
         paint(target);
         s.raf = 0;
         latest.current.onSettled?.({ ...z, dir: opening ? 'open' : 'close' });

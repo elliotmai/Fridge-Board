@@ -150,11 +150,14 @@ export function Hive() {
   // it shrinks back into its icon. Before paint, so the home screen never
   // flashes without it.
   const shown = useRef(view);
+  const closeFrom = useRef(undefined); // where the home bar's swipe left the app (Launch.jsx startAt)
   useLayoutEffect(() => {
     const was = shown.current;
     shown.current = view;
     if (!was || view) return;
-    setZoom((z) => (z?.id === was ? { ...z, dir: 'close', key: Date.now() } : { id: was, dir: 'close', keys: zoomKeys(was), key: Date.now() }));
+    const startAt = closeFrom.current;
+    closeFrom.current = undefined;
+    setZoom((z) => (z?.id === was ? { ...z, dir: 'close', key: Date.now() } : { id: was, dir: 'close', keys: zoomKeys(was), startAt, key: Date.now() }));
   }, [view]);
 
   const navigate = useCallback((id) => {
@@ -195,10 +198,19 @@ export function Hive() {
     navigate(id);
   }, [navigate, look.inside, look.external, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const goHome = useCallback(() => {
+  const goHome = useCallback((how) => {
+    if (typeof how?.startAt === 'number') closeFrom.current = how.startAt;
     if (pushed.current && viewFromHash()) window.history.back();
     else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setView(null); }
   }, []);
+
+  // Escape goes home from an app in a frame (Fridge Board keeps Escape for its own cook mode).
+  useEffect(() => {
+    if (!view || view === 'board') return;
+    const esc = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.hive-layer')) goHome(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [view, goHome]);
 
   const onZoomSettled = useCallback((z) => {
     setZoom((cur) => (cur?.id === z.id && cur.dir === z.dir ? null : cur));
