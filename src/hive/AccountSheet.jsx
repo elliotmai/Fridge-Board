@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
-  authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
+  authMessage, createAccount, createHousehold, eventPartners, householdMessage, makeEventPartner, removeEventPartner, removeMember, inviteCode, newInviteCode, joinHousehold, myHousehold,
   resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
@@ -197,7 +197,18 @@ function Household() {
   const [code, setCode] = useState('');
   const [invite, setInvite] = useState('');
   const { busy, run, Msg } = useRun();
-  const load = useCallback(() => myHousehold().then(setH).catch(() => setH(null)), []);
+  const [partners, setPartners] = useState([]);
+  const [confirm, setConfirm] = useState(null); // { id, kind: 'remove' | 'partner', name }
+  const load = useCallback(() => myHousehold().then((x) => {
+    setH(x);
+    if (x) eventPartners(x.id).then(setPartners).catch(() => setPartners([]));
+  }).catch(() => setH(null)), []);
+  const doConfirm = async () => {
+    const c = confirm;
+    await run(() => (c.kind === 'remove' ? removeMember(h.id, c.id) : makeEventPartner(h.id, c.id, true)), householdMessage);
+    setConfirm(null);
+    load();
+  };
   useEffect(() => { load(); }, [load]);
 
   if (h === undefined) return <p className="sheet-note">Loading your household…</p>;
@@ -225,8 +236,44 @@ function Household() {
     <>
       <h3 className="sheet-sub">{h.name}</h3>
       {h.members.map((m) => (
-        <div className="set-row" key={m.id}><span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ', owner' : ''}</small></span></div>
+        <div className="set-row" key={m.id}>
+          <span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ', owner' : ''}</small></span>
+          {h.role === 'owner' && !m.me && (
+            confirm?.id === m.id ? (
+              <span className="row-actions">
+                <button className="pill strong" disabled={busy} onClick={doConfirm}>{confirm.kind === 'remove' ? `Remove ${m.name}` : 'Make partner'}</button>
+                <button className="pill" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button>
+              </span>
+            ) : (
+              <span className="row-actions">
+                <button className="pill" disabled={busy} onClick={() => setConfirm({ id: m.id, kind: 'partner', name: m.name })}>Event partner</button>
+                <button className="pill" disabled={busy} onClick={() => setConfirm({ id: m.id, kind: 'remove', name: m.name })}>Remove</button>
+              </span>
+            )
+          )}
+        </div>
       ))}
+      {confirm && (
+        <p className="sheet-note" role="status">
+          {confirm.kind === 'remove'
+            ? `${confirm.name} leaves the household: shopping, meals, chores, the farm and trips. Their own things stay theirs.`
+            : `${confirm.name} leaves the household but keeps planning every KitchenHub event with you, and nothing else.`}
+        </p>
+      )}
+      {partners.length > 0 && (
+        <>
+          <h3 className="sheet-sub">Event partners</h3>
+          <p className="sheet-note">They plan every KitchenHub event with your household, and see nothing else.</p>
+          {partners.map((p) => (
+            <div className="set-row" key={p.user_id}>
+              <span><b>{p.name}</b><small>{p.email}{p.can_edit ? '' : ', view only'}</small></span>
+              {h.role === 'owner' && (
+                <button className="pill" disabled={busy} onClick={async () => { await run(() => removeEventPartner(h.id, p.user_id), householdMessage); load(); }}>Remove</button>
+              )}
+            </div>
+          ))}
+        </>
+      )}
       {h.role === 'owner' && (
         invite ? (
           <>

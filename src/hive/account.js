@@ -286,6 +286,30 @@ export async function newInviteCode(householdId) {
   return must(await sb.schema('core').rpc('reset_invite', { hid: householdId }));
 }
 
+/** Owner: take someone out of the household (or yourself, to leave). */
+export async function removeMember(householdId, userId) {
+  const sb = await supabase();
+  must(await sb.schema('core').rpc('remove_member', { hid: householdId, who: userId }));
+}
+
+/** Owner: move a member to event partner (KitchenHub events only, every event). */
+export async function makeEventPartner(householdId, userId, canEdit = true) {
+  const sb = await supabase();
+  must(await sb.schema('kitchen').rpc('make_event_partner', { hid: householdId, who: userId, edit: canEdit }));
+}
+
+/** The household's event partners: [{ user_id, name, email, can_edit }]. */
+export async function eventPartners(householdId) {
+  const sb = await supabase();
+  return must(await sb.schema('kitchen').rpc('household_partners', { hid: householdId })) || [];
+}
+
+/** Owner: stop someone being an event partner. */
+export async function removeEventPartner(householdId, userId) {
+  const sb = await supabase();
+  must(await sb.schema('kitchen').rpc('remove_event_partner', { hid: householdId, who: userId }));
+}
+
 export async function joinHousehold(code) {
   const sb = await supabase();
   const r = await sb.schema('core').rpc('join_household', { invite: code.trim() });
@@ -296,5 +320,7 @@ export async function joinHousehold(code) {
 /** Plain-English message for a household error. */
 export function householdMessage(e) {
   if (e?.code === 'bad_invite') return 'That code doesn’t work. It may be used up or more than a week old.';
+  if (e?.code === 'P0001' && e.message) return e.message.charAt(0).toUpperCase() + e.message.slice(1) + '.';
+  if (e?.code === '42501') return 'Only the household’s owner can do that.';
   return authMessage(e);
 }
