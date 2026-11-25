@@ -14,6 +14,7 @@ import { accountsOn, USER_CHANGED, useHiveUser } from './account';
 import { connectGoogle } from './googleConnect';
 import { connectRequest } from './googleReturn';
 import { AccountSheet } from './AccountSheet';
+import { rememberJoinCode } from './joinCode';
 import { announce, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
@@ -124,6 +125,18 @@ export function Hive() {
     if (!user?.verified) { setSheet('account'); return; }
     connectGoogle({ back: asked.back }).catch(() => setSheet('account'));
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // `?join=CODE`: a household invite link. Keep the code for the Account
+  // sheet (it survives signing in or creating an account) and open it.
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get('join');
+    if (!code) return;
+    rememberJoinCode(code);
+    const url = new URL(location.href);
+    url.searchParams.delete('join');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    setSheet('account');
+  }, []);
 
   const { data, act } = useLiveBoard();
   const now = new Date(useTick(30000));
