@@ -28,7 +28,7 @@ or timing.
 ## Type
 
 [Atkinson Hyperlegible Next](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next),
-one family, weights 400 to 800. It was drawn for low-vision readers: open
+one family, weights 400 to 800, for everything but numerals set large. It was drawn for low-vision readers: open
 counters, distinct 1/l/I and 0/O, which is what a wall display needs. Numbers
 are tabular everywhere.
 
@@ -41,6 +41,12 @@ are tabular everywhere.
 | `--t-xl` | 28px | Big numbers in widgets, tonight's dinner on phones |
 | `--t-2xl` | 40px | Tonight's dinner on the fridge, cook-mode step |
 | `--t-clock` | clamp(44px, 7vw, 96px) | The clock |
+| `--t-clock-wall` | clamp(96px, 10vmin, 168px) | Hive's clock on a wall display |
+
+The clock, temperatures and counts use `--font-num`:
+[Overpass](https://fonts.google.com/specimen/Overpass) 700 to 800, drawn from
+highway-sign lettering and tabular, with a plain zero. Atkinson's zero is
+slashed, and a slashed zero in a clock reads as ø from across a room.
 
 Weights: 400 body, 600 labels and row titles, 800 the clock and big numbers.
 Section labels are 14px/600 in `--muted`, sentence case.
@@ -62,7 +68,7 @@ Section labels are 14px/600 in `--muted`, sentence case.
 | `--late` | `#B3261E` | `#FF8F80` | Late, overdue, destructive |
 | `--warn` | `#7F5200` | `#E9B65C` | Not updating, use soon |
 
-Badges are ink on paper-white (`--badge-bg`, `--badge-fg`), not alarm red: a
+Counts beside apps are ink on paper-white (`--badge-bg`, `--badge-fg`), not alarm red: a
 count of chores is information, not an emergency.
 
 ## Space and shape
@@ -70,10 +76,14 @@ count of chores is information, not an emergency.
 Spacing steps of 4: `--s1` 4, `--s2` 8, `--s3` 12, `--s4` 16, `--s5` 24,
 `--s6` 32, `--s7` 48.
 
+The home screen scales with its reader: on a wall display (1280px wide and
+landscape, or 1000px wide and 1600px tall in portrait) rows step up to
+`--t-lg`, panel titles to `--t-xl` and tonight's dinner to `--t-2xl`.
+
 Radii follow hierarchy, smallest inside, largest outside: `--r-xs` 6 (checks,
-tags), `--r-sm` 10 (buttons, inputs, rows), `--r-md` 16 (widgets, zones on
-the fridge tablet, lists), `--r-lg` 24 (sheets, dock). App icons are
-squircles at 26% with a 2px darker lower edge, like a painted enamel tile.
+tags), `--r-sm` 10 (buttons, inputs, rows), `--r-md` 16 (home panels, zones on
+the fridge tablet, lists), `--r-lg` 24 (sheets). App tiles are
+squares at 26% with a 2px darker lower edge, like a painted enamel tile.
 
 Tap targets are 44px or more everywhere (40px only on the small Fire tablet
 layout, where the whole board must fit one screen).
@@ -89,9 +99,8 @@ layout, where the whole board must fit one screen).
 | `--ease-out` | cubic-bezier(.2, 0, 0, 1) | Things arriving |
 | `--ease-in` | cubic-bezier(.4, 0, 1, 1) | Things leaving |
 
-Press feedback is a 0.96 scale and a darker tone, never a bounce. Edit mode
-shows a dashed outline around each tile and the remove buttons; icons hold
-still.
+Press feedback is a 0.96 scale and a darker tone, never a bounce. The day
+line's now mark moves with the clock, without animating.
 
 ## Focus
 

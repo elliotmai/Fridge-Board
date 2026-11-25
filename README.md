@@ -1,30 +1,41 @@
 # Hive
 
-Every app in one home screen. It looks and works like a phone's home screen:
-app icons, folders, a dock and widgets, all rearrangeable. Fridge Board is one
-of its apps, and still runs the kitchen tablet exactly as before.
+Every app in one home screen, built around the household's day: what's
+happening now, what's next, what needs someone, and every app one tap away.
+Fridge Board is one of its apps, and still runs the kitchen tablet exactly as
+before.
 
 **Stack:** Vite + React, built from `app-template` (What's New, PWA auto-update,
 offline toast, pull-to-refresh on phones, Ticketbooth feedback link).
 
 ## The home screen
 
-It behaves like a phone's home screen, and almost everything about it can be
-changed.
+One page, read from wherever you are: a phone in a hand (one column, pinned
+apps and search under the thumb), a tablet (two columns), or a wall display
+across the room (1920x1080 or 1080x1920: the whole day on one screen that
+never scrolls, in bigger type).
 
 | | |
 | --- | --- |
-| **Pages** | Icons and widgets fill the screen exactly: no scrolling, swipe sideways between pages, dots show where you are. The grid fits whatever screen it's on (columns and rows from its size), so one layout works on a phone, a tablet, or a turned tablet (`pack` in `src/hive/layout.js`). The last page is the **App Library**: every app, grouped, with search. |
-| **Open** | Tap. The app zooms out of its icon; going home shrinks it back in. Fridge Board runs inside Hive; other apps open full screen with **Home**, **Reload**, **Open in its own tab**, and a home bar at the bottom: swipe it up (the app shrinks with your finger) or tap it. |
-| **Long press** | An icon's menu: its shortcuts (KitchenHub → Shopping list, GalaxyFarm → Chores…), Edit icon, Remove, Edit home screen. Keep dragging from there and you're rearranging. A widget's menu changes its size (small, medium, large). Press and hold empty space to start editing. |
-| **Rearrange** | Drag; hold at the screen edge to change page. Rest on an icon to make a folder; folders open with a bloom from their icon. Minus badges remove. Arrow keys move the focused icon. |
-| **Search** | Swipe down, or tap the dots. Finds apps and what's in them: tasks (LearnLeaf and Google), calendar events, trips, shopping, meals, chores. Each result opens the app it comes from, at the right page (Google Calendar and Google Tasks in a new tab). With nothing typed: recent apps and today. |
-| **Inside or in a tab** | Apps open inside Hive by default. In a frame a browser gives an app separate storage, so it asks you to sign in again unless it supports Sign in with Hive. Settings → Open apps inside Hive turns that off for all apps; an app's long-press menu does it for one. |
-| **Badges** | Live counts: chores left (Fridge Board), things to buy (KitchenHub), tasks due (LearnLeaf). |
-| **Customize** | Settings (an app on the home screen) → Wallpaper & home screen: wallpapers or your own photo (labels turn white on dark ones), dimming, icon size, columns, names on or off, dock, search, App Library, badges, light or dark. **Edit icon** renames any app and changes its colour and symbol. |
+| **Header** | The time (Overpass numerals, plain zero), the date, the next timed thing today (or what's on now), and the weather. |
+| **Day line** | The chore slots from 5 am to midnight, end to end, with a mark for now and today's timed events and tasks pinned where they happen. Past slots with chores left show as late. Tap a slot for GalaxyFarm's chores. |
+| **Needs someone** | This slot's chores (and any left from earlier, flagged late), tasks due today or late (LearnLeaf and Google Tasks), shopping for tonight with an add field, herd alerts from ZNT (a breeding step today or tomorrow, or a clash with a trip), food to use soon. Tick right here; ticks go to the app that owns the thing, with Undo. |
+| **Tonight** | Tonight's dinner (opens the recipe in KitchenHub) and the next few nights. |
+| **Coming up** | Calendar, trips, legs and stays, breeding steps and tasks by day, each day with its forecast. Four days, then "Show the next two weeks". |
+| **Apps** | Every app, grouped (Farm, Kitchen, Home, Travel, Together, Health, School, Tools), pinned apps first, with counts beside them (chores left, things to buy, tasks due). Tap opens (inside Hive, or in its own tab). Press and hold, right-click, or Shift+F10 for an app's menu: its shortcuts, open in a tab, pin, hide, edit icon. Hidden apps fold away at the end; search still finds them. |
+| **Search** | Start typing anywhere (or press `/`, or tap Search). Finds apps and what's in them: tasks, calendar events, trips, shopping, meals, chores. Each result opens the app it comes from, at the right page. |
+| **Edit home screen** | Settings → Edit home screen (or an app's menu): pinned apps and their order, hidden apps, and which parts of the day show. |
+| **Background & look** | Settings → Background & look: a painted background or your own photo (dimmable), counts on or off, open apps inside Hive, light or dark. **Edit icon** renames any app and changes its colour and symbol. |
 
-Layout and looks are saved on each device (`hive.layout`, `hive.look`); the
-layout format and page packing are tested in `layout.test.js`.
+Each part shows **Sample** when its app isn't connected and **Not updating**
+when it can't be reached, as the board does. The day is worked out in
+`src/lib/day.js` and the arrangement in `src/hive/arrange.js` (saved per device
+as `hive.home`); both are plain functions with tests.
+
+The old phone-style home screen (pages of icons, folders, dock, page dots,
+widgets in three sizes) is retired. Its dock carries over as the pinned apps
+and custom icons carry over; apps that weren't on it start hidden. Folders gave
+way to the fixed groups, widgets to the parts of the day.
 
 ### The fridge tablet
 
@@ -112,7 +123,7 @@ have an account get in.
 
 ## Roadmap
 
-1. **Home screen** with folders, dock, widgets and the board as an app. *(done)*
+1. **Home screen** around the household's day, with the board as an app. *(done; was an icon grid with folders and widgets)*
 2. **One Hive sign-in.** *(built: Hive, app-template, LearnLeaf; needs the
    setup above)* Next: the other Firebase apps from the template module, and
    a NextAuth version for GalaxyFarm.
