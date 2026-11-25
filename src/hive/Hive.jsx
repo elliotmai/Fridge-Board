@@ -43,7 +43,7 @@ function firstSettings() {
  * (the clock screen) or 'off'. Settings saved before the clock screen existed
  * had a yes/no `idleToBoard`; that still means what it meant.
  */
-export const idleOf = (s) => s.idle ?? (s.idleToBoard ? 'board' : 'off');
+const idleOf = (s) => s.idle ?? (s.idleToBoard ? 'board' : 'off');
 
 const viewFromHash = () => {
   const h = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
@@ -90,7 +90,7 @@ export function Hive() {
   // One Hive sign-in, handed to apps in frames as short passes (bridge.js).
   const { user, ready, recovering } = useHiveUser();
   // Back from a reset-password link: go home and ask for the new password.
-  useEffect(() => { if (recovering) { setView(null); setSheet('account'); } }, [recovering]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (recovering) { setView(null); setSheet('account'); } }, [recovering]);
   const signedIn = useRef(null);
   // Apps match people by email, so only a confirmed email counts as signed in.
   // null until the saved session has loaded: an app that says hello sooner

@@ -14,24 +14,29 @@ changed.
 
 | | |
 | --- | --- |
-| **Pages** | Icons and widgets fill the screen exactly: no scrolling, swipe sideways between pages, dots show where you are. The grid fits whatever screen it's on (columns and rows from its size), so one layout works on a phone, a tablet, or a turned tablet (`pack` in `src/hive/layout.js`). The last page is the **App Library**: every app, grouped, with search. |
+| **Pages** | Icons and widgets fill the screen exactly: no scrolling. Pages follow your finger and a flick glides to the next (`src/hive/pager.js`); Page Up/Down and the mouse wheel work too. Press and hold an item for **Start a new page here**: that page break holds on every screen. The grid fits whatever screen it's on (columns and rows from its size), so one layout works on a phone, a tablet, or a turned tablet (`pack` in `src/hive/layout.js`). The last page is the **App Library**: every app, grouped, with search. |
 | **Open** | Tap. The app zooms out of its icon; going home shrinks it back in. Fridge Board runs inside Hive; other apps open full screen with **Home**, **Reload**, **Open in its own tab**, and a home bar at the bottom: swipe it up (the app shrinks with your finger) or tap it. |
 | **Long press** | An icon's menu: its shortcuts (KitchenHub → Shopping list, GalaxyFarm → Chores…), Edit icon, Remove, Edit home screen. Keep dragging from there and you're rearranging. A widget's menu changes its size (small, medium, large). Press and hold empty space to start editing. |
-| **Rearrange** | Drag; hold at the screen edge to change page. Rest on an icon to make a folder; folders open with a bloom from their icon. Minus badges remove. Arrow keys move the focused icon. |
+| **Rearrange** | Drag; neighbours slide aside, and hold at the screen edge to change page. Rest on an icon to make a folder; folders open with a bloom from their icon. Minus badges remove. Arrow keys move the focused icon. |
+| **Stacks** | Rest a widget on another to stack them. Swipe up or down (or tap the dots) to turn; a stack can turn by itself to what matters now: chores in the morning, dinner from mid-afternoon, an event about to start (`src/hive/smart.js`). Long press → Edit stack. |
+| **Clock screen** | For the fridge: the time, big, beside (landscape) or above (portrait) two widget stacks that still work. Dim red from 9 pm. Tap the clock on a tablet, or Settings → When left alone → Show the clock screen. Choose what it shows in Wallpaper & home screen. |
 | **Search** | Swipe down, or tap the dots. Finds apps and what's in them: tasks (LearnLeaf and Google), calendar events, trips, shopping, meals, chores. Each result opens the app it comes from, at the right page (Google Calendar and Google Tasks in a new tab). With nothing typed: recent apps and today. |
 | **Inside or in a tab** | Apps open inside Hive by default. In a frame a browser gives an app separate storage, so it asks you to sign in again unless it supports Sign in with Hive. Settings → Open apps inside Hive turns that off for all apps; an app's long-press menu does it for one. |
 | **Badges** | Live counts: chores left (Fridge Board), things to buy (KitchenHub), tasks due (LearnLeaf). |
-| **Customize** | Settings (an app on the home screen) → Wallpaper & home screen: wallpapers or your own photo (labels turn white on dark ones), dimming, icon size, columns, names on or off, dock, search, App Library, badges, light or dark. **Edit icon** renames any app and changes its colour and symbol. |
+| **Customize** | Settings (an app on the home screen) → Wallpaper & home screen: wallpapers or your own photo (labels turn white on dark ones), colour from the wallpaper, dimming, icon style (colour, dark, tinted), icon size, columns, compact rows, names on or off, badges (numbers, dot, off), the line under the clock, dock, search, App Library, light or dark, the clock screen. **Edit icon** renames any app and changes its colour and symbol. |
 
 Layout and looks are saved on each device (`hive.layout`, `hive.look`); the
-layout format and page packing are tested in `layout.test.js`.
+layout format (version 3 adds stacks and page breaks; older layouts load as
+they are) and page packing are tested in `layout.test.js`. Why these features:
+`docs/hive-research.md`.
 
 ### The fridge tablet
 
 A screen 760px or wider that already had the board key is treated as the fridge
 tablet: it opens straight to Fridge Board and drifts back to it when left alone
 (2 minutes on the home screen, 15 in another app). The grid button in the board's
-header goes to the home screen. Both are switchable in Hive settings. Local
+header goes to the home screen. Both are switchable in Hive settings ("Open
+to" and "When left alone" can also be the clock screen). Local
 storage keys still start with `fridge-board.`, so the tablet keeps its key and
 settings through the rename.
 

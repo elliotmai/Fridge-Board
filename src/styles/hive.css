@@ -568,6 +568,7 @@ div.add-row:hover { background: none; }
 .rest-stack .w-count b { font-size: 34px; }
 .rest-stack .w-sub, .rest-stack .w-text small { font-size: 15px; }
 .rest-stack .stack-rail { right: 6px; }
+.rest .w-clock { display: none; } /* the clock screen already says the time */
 .rest-stack .widget { padding-right: 40px; }
 /* Landscape: the clock beside the stacks. Portrait (the tall fridge): above them. */
 @media (orientation: landscape) {
@@ -575,7 +576,7 @@ div.add-row:hover { background: none; }
   .rest.with-stacks .rest-clock b { font-size: min(16vw, 34vh); }
 }
 @media (orientation: portrait) {
-  .rest.with-stacks .rest-shift { grid-template-rows: auto minmax(0, 1fr); }
+  .rest.with-stacks .rest-shift { grid-template-rows: minmax(0, 1fr) minmax(0, 54vh); }
   .rest.with-stacks .rest-clock b { font-size: min(30vw, 24vh); }
 }
 @media (max-width: 700px) and (orientation: portrait) { .rest-stacks { grid-template-columns: 1fr; } .rest-stack:nth-child(2) { display: none; } }
