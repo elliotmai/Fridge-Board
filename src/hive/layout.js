@@ -172,6 +172,44 @@ function stackOnto(layout, key, targetKey) {
   return tidy(l);
 }
 
+/** Take widget `w` off the grid wherever it is (on its own or in a stack). Mutates a clone; tidy after. */
+function pull(l, w) {
+  l.grid = l.grid
+    .filter((i) => !(i.k === 'widget' && i.w === w))
+    .map((i) => (i.k === 'stack' && i.widgets.includes(w) ? { ...i, widgets: i.widgets.filter((x) => x !== w) } : i));
+}
+
+/**
+ * A new stack of these widgets, top first, at the start of the grid. Widgets
+ * already on the home screen move into it (out of where they were). Needs two.
+ */
+export function addStack(layout, widgets, size = 's') {
+  const ws = [...new Set(widgets)].filter((w) => typeof w === 'string' && w);
+  if (ws.length < 2) return layout;
+  const l = clone(layout);
+  ws.forEach((w) => pull(l, w));
+  l.grid.unshift(stack(uid('s'), size, ws, true));
+  return tidy(l);
+}
+
+/**
+ * "Stack with…": put widget `w` on top of the widget or stack `targetKey`.
+ * A widget becomes a stack of the two, in its spot and at its size; a stack
+ * takes `w` on top. `w` moves from wherever it was, or comes in new.
+ */
+export function stackWith(layout, targetKey, w) {
+  const at = locate(layout, targetKey);
+  if (!at || !isWidgetLike(at.item) || typeof w !== 'string' || !w) return layout;
+  if (at.item.k === 'widget' ? at.item.w === w : at.item.widgets.includes(w)) return layout;
+  const l = clone(layout);
+  pull(l, w);
+  const i = l.grid.findIndex((x) => x.key === targetKey);
+  if (i < 0) return layout;
+  const t = l.grid[i];
+  l.grid[i] = t.k === 'stack' ? { ...t, widgets: [w, ...t.widgets] } : stack(uid('s'), t.size, [w, t.w], true);
+  return tidy(l);
+}
+
 /** Take one widget out of a stack; it goes just after the stack, at the stack's size. */
 export function unstack(layout, stackKey, w) {
   const l = clone(layout);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addApp, defaultLayout, DOCK_MAX, locate, merge, move, normalize, pack, placedApps, placedWidgets, remove, rename, setCustom, setPageBreak, setStack, setWidgetSize, takeOut, unstack } from './layout.js';
+import { addApp, addStack, stackWith, defaultLayout, DOCK_MAX, locate, merge, move, normalize, pack, placedApps, placedWidgets, remove, rename, setCustom, setPageBreak, setStack, setWidgetSize, takeOut, unstack } from './layout.js';
 
 const keys = (list) => list.map((i) => i.key);
 const base = () => ({
@@ -227,4 +227,32 @@ test('a page break starts a new page on any screen, and joins back', () => {
   assert.equal(setPageBreak(l, 'a2', true).grid.length, 5); // already starts a page
   assert.deepEqual(keys(setPageBreak(l, 'a2', false).grid), ['a0', 'a1', 'a2', 'a3']);
   assert.equal(remove(remove(l, 'a2'), 'a3').grid.some((i) => i.k === 'break'), false); // nothing after it: the break goes
+});
+
+test('addStack makes a stack of the chosen widgets, moving any already placed', () => {
+  const start = { v: 3, grid: [{ k: 'widget', key: 'w:chores', w: 'chores', size: 'm' }, { k: 'app', key: 'a' }, { k: 'stack', key: 's:1', size: 's', widgets: ['dinner', 'tasks'], rotate: true }], dock: [], custom: {} };
+  const l = addStack(start, ['chores', 'dinner', 'trip'], 'm');
+  assert.equal(l.grid[0].k, 'stack');
+  assert.deepEqual(l.grid[0].widgets, ['chores', 'dinner', 'trip']);
+  assert.equal(l.grid[0].size, 'm');
+  // chores left its spot; the old stack, down to one widget, became that widget
+  assert.deepEqual(keys(l.grid).slice(1), ['a', 'w:tasks']);
+  assert.deepEqual([...placedWidgets(l)].sort(), ['chores', 'dinner', 'tasks', 'trip']);
+  assert.equal(addStack(start, ['chores']), start);
+  assert.equal(addStack(start, ['chores', 'chores']), start);
+});
+
+test('stackWith stacks a widget onto a widget or a stack', () => {
+  const start = { v: 3, grid: [{ k: 'widget', key: 'w:chores', w: 'chores', size: 'm' }, { k: 'app', key: 'a' }, { k: 'widget', key: 'w:trip', w: 'trip', size: 's' }], dock: [], custom: {} };
+  const l = stackWith(start, 'w:chores', 'trip');
+  assert.equal(l.grid.length, 2);
+  assert.equal(l.grid[0].k, 'stack');
+  assert.deepEqual(l.grid[0].widgets, ['trip', 'chores']);
+  assert.equal(l.grid[0].size, 'm');
+  const l2 = stackWith(l, l.grid[0].key, 'dinner');
+  assert.deepEqual(l2.grid[0].widgets, ['dinner', 'trip', 'chores']);
+  assert.equal(l2.grid[0].key, l.grid[0].key);
+  assert.equal(stackWith(l2, l2.grid[0].key, 'trip'), l2);
+  assert.equal(stackWith(start, 'w:chores', 'chores'), start);
+  assert.equal(stackWith(start, 'a', 'trip'), start);
 });

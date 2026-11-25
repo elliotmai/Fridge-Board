@@ -4,8 +4,9 @@ import { FEEDBACK_URL } from '@/config/app';
 import { useTheme } from '@/context/ThemeContext';
 import { AppIcon } from './Home';
 import { forgetFrame, markFrameReady } from './frameReady';
-import { placedApps, placedWidgets, setStack, unstack } from './layout';
+import { locate, placedApps, placedWidgets, setStack, unstack } from './layout';
 import { Widget, WIDGETS, widgetIds } from './widgets';
+import { UI } from './glyphs';
 
 /** Close on Escape and put focus inside, like any dialog. */
 function useDialog(onClose) {
@@ -80,7 +81,86 @@ function WidgetPick({ w, data, now, custom, onAdd }) {
  * Add to the home screen: a widget gallery with live previews (pick a size,
  * see it with today's data), then every app not on the home screen yet.
  */
-export function AddSheet({ layout, data, now, custom = {}, onAddApp, onAddWidget, onClose }) {
+/** Where a widget is now, for pickers: on its own, in a stack, or not on the home screen. */
+function whereIs(layout, w) {
+  const s = layout.grid.find((i) => i.k === 'stack' && i.widgets.includes(w));
+  if (s) return 'In a stack now: it moves';
+  return placedWidgets(layout).has(w) ? 'On your home screen: it moves' : null;
+}
+
+/** Add a stack: tick the widgets that go in it (top first, in the order you tick), pick a size. */
+function StackPick({ layout, onAddStack }) {
+  const [open, setOpen] = useState(false);
+  const [chosen, setChosen] = useState([]);
+  const [size, setSize] = useState('s');
+  const toggle = (w) => setChosen((c) => (c.includes(w) ? c.filter((x) => x !== w) : [...c, w]));
+  if (!open) {
+    return (
+      <button className="add-row add-stack" onClick={() => setOpen(true)}>
+        <span className="add-stack-icon" aria-hidden="true">{UI.grid()}</span>
+        <span><b>Add a stack</b><small>Several widgets in one spot. Swipe through them, or let it turn to what matters now.</small></span>
+        <span className="add-plus" aria-hidden="true">+</span>
+      </button>
+    );
+  }
+  return (
+    <div className="stack-pick">
+      <h3 className="sheet-sub">New stack: pick two or more widgets</h3>
+      <div className="add-list" role="group" aria-label="Widgets in the new stack">
+        {widgetIds.map((w) => {
+          const n = chosen.indexOf(w);
+          const note = whereIs(layout, w);
+          return (
+            <label key={w} className="add-row">
+              <AppIcon id={WIDGETS[w].app} size={40} />
+              <span><b>{WIDGETS[w].label}</b><small>{n >= 0 ? (n === 0 ? 'On top' : `${n + 1}${['st', 'nd', 'rd'][n] || 'th'} in the stack`) : note || `From ${CATALOG[WIDGETS[w].app].name}`}</small></span>
+              <input type="checkbox" className="switch-input" checked={n >= 0} onChange={() => toggle(w)} />
+            </label>
+          );
+        })}
+      </div>
+      <div className="pick-foot">
+        <div className="seg seg-mini" role="radiogroup" aria-label="Stack size">
+          {SIZE_NAMES.map(([s, name]) => (
+            <button key={s} role="radio" aria-checked={size === s} onClick={() => setSize(s)}>{name}</button>
+          ))}
+        </div>
+        <button className="pill" onClick={() => { setOpen(false); setChosen([]); }}>Cancel</button>
+        <button className="pill strong" disabled={chosen.length < 2} onClick={() => { onAddStack(chosen, size); setOpen(false); setChosen([]); }}>
+          {chosen.length < 2 ? 'Pick two or more' : `Add stack of ${chosen.length}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** "Stack with…": pick a widget to stack on this widget or stack. */
+export function StackWithSheet({ targetKey, layout, onPick, onClose }) {
+  const ref = useDialog(onClose);
+  const target = locate(layout, targetKey)?.item;
+  if (!target) return null;
+  const inIt = target.k === 'stack' ? target.widgets : [target.w];
+  const name = target.k === 'stack' ? 'this stack' : WIDGETS[target.w].label;
+  return (
+    <div className="scrim hive-layer" onClick={onClose}>
+      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label={`Stack with ${name}`} ref={ref} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><h2>Stack with {name}</h2><button className="pill" onClick={onClose}>Cancel</button></div>
+        <p className="sheet-note">Pick a widget to put on top. They share one spot; swipe to turn between them.</p>
+        <div className="add-list">
+          {widgetIds.filter((w) => !inIt.includes(w)).map((w) => (
+            <button key={w} className="add-row" onClick={() => onPick(w)}>
+              <AppIcon id={WIDGETS[w].app} size={40} />
+              <span><b>{WIDGETS[w].label}</b><small>{whereIs(layout, w) || `From ${CATALOG[WIDGETS[w].app].name}`}</small></span>
+              <span className="add-plus" aria-hidden="true">+</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AddSheet({ layout, data, now, custom = {}, onAddApp, onAddWidget, onAddStack, onClose }) {
   const ref = useDialog(onClose);
   const onHome = placedApps(layout);
   const widgetsOn = placedWidgets(layout);
@@ -90,12 +170,14 @@ export function AddSheet({ layout, data, now, custom = {}, onAddApp, onAddWidget
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel sheet-wide" role="dialog" aria-modal="true" aria-label="Add to the home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><h2>Add to home screen</h2><button className="pill" onClick={onClose}>Close</button></div>
+        <h3 className="sheet-sub">Stacks</h3>
+        <div className="add-list"><StackPick layout={layout} onAddStack={onAddStack} /></div>
         <h3 className="sheet-sub">Widgets</h3>
         {widgets.length ? (
           <div className="picks">
             {widgets.map((w) => <WidgetPick key={w} w={w} data={data} now={now} custom={custom} onAdd={onAddWidget} />)}
           </div>
-        ) : <p className="sheet-note">Every widget is on your home screen. To make room, drop one widget on another: they become a stack.</p>}
+        ) : <p className="sheet-note">Every widget is on your home screen. To make room, add a stack above, or choose Stack with… on a widget.</p>}
         <h3 className="sheet-sub">Apps</h3>
         {apps.length ? (
           <div className="add-list">

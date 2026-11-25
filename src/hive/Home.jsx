@@ -93,7 +93,8 @@ export function stackIndex(item, sel, sig) {
  * start editing. Swipe down to search, up for the App Library. Swipe up or
  * down on a stack to turn it. While editing: drag to move (neighbours slide
  * aside; hold at the edge to change page), rest on an icon to make a folder,
- * rest a widget on a widget to make a stack, minus badges remove.
+ * rest a widget on a widget to make a stack (or use its stack badge, or
+ * Stack with… in its menu), minus badges remove.
  * Keyboard: Tab reaches every tile (its page comes into view), Page Up and
  * Page Down turn pages, arrow keys move the focused tile while editing.
  */
@@ -119,7 +120,7 @@ function sameHome(a, b) {
 
 function HomeScreen({
   layout, setLayout, data, now, sig, editing, setEditing, look, badges = {}, dark,
-  onOpen, onOpenFolder, onAdd, onCustomize, onSearch, onEditIcon, onEditStack, onAddToHome, onSetExternal, onClock, account,
+  onOpen, onOpenFolder, onAdd, onCustomize, onSearch, onEditIcon, onEditStack, onStackWith, onAddToHome, onSetExternal, onClock, account,
 }) {
   const custom = layout.custom || {};
   const [drag, setDrag] = useState(null); // { key, w, h, mergeKey }
@@ -514,6 +515,12 @@ function HomeScreen({
             {zone === 'grid' && look.labels && <span className="tile-name">{label(item)}</span>}
           </button>
         )}
+        {editing && isWidget && zone === 'grid' && onStackWith && (
+          <button className="badge-out badge-stack" aria-label={`Stack with ${label(item)}`} title="Stack with…"
+            onPointerDown={(e) => e.stopPropagation()} onClick={() => onStackWith(item.key)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12M6 15h12" /></svg>
+          </button>
+        )}
         {editing && item.k !== 'folder' && (
           <button className="badge-remove" aria-label={`Remove ${label(item)} from the home screen`}
             onPointerDown={(e) => e.stopPropagation()} onClick={() => setLayout(remove(layout, item.key))}>
@@ -541,6 +548,7 @@ function HomeScreen({
         ...sizes,
         { label: 'Turn by itself', icon: UI.size, checked: item.rotate, onSelect: () => { close(); setLayout((l) => setStack(l, item.key, { rotate: !item.rotate })); } },
         { label: 'Edit stack', icon: UI.palette, onSelect: () => { close(); onEditStack(item.key); } },
+        { label: 'Stack with…', icon: UI.plus, onSelect: () => { close(); onStackWith?.(item.key); } },
         { divider: true },
         editHome, ...pageStart,
         { label: 'Remove stack', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } },
@@ -549,6 +557,7 @@ function HomeScreen({
     if (item.k === 'widget') {
       return [
         ...sizes,
+        { label: 'Stack with…', icon: UI.plus, onSelect: () => { close(); onStackWith?.(item.key); } },
         { divider: true },
         editHome, ...pageStart,
         { label: 'Remove widget', icon: UI.minus, danger: true, onSelect: () => { close(); setLayout(remove(layout, item.key)); } },

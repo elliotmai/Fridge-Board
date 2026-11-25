@@ -19,9 +19,9 @@ import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
 import { AppFades } from './Launch';
-import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
+import { addApp, addStack, addWidget, defaultLayout, locate, normalize, rename, stackWith, takeOut } from './layout';
 import { DEFAULT_LOOK, WALLPAPERS, accentFor } from './look';
-import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet } from './Sheets';
+import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet, StackWithSheet } from './Sheets';
 import { Spotlight } from './Spotlight';
 import { WidgetActions } from './live';
 import { WIDGETS, signals, useLiveBoard, widgetIds } from './widgets';
@@ -70,6 +70,7 @@ export function Hive() {
 
   const [view, setView] = useState(() => viewFromHash() ?? (s.start === 'board' ? 'board' : null));
   const [stackEdit, setStackEdit] = useState(null);
+  const [stackOn, setStackOn] = useState(null); // "Stack with…": the widget or stack to stack onto
   const [recent, setRecent] = useState(() => (view && view !== 'board' ? [view] : []));
   const [boardOpened, setBoardOpened] = useState(view === 'board');
   const [editing, setEditing] = useState(false);
@@ -284,7 +285,7 @@ export function Hive() {
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
         <WidgetActions.Provider value={act}>
         <Home layout={layout} setLayout={setLayout} data={data} now={now} sig={sig} look={look} badges={badges} dark={wallDark}
-          onEditStack={setStackEdit} onClock={() => setResting(true)}
+          onEditStack={setStackEdit} onStackWith={setStackOn} onClock={() => setResting(true)}
           editing={editing} setEditing={setEditing} onOpen={open}
           onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
           onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
@@ -312,7 +313,18 @@ export function Hive() {
       {!view && sheet === 'add' && (
         <AddSheet layout={layout} onClose={() => setSheet(null)}
           data={data} now={now} custom={layout.custom}
-          onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w, size) => setLayout(addWidget(layout, w, size))} />
+          onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w, size) => setLayout(addWidget(layout, w, size))}
+          onAddStack={(ws, size) => { setLayout(addStack(layout, ws, size)); setSheet(null); }} />
+      )}
+      {!view && stackOn && locate(layout, stackOn) && (
+        <StackWithSheet targetKey={stackOn} layout={layout} onClose={() => setStackOn(null)}
+          onPick={(w) => {
+            const next = stackWith(layout, stackOn, w);
+            setLayout(next); setStackOn(null);
+            // A widget stacked on a widget becomes a new stack: open it so the order can be set.
+            const made = next.grid.find((i) => i.k === 'stack' && i.widgets[0] === w);
+            if (made) setStackEdit(made.key);
+          }} />
       )}
       {!view && stackEdit && locate(layout, stackEdit)?.item.k === 'stack' && (
         <StackSheet stack={locate(layout, stackEdit).item} layout={layout} setLayout={setLayout} onClose={() => setStackEdit(null)} />

@@ -541,6 +541,16 @@ p.w-note { text-decoration: none; }
 .pick-foot { display: grid; gap: var(--s2); }
 .pick-foot > span { display: grid; }
 .pick-foot small { color: var(--muted); font-size: 13px; }
+/* Add a stack: the row that opens it, and the picker. */
+.add-stack { width: 100%; text-align: left; }
+.add-stack-icon { width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--accent); color: var(--bg); flex: none; }
+.add-stack-icon svg { width: 22px; height: 22px; }
+.stack-pick { display: grid; gap: var(--s3); padding: var(--s3); }
+.stack-pick .sheet-sub { margin: 0; }
+.stack-pick .pick-foot { grid-template-columns: 1fr auto auto; align-items: center; }
+@media (max-width: 420px) { .stack-pick .pick-foot { grid-template-columns: 1fr 1fr; } .stack-pick .pick-foot .seg { grid-column: 1 / -1; } }
+.badge-stack { left: auto; right: 8px; }
+.tile-widget .badge-stack { top: 8px; left: auto; right: 8px; }
 .seg.seg-mini { grid-template-columns: repeat(3, 1fr); margin: 0; background: var(--bg); }
 .seg.seg-mini button { min-height: 44px; }
 .row-tools { display: inline-flex; gap: var(--s1); flex: none; }
