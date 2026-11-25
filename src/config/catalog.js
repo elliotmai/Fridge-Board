@@ -31,8 +31,9 @@ export const CATALOG = {
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
   cattlegraph: { name: 'Cattle Graph', url: 'https://cattle.flyingdoublemranch.com', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
   kitchenhub: { name: 'KitchenHub', url: APPS.kitchenhub.url, color: '#9c3a5c', glyph: 'pot', audience: 'anyone', blurb: 'What is in the fridge, meal plans and shopping.',
-    shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
-  letseat: { name: "Let's Eat", url: 'https://letseat.flyingdoublemranch.com', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
+    shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'Events', path: APPS.kitchenhub.paths.events }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
+  // Let's Eat is part of KitchenHub now: the tile opens KitchenHub's events.
+  letseat: { name: "Let's Eat", url: `${APPS.kitchenhub.url}${APPS.kitchenhub.paths.events}`, color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Holiday meals and shopping by store, in KitchenHub.' },
   pool: { name: 'Pool Heater', url: 'https://pool.flyingdoublemranch.com', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
   // hive: existing Property Care accounts sign in with Hive (inside Hive and on its own address).
   property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', hive: true, color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },

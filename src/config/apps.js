@@ -12,7 +12,7 @@ export const APPS = {
   kitchenhub: {
     name: 'KitchenHub',
     url: 'https://kitchen.flyingdoublemranch.com',
-    paths: { mealPlan: '/meal-plan', shopping: '/shopping-list', inventory: '/inventory', recipe: (id) => `/recipes?recipe=${encodeURIComponent(id)}` },
+    paths: { mealPlan: '/meal-plan', shopping: '/shopping-list', events: '/events', inventory: '/inventory', recipe: (id) => `/recipes?recipe=${encodeURIComponent(id)}` },
   },
   learnleaf: {
     name: 'LearnLeaf',
