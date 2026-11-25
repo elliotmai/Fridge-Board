@@ -2,6 +2,8 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { WhatsNew } from '@/components/WhatsNew';
+import { KitchenTimerAlarm } from '@/components/KitchenTimerAlarm';
+import { KitchenTimersProvider } from '@/context/KitchenTimers';
 import { Hive } from '@/hive/Hive';
 
 /**
@@ -12,7 +14,10 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <Hive />
+        <KitchenTimersProvider>
+          <Hive />
+          <KitchenTimerAlarm />
+        </KitchenTimersProvider>
         <NetworkStatus />
         <WhatsNew />
       </ToastProvider>

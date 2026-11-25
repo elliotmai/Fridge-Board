@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { useKitchenTimers } from '@/context/KitchenTimers';
+import { stepKey } from '@/lib/kitchenTimers';
 import { USER_CHANGED } from '@/hive/account';
 import { callApi, setKey, takeKeyFromUrl } from '@/data/api';
 import { loadBoard, REFRESH_MS } from '@/data/sources';
@@ -42,7 +44,14 @@ export function Board({ onHome }) {
   const [peek, setPeek] = useState(null);
   const [drawer, setDrawer] = useState(false);
   const [cook, setCook] = useState(null);
-  const [timers, setTimers] = useState({});
+  // KitchenHub's timers, shared with every screen in the household
+  // (src/context/KitchenTimers.jsx). Here they are keyed the board's way:
+  // '<recipe>:<page>' for a step's timer, 'timer:<id>' for any other.
+  const kitchenTimers = useKitchenTimers();
+  const timers = useMemo(() => Object.fromEntries((kitchenTimers?.timers || []).map((t) => {
+    const step = /^recipe:(.+):(\d+)$/.exec(t.key || '');
+    return [step ? `${step[1]}:${+step[2] + 1}` : `timer:${t.id}`, t];
+  })), [kitchenTimers?.timers]);
 
   const reload = useCallback(async () => {
     const d = await loadBoard();
@@ -171,14 +180,17 @@ export function Board({ onHome }) {
   };
   const toggleSitter = () => setOpts((o) => (sitter ? { ...o, sitter: false, autoSitter: ts.away ? false : o.autoSitter } : { ...o, sitter: true }));
   const openCook = (id) => { setPeek(null); clearToasts(); setCook((c) => ({ id, page: 0, seen: [0], gathered: c?.id === id ? c.gathered : [] })); };
-  const toggleTimer = (key, mins, label) => setTimers((t) => {
-    const n = { ...t };
-    if (n[key]) delete n[key]; else n[key] = { endsAt: Date.now() + mins * 60000, label };
-    return n;
-  });
+  const toggleTimer = async (key, mins, label) => {
+    if (timers[key]) { kitchenTimers.stop(timers[key].id); return; }
+    const [rid, page] = [key.slice(0, key.lastIndexOf(':')), +key.slice(key.lastIndexOf(':') + 1)];
+    const name = data.recipes[rid]?.name;
+    const ok = await kitchenTimers.start({ key: stepKey(rid, page - 1), minutes: mins, label: name ? `${name}: ${label}` : label });
+    if (!ok) toast("Couldn't start the timer", { type: 'error', duration: 5000 });
+  };
   const jumpToTimer = (key) => {
-    const [rid, step] = key.split(':');
     if (Date.now() >= timers[key].endsAt) { toggleTimer(key); return; }
+    if (key.startsWith('timer:')) return;
+    const rid = key.slice(0, key.lastIndexOf(':')), step = key.slice(key.lastIndexOf(':') + 1);
     setCook((c) => ({ id: rid, page: +step, seen: [...new Set([...(c?.id === rid ? c.seen : [0]), +step])], gathered: c?.id === rid ? c.gathered : [] }));
   };
   const reset = () => { setLocalDone([]); setLocalBought([]); setLocalTodos([]); setCleared([]); setExtra([]); toast('Cleared ticks and added items on this device'); };
