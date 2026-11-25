@@ -3,7 +3,7 @@ import { APPS } from '@/config/apps';
 import { CATALOG, appIds, appLook } from '@/config/catalog';
 import { dedupeEvents, eventDays, mergeTodos } from '@/lib/agenda';
 import { daysBetween, md, startOf } from '@/lib/dates';
-import { AppIcon } from './Home';
+import { AppIcon } from './Apps';
 import { UI } from './glyphs';
 
 /**
@@ -13,11 +13,11 @@ import { UI } from './glyphs';
  * Results open the app that owns them, at the right page when the app has one.
  * Arrow keys move, Enter opens, Escape closes.
  */
-export function Spotlight({ data, now, custom, recent, onOpen, onAction, onClose }) {
-  const [q, setQ] = useState('');
+export function Spotlight({ data, now, custom, recent, initial = '', onOpen, onAction, onClose }) {
+  const [q, setQ] = useState(initial);
   const [sel, setSel] = useState(0);
   const input = useRef(null);
-  useEffect(() => { input.current?.focus(); }, []);
+  useEffect(() => { const el = input.current; el?.focus(); el?.setSelectionRange?.(el.value.length, el.value.length); }, []);
 
   const results = useMemo(() => search(q, { data, now, custom }), [q, data, now, custom]);
   const flat = results.flatMap((g) => g.items);
@@ -57,9 +57,9 @@ export function Spotlight({ data, now, custom, recent, onOpen, onAction, onClose
                   <h3 className="spot-h">Recent</h3>
                   <div className="spot-recent">
                     {recent.slice(0, 8).map((id) => (
-                      <button key={id} className="tile-btn" onClick={() => go({ app: id })}>
-                        <AppIcon id={id} custom={custom} size={52} />
-                        <span className="tile-name">{appLook(id, custom).name}</span>
+                      <button key={id} className="app" onClick={() => go({ app: id })}>
+                        <AppIcon id={id} custom={custom} size={36} />
+                        <span className="app-name">{appLook(id, custom).name}</span>
                       </button>
                     ))}
                   </div>
@@ -116,8 +116,8 @@ export function search(query, { data, now, custom = {} }) {
     .map((id) => ({ key: `app:${id}`, app: id, title: appLook(id, custom).name, sub: CATALOG[id].blurb })), 8);
 
   add('Settings', [
-    { key: 'act:wallpaper', action: 'wallpaper', app: 'settings', title: 'Wallpaper & home screen', words: 'wallpaper background photo icons dock columns badges look theme dark' },
-    { key: 'act:edit', action: 'edit', app: 'settings', title: 'Edit home screen', words: 'edit arrange move rearrange widgets folders' },
+    { key: 'act:wallpaper', action: 'wallpaper', app: 'settings', title: 'Background & look', words: 'wallpaper background photo badges counts look theme dark light colour color' },
+    { key: 'act:edit', action: 'edit', app: 'settings', title: 'Edit home screen', words: 'edit arrange pin unpin hide show sections widgets folders' },
     { key: 'act:account', action: 'account', app: 'settings', title: 'Hive account', words: 'sign in account email password log out' },
     { key: 'act:settings', action: 'settings', app: 'settings', title: 'Settings', words: 'settings preferences fridge board idle' },
   ].filter((a) => has(a.title, q) || has(a.words, q)), 3);

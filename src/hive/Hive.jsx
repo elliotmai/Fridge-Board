@@ -12,15 +12,14 @@ import { useTick } from '@/hooks/useTick';
 import { accountsOn, USER_CHANGED, useHiveUser } from './account';
 import { AccountSheet } from './AccountSheet';
 import { announce, startBridge } from './bridge';
+import { defaultArrangement, normalize } from './arrange';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { Home } from './Home';
 import { LaunchLayer, reducedMotion } from './Launch';
-import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
 import { DEFAULT_LOOK, WALLPAPERS } from './look';
-import { AddSheet, AppFrame, FolderView, HiveSettings } from './Sheets';
+import { AppFrame, EditHome, HiveSettings } from './Sheets';
 import { Spotlight } from './Spotlight';
-import { WidgetActions } from './live';
-import { useLiveBoard, widgetIds } from './widgets';
+import { WidgetActions, useLiveBoard } from './live';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -51,16 +50,18 @@ export function Hive() {
   const phone = useIsPhone();
   const [s, setSettings] = useStored('hive.settings', firstSettings());
 
-  const [stored, setStored] = useStored('hive.layout', null);
-  const layout = useMemo(() => normalize(stored ?? defaultLayout(), appIds, widgetIds), [stored]);
-  const setLayout = useCallback((next) => setStored(typeof next === 'function' ? next(layout) : next), [layout, setStored]);
+  // How this device's home screen is arranged (arrange.js). The first time,
+  // it's worked out from the old icon grid's layout, if there was one.
+  const [stored, setStored] = useStored('hive.home', null);
+  const [oldLayout] = useStored('hive.layout', null);
+  const arrangement = useMemo(() => normalize(stored, appIds, oldLayout), [stored, oldLayout]);
+  const setArrangement = useCallback((next) => setStored(typeof next === 'function' ? next(arrangement) : next), [arrangement, setStored]);
 
   const [view, setView] = useState(() => viewFromHash() ?? (s.start === 'board' ? 'board' : null));
   const [recent, setRecent] = useState(() => (view && view !== 'board' ? [view] : []));
   const [boardOpened, setBoardOpened] = useState(view === 'board');
-  const [editing, setEditing] = useState(false);
-  const [folder, setFolder] = useState(null); // { key, rect }
-  const [sheet, setSheet] = useState(null); // 'add' | 'settings' | 'account' | 'look' | 'search'
+  const [sheet, setSheet] = useState(null); // 'edit' | 'settings' | 'account' | 'look' | 'search'
+  const [query, setQuery] = useState(''); // what was typed to open search
   const [iconEdit, setIconEdit] = useState(null);
   const [anim, setAnim] = useState(null); // the zoom between an icon and its app
   const [paths, setPaths] = useState({}); // app id → { path, n } for shortcuts
@@ -128,7 +129,7 @@ export function Hive() {
     window.scrollTo(0, scrolls.current[view ?? 'home'] ?? 0);
     if (view === 'board') setBoardOpened(true);
     else if (view) setRecent((r) => [view, ...r.filter((x) => x !== view)].slice(0, KEEP_FRAMES));
-    if (view) { setEditing(false); setFolder(null); setSheet(null); }
+    if (view) setSheet(null);
     if (view) setRecentApps((r) => [view, ...r.filter((x) => x !== view)].slice(0, 12));
   }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -146,7 +147,6 @@ export function Hive() {
   const open = useCallback((id, from, path) => {
     const a = CATALOG[id];
     if (!a) return;
-    setFolder(null);
     if (id === 'settings') { setSheet('settings'); return; }
     // In its own tab: apps that can't be framed, and any the person chose (in a
     // frame, a browser gives the app separate storage, so its own sign-in
@@ -185,11 +185,11 @@ export function Hive() {
     return () => { clearInterval(id); ['pointerdown', 'keydown'].forEach((e) => document.removeEventListener(e, touch, true)); };
   }, [s.idleToBoard, view, open]);
 
-  const folderItem = folder && locate(layout, folder.key)?.item;
   const onBoard = view === 'board';
+  const search = useCallback((q) => { setQuery(q || ''); setSheet('search'); }, []);
   const spotAction = (a) => {
     if (a === 'wallpaper') setSheet('look');
-    else if (a === 'edit') { setSheet(null); setEditing(true); }
+    else if (a === 'edit') setSheet('edit');
     else if (a === 'account') setSheet(accountsOn ? 'account' : 'settings');
     else setSheet('settings');
   };
@@ -209,39 +209,29 @@ export function Hive() {
       <div className="hive-view home-view" hidden={!!view} style={{ '--wall': wall.css }}>
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
         <WidgetActions.Provider value={act}>
-        <Home layout={layout} setLayout={setLayout} data={data} now={now} look={look} badges={badges} dark={wallDark}
-          editing={editing} setEditing={setEditing} onOpen={open}
-          onOpenFolder={(key, el) => setFolder({ key, rect: el?.getBoundingClientRect?.() || null })}
-          onAdd={() => setSheet('add')} onCustomize={() => setSheet('look')} onSearch={() => setSheet('search')}
-          onEditIcon={setIconEdit} onAddToHome={(id) => setLayout(addApp(layout, id))}
-          onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: !!on } }))} account={account} />
+          <Home arrangement={arrangement} setArrangement={setArrangement} data={data} now={now} look={look} counts={badges} dark={wallDark}
+            onOpen={open} onSearch={search} onEditIcon={setIconEdit} onEditHome={() => setSheet('edit')} onSettings={() => setSheet('settings')}
+            onSetExternal={(id, on) => setLook((l) => ({ ...l, external: { ...(l.external || {}), [id]: !!on } }))} account={account} />
         </WidgetActions.Provider>
       </div>
 
-      {!view && folderItem?.k === 'folder' && (
-        <FolderView key={folderItem.key} folder={folderItem} origin={folder.rect} custom={layout.custom} badges={look.badges ? badges : {}}
-          editing={editing} onOpen={open} onClose={() => setFolder(null)}
-          onRename={(n) => setLayout(rename(layout, folderItem.key, n))}
-          onTakeOut={(id) => { const next = takeOut(layout, id); setLayout(next); if (!locate(next, folderItem.key)) setFolder(null); }} />
-      )}
       {!view && sheet === 'search' && (
-        <Spotlight data={data} now={now} custom={layout.custom} recent={recentApps.filter((id) => CATALOG[id])}
+        <Spotlight data={data} now={now} custom={arrangement.custom} recent={recentApps.filter((id) => CATALOG[id])} initial={query}
           onOpen={open} onAction={spotAction} onClose={() => setSheet(null)} />
       )}
       {!view && sheet === 'look' && (
         <AppearanceSheet look={look} setLook={setLook} photo={photo} setPhoto={setPhoto} onClose={() => setSheet(null)} />
       )}
-      {!view && iconEdit && <IconEditor id={iconEdit} layout={layout} setLayout={setLayout} onClose={() => setIconEdit(null)} />}
-      {anim && <LaunchLayer key={anim.key} anim={anim} custom={layout.custom} onDone={onAnimDone} />}
-      {!view && sheet === 'add' && (
-        <AddSheet layout={layout} onClose={() => setSheet(null)}
-          onAddApp={(id) => setLayout(addApp(layout, id))} onAddWidget={(w) => setLayout(addWidget(layout, w))} />
+      {!view && sheet === 'edit' && (
+        <EditHome arrangement={arrangement} setArrangement={setArrangement} onClose={() => setSheet(null)}
+          onLook={() => setSheet('look')} onReset={() => setStored(defaultArrangement())} />
       )}
+      {!view && iconEdit && <IconEditor id={iconEdit} arrangement={arrangement} setArrangement={setArrangement} onClose={() => setIconEdit(null)} />}
+      {anim && <LaunchLayer key={anim.key} anim={anim} custom={arrangement.custom} onDone={onAnimDone} />}
       {!view && sheet === 'account' && accountsOn && <AccountSheet user={user} recovering={recovering} onClose={() => setSheet(null)} />}
       {!view && sheet === 'settings' && (
         <HiveSettings settings={s} setSettings={(f) => setSettings(f(s))} onClose={() => setSheet(null)} account={account}
-          onLook={() => setSheet('look')} onEdit={() => { setSheet(null); setEditing(true); }}
-          onResetLayout={() => setStored(defaultLayout())} />
+          onLook={() => setSheet('look')} onEdit={() => setSheet('edit')} />
       )}
     </div>
   );

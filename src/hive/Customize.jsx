@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { CATALOG, appLook } from '@/config/catalog';
 import { useTheme } from '@/context/ThemeContext';
-import { AppIcon } from './Home';
+import { AppIcon } from './Apps';
 import { GLYPHS } from './glyphs';
-import { setCustom } from './layout';
+import { setCustom } from './arrange';
 import { WALLPAPERS, photoToWallpaper } from './look';
 
 /** Escape closes, focus goes inside, and back where it was after. */
@@ -38,7 +38,7 @@ function Toggle({ label, hint, checked, onChange }) {
   );
 }
 
-/** Wallpaper & home screen. Every change shows on the home screen behind the sheet as you make it. */
+/** Background & look. Every change shows on the home screen behind the sheet as you make it. */
 export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
   const ref = useSheet(onClose);
   const { theme, setTheme } = useTheme();
@@ -64,10 +64,11 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
 
   return (
     <div className="scrim hive-layer see-through" onClick={onClose}>
-      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Wallpaper and home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><h2>Wallpaper &amp; home screen</h2><button className="pill" onClick={onClose}>Done</button></div>
+      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Background and look" ref={ref} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><h2>Background &amp; look</h2><button className="pill" onClick={onClose}>Done</button></div>
 
-        <h3 className="sheet-sub">Wallpaper</h3>
+        <h3 className="sheet-sub">Background</h3>
+        <p className="sheet-note">Shows around the edges and behind the clock. The day itself stays on plain panels, so it reads the same on any background.</p>
         <div className="walls">
           {Object.entries(WALLPAPERS).map(([k, w]) => (
             <button key={k} className={`wall ${look.wallpaper === k ? 'on' : ''}`} onClick={() => set('wallpaper')(k)} aria-pressed={look.wallpaper === k}>
@@ -83,24 +84,17 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
         </div>
         {photo && look.wallpaper === 'photo' && <button className="link-btn" onClick={() => { setPhoto(null); set('wallpaper')('honey'); }}>Remove your photo</button>}
         {err && <p className="auth-msg bad" role="alert">{err}</p>}
-        <Toggle label="Dim wallpaper" hint="Darker behind the icons, easier on the eyes at night." checked={look.dim} onChange={set('dim')} />
+        <Toggle label="Dim the background" hint="Darker around the panels, easier on the eyes at night." checked={look.dim} onChange={set('dim')} />
 
-        <h3 className="sheet-sub">Icons</h3>
-        <div className="set-row stack"><span><b>Size</b></span><Seg label="Icon size" value={look.iconSize} onChange={set('iconSize')} options={[['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]} /></div>
-        <div className="set-row stack"><span><b>Columns</b><small>Auto fits the screen: 4 on a phone, more on a tablet.</small></span>
-          <Seg label="Columns" value={look.cols} onChange={set('cols')} options={[['auto', 'Auto'], ['4', '4'], ['5', '5'], ['6', '6'], ['8', '8']]} /></div>
-        <Toggle label="Show names under icons" checked={look.labels} onChange={set('labels')} />
-        <Toggle label="Badges" hint="Counts on icons, like chores left or things to buy." checked={look.badges} onChange={set('badges')} />
+        <h3 className="sheet-sub">Counts</h3>
+        <Toggle label="Show counts beside apps" hint="Chores left, things to buy, tasks due." checked={look.badges} onChange={set('badges')} />
 
         <h3 className="sheet-sub">Apps</h3>
         <Toggle label="Open apps inside Hive" checked={look.inside !== false} onChange={set('inside')}
-          hint="On: every app opens inside Hive. Off: every app opens in its own tab. To choose for one app, press and hold its icon." />
+          hint="On: every app opens inside Hive. Off: every app opens in its own tab. To choose for one app, press and hold it in the app list." />
 
-        <h3 className="sheet-sub">Home screen</h3>
-        <Toggle label="Dock" checked={look.dock} onChange={set('dock')} />
-        <Toggle label="Search" hint="Swipe down, or tap the dots, to search apps and everything in them." checked={look.search} onChange={set('search')} />
-        <Toggle label="App Library" hint="A last page with every app, grouped." checked={look.library} onChange={set('library')} />
-        <div className="set-row stack"><span><b>Appearance</b></span>
+        <h3 className="sheet-sub">Appearance</h3>
+        <div className="set-row stack"><span><b>Light or dark</b></span>
           <Seg label="Theme" value={theme} onChange={setTheme} options={[['light', 'Light'], ['dark', 'Dark']]} /></div>
       </div>
     </div>
@@ -110,13 +104,13 @@ export function AppearanceSheet({ look, setLook, photo, setPhoto, onClose }) {
 const SWATCHES = ['#2f7a4a', '#3d6b2f', '#9c3a5c', '#c2553a', '#c27c0e', '#b77a0c', '#1f7fa6', '#2c5e9e', '#4b3b78', '#8e2f3c', '#355147', '#24292f', '#56606b', '#8e8e93'];
 
 /** Rename an app and change its icon's colour and glyph. Changes apply as you go. */
-export function IconEditor({ id, layout, setLayout, onClose }) {
+export function IconEditor({ id, arrangement, setArrangement, onClose }) {
   const ref = useSheet(onClose);
-  const custom = layout.custom || {};
+  const custom = arrangement.custom || {};
   const now = appLook(id, custom);
   const base = CATALOG[id] || {};
   const [name, setName] = useState(custom[id]?.name || '');
-  const patch = (p) => setLayout((l) => setCustom(l, id, p));
+  const patch = (p) => setArrangement((a) => setCustom(a, id, p));
 
   return (
     <div className="scrim hive-layer see-through" onClick={onClose}>

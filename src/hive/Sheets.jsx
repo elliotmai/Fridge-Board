@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AUDIENCE, CATALOG, appIds, appLook, appUrl } from '@/config/catalog';
 import { FEEDBACK_URL } from '@/config/app';
 import { useTheme } from '@/context/ThemeContext';
-import { AppIcon } from './Home';
-import { placedApps, placedWidgets } from './layout';
-import { WIDGETS, widgetIds } from './widgets';
+import { AppIcon } from './Apps';
+import { PIN_MAX, SECTIONS, hide, movePin, pin, sectionIds, sectionOn, setSection, show, unpin } from './arrange';
 
 /** Close on Escape and put focus inside, like any dialog. */
 function useDialog(onClose) {
@@ -19,82 +18,84 @@ function useDialog(onClose) {
   return ref;
 }
 
-export function FolderView({ folder, origin, custom, badges = {}, editing, onOpen, onRename, onTakeOut, onClose }) {
+/**
+ * Edit home screen: which apps are pinned (and in what order), which parts of
+ * the day show, and which apps are tucked away. Changes show behind the sheet
+ * as you make them.
+ */
+export function EditHome({ arrangement, setArrangement, onLook, onReset, onClose }) {
   const ref = useDialog(onClose);
-  const [name, setName] = useState(folder.name);
-  // Bloom out of the folder's icon: start at its spot and size, then grow.
-  const from = origin ? { '--fx': `${origin.left + origin.width / 2 - window.innerWidth / 2}px`, '--fy': `${origin.top + origin.height / 2 - window.innerHeight / 2}px` } : {};
+  const [confirm, setConfirm] = useState(false);
+  const { pinned, hidden, custom } = arrangement;
+  const name = (id) => appLook(id, custom).name;
+  const set = (f) => setArrangement((a) => f(a));
   return (
-    <div className="scrim hive-layer folder-scrim" onClick={onClose}>
-      <div className="folder-open" style={from} role="dialog" aria-modal="true" aria-label={`${folder.name} folder`} ref={ref} onClick={(e) => e.stopPropagation()}>
-        {editing
-          ? <input className="folder-name" value={name} aria-label="Folder name" onChange={(e) => setName(e.target.value)} onBlur={() => onRename(name)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
-          : <h2 className="folder-title">{folder.name}</h2>}
-        <div className="folder-grid">
-          {folder.apps.map((id) => (
-            <div className="tile" key={id}>
-              <button className="tile-btn" onClick={(e) => !editing && onOpen(id, e.currentTarget.querySelector('.icon'))}>
-                <AppIcon id={id} custom={custom} badge={badges[id]} /><span className="tile-name">{appLook(id, custom).name}</span>
-              </button>
-              {editing && (
-                <button className="badge-out" aria-label={`Move ${appLook(id, custom).name} out of the folder`} onClick={() => onTakeOut(id)}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18V6M7 11l5-5 5 5" /></svg>
-                </button>
-              )}
-            </div>
+    <div className="scrim hive-layer see-through" onClick={onClose}>
+      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Edit home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><h2>Edit home screen</h2><button className="pill" onClick={onClose}>Done</button></div>
+
+        <h3 className="sheet-sub">Pinned apps</h3>
+        <p className="sheet-note">First in the app list, and along the bottom of a phone. Up to {PIN_MAX}.</p>
+        {pinned.length ? (
+          <ul className="edit-list">
+            {pinned.map((id, i) => (
+              <li key={id} className="edit-row">
+                <AppIcon id={id} custom={custom} size={36} />
+                <b>{name(id)}</b>
+                <button className="pill icon-only" aria-label={`Move ${name(id)} up`} disabled={i === 0} onClick={() => set((a) => movePin(a, id, -1))}><Arrow up /></button>
+                <button className="pill icon-only" aria-label={`Move ${name(id)} down`} disabled={i === pinned.length - 1} onClick={() => set((a) => movePin(a, id, 1))}><Arrow /></button>
+                <button className="pill" onClick={() => set((a) => unpin(a, id))}>Unpin</button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="sheet-note">Nothing pinned. Pin an app below, or press and hold it on the home screen.</p>}
+
+        <h3 className="sheet-sub">On the home screen</h3>
+        <div className="add-list">
+          {sectionIds.map((k) => (
+            <label key={k} className="set-row">
+              <span><b>{SECTIONS[k]}</b></span>
+              <input type="checkbox" className="switch-input" checked={sectionOn(arrangement, k)} onChange={(e) => set((a) => setSection(a, k, e.target.checked))} />
+            </label>
           ))}
         </div>
-        {editing && <p className="sheet-note">Tap the arrow to move an app back to the home screen.</p>}
-      </div>
-    </div>
-  );
-}
 
-/** The App Library: every app and widget not on the home screen yet. */
-export function AddSheet({ layout, onAddApp, onAddWidget, onClose }) {
-  const ref = useDialog(onClose);
-  const onHome = placedApps(layout);
-  const widgetsOn = placedWidgets(layout);
-  const apps = appIds.filter((id) => !onHome.has(id));
-  const widgets = widgetIds.filter((w) => !widgetsOn.has(w));
-  return (
-    <div className="scrim hive-layer" onClick={onClose}>
-      <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Add to the home screen" ref={ref} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><h2>Add to home screen</h2><button className="pill" onClick={onClose}>Close</button></div>
-        <h3 className="sheet-sub">Widgets</h3>
-        {widgets.length ? (
-          <div className="add-list">
-            {widgets.map((w) => (
-              <button key={w} className="add-row" onClick={() => onAddWidget(w)}>
-                <AppIcon id={WIDGETS[w].app} size={40} />
-                <span><b>{WIDGETS[w].label}</b><small>From {CATALOG[WIDGETS[w].app].name}</small></span>
-                <span className="add-plus" aria-hidden="true">+</span>
-              </button>
-            ))}
-          </div>
-        ) : <p className="sheet-note">Every widget is on your home screen.</p>}
         <h3 className="sheet-sub">Apps</h3>
-        {apps.length ? (
-          <div className="add-list">
-            {apps.map((id) => (
-              <button key={id} className="add-row" onClick={() => onAddApp(id)}>
-                <AppIcon id={id} size={40} />
-                <span><b>{CATALOG[id].name}</b><small>{CATALOG[id].blurb}</small></span>
-                <span className="chip">{AUDIENCE[CATALOG[id].audience]}</span>
-                <span className="add-plus" aria-hidden="true">+</span>
-              </button>
-            ))}
-          </div>
-        ) : <p className="sheet-note">Every app is on your home screen. Remove one with the minus badge to see it here.</p>}
+        <ul className="edit-list">
+          {appIds.map((id) => {
+            const isPinned = pinned.includes(id), isHidden = hidden.includes(id);
+            return (
+              <li key={id} className={`edit-row ${isHidden ? 'is-hidden' : ''}`}>
+                <AppIcon id={id} custom={custom} size={36} />
+                <span><b>{name(id)}</b><small>{isHidden ? 'Hidden. Search still finds it.' : AUDIENCE[CATALOG[id].audience]}</small></span>
+                {!isPinned && <button className="pill" disabled={pinned.length >= PIN_MAX} onClick={() => set((a) => pin(a, id))}>Pin</button>}
+                {id !== 'settings' && (isHidden
+                  ? <button className="pill" onClick={() => set((a) => show(a, id))}>Show</button>
+                  : <button className="pill" onClick={() => set((a) => hide(a, id))}>Hide</button>)}
+              </li>
+            );
+          })}
+        </ul>
+
+        <button className="set-row set-link" onClick={onLook}>
+          <span><b>Background &amp; look</b><small>Background colour or photo, badges, light or dark.</small></span><span className="chev" aria-hidden="true">›</span>
+        </button>
+        <div className="set-row">
+          <span><b>Start over</b><small>Back to the standard pins and every part of the day. Saved on this device.</small></span>
+          {confirm
+            ? <button className="pill danger" onClick={() => { onReset(); setConfirm(false); }}>Reset it</button>
+            : <button className="pill" onClick={() => setConfirm(true)}>Reset</button>}
+        </div>
       </div>
     </div>
   );
 }
 
-export function HiveSettings({ settings, setSettings, onResetLayout, onClose, account, onLook, onEdit }) {
+const Arrow = ({ up }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{up ? <path d="M12 19V5M6 11l6-6 6 6" /> : <path d="M12 5v14M6 13l6 6 6-6" />}</svg>;
+
+export function HiveSettings({ settings, setSettings, onClose, account, onLook, onEdit }) {
   const ref = useDialog(onClose);
   const { theme, setTheme } = useTheme();
-  const [confirm, setConfirm] = useState(false);
   return (
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel" role="dialog" aria-modal="true" aria-label="Hive settings" ref={ref} onClick={(e) => e.stopPropagation()}>
@@ -117,10 +118,10 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
           )}
         </div>
         <button className="set-row set-link" onClick={onLook}>
-          <span><b>Wallpaper &amp; home screen</b><small>Wallpaper, icon size, columns, dock, badges.</small></span><span className="chev" aria-hidden="true">›</span>
+          <span><b>Background &amp; look</b><small>Background colour or photo, badges, light or dark, apps inside Hive.</small></span><span className="chev" aria-hidden="true">›</span>
         </button>
         <button className="set-row set-link" onClick={onEdit}>
-          <span><b>Edit home screen</b><small>Or press and hold any empty space.</small></span><span className="chev" aria-hidden="true">›</span>
+          <span><b>Edit home screen</b><small>Pinned apps, hidden apps, and which parts of the day show.</small></span><span className="chev" aria-hidden="true">›</span>
         </button>
         <label className="set-row">
           <span><b>Open to</b><small>On the fridge tablet, Fridge Board keeps it working like before.</small></span>
@@ -137,12 +138,6 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
           <span><b>Theme</b></span>
           <select value={theme} onChange={(e) => setTheme(e.target.value)}><option value="light">Light</option><option value="dark">Dark</option></select>
         </label>
-        <div className="set-row">
-          <span><b>Home screen layout</b><small>Saved on this device for now. It follows your account once Hive sign-in is ready.</small></span>
-          {confirm
-            ? <button className="pill danger" onClick={() => { onResetLayout(); setConfirm(false); }}>Reset it</button>
-            : <button className="pill" onClick={() => setConfirm(true)}>Reset</button>}
-        </div>
         <a className="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer">Report a bug or request a feature</a>
       </div>
     </div>

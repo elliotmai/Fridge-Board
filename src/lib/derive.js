@@ -1,4 +1,4 @@
-import { daysBetween, parseDate, startOf } from './dates';
+import { daysBetween, parseDate, startOf } from './dates.js';
 
 export const SLOTS = { owed: ['Still owed', 0], morning: ['Morning', 11], midday: ['Midday', 14], evening: ['Evening', 20], night: ['Night', 24] };
 

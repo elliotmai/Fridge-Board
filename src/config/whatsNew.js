@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.25',
+    date: 'November 2026',
+    items: ['Hive’s home screen is now your household’s day: the time and what’s next, a line showing where you are in the chores, what needs someone, tonight’s dinner and what’s coming up. Every app is listed underneath, grouped; press and hold one to pin or hide it. Start typing anywhere to search.'],
+  },
+  {
     version: '2026.11.24',
     date: 'November 2026',
     items: ['Hive has a calmer new look: bigger time and type you can read across the kitchen, flat colours instead of frosted glass, and a fridge layout for tall screens with the kitchen across the top.'],
