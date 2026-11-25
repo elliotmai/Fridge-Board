@@ -15,7 +15,7 @@ import { announce, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
-import { AppFade } from './Launch';
+import { AppFades } from './Launch';
 import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
 import { DEFAULT_LOOK, WALLPAPERS, accentFor } from './look';
 import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet } from './Sheets';
@@ -73,7 +73,9 @@ export function Hive() {
   const [folder, setFolder] = useState(null); // { key, rect }
   const [sheet, setSheet] = useState(null); // 'add' | 'settings' | 'account' | 'look' | 'search'
   const [iconEdit, setIconEdit] = useState(null);
-  const [fade, setFade] = useState(null); // an app fading in or out (Launch.jsx)
+  const fades = useRef(null); // opening and closing apps (Launch.jsx); its own state, so a fade re-renders nothing here
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const [paths, setPaths] = useState({}); // app id → { path, n } for shortcuts
   const [recentApps, setRecentApps] = useStored('hive.recent', []);
 
@@ -154,7 +156,8 @@ export function Hive() {
     const was = shown.current;
     shown.current = view;
     if (!was || view) return;
-    setFade((f) => (f?.id === was ? { ...f, dir: 'close', key: Date.now() } : { id: was, dir: 'close', key: Date.now() }));
+    // Gone without a fade (the back gesture): the cover goes up before this paints and fades off.
+    if (!fades.current?.busy()) fades.current?.reveal();
   }, [view]);
 
   const navigate = useCallback((id) => {
@@ -174,18 +177,32 @@ export function Hive() {
     // frame, a browser gives the app separate storage, so its own sign-in
     // doesn't carry over unless the app supports Sign in with Hive).
     if (opensInTab(id, look)) { window.open(appUrl(id, path), '_blank', 'noopener'); return; }
+    // The cover fades in first (AppFade); the app is mounted and shown only
+    // under it (showApp), so its loading never competes with the fade.
+    if (viewFromHash() !== id && viewRef.current !== id && fades.current) { fades.current.open(id, path); return; }
+    showApp(id, path);
+  }, [navigate, look.inside, look.external]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Put an app on screen: mount it (if it isn't kept loaded already) and make it the view. */
+  const showApp = useCallback((id, path) => {
     if (path) setPaths((p) => ({ ...p, [id]: { path, n: (p[id]?.n || 0) + 1 } }));
-    // Mount the app now, so it can fade in from the first frame.
     if (id === 'board') setBoardOpened(true);
     else setRecent((r) => (r.includes(id) ? r : [id, ...r].slice(0, KEEP_FRAMES)));
-    if (viewFromHash() !== id && view !== id) setFade({ id, dir: 'open', key: Date.now() });
     navigate(id);
-  }, [navigate, look.inside, look.external, view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
-  const goHome = useCallback(() => {
+  /** Go home now, without a fade. */
+  const leaveApp = useCallback(() => {
     if (pushed.current && viewFromHash()) window.history.back();
     else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setView(null); }
   }, []);
+
+  /** Go home from an app: the cover fades over it, Hive goes home under it, and it fades off. */
+  const goHome = useCallback(() => {
+    const id = viewRef.current;
+    if (id && fades.current && !fades.current.busy()) fades.current.close(id);
+    else leaveApp();
+  }, [leaveApp]);
 
   // Escape goes home from an app in a frame (Fridge Board keeps Escape for its own cook mode).
   useEffect(() => {
@@ -195,10 +212,6 @@ export function Hive() {
     return () => window.removeEventListener('keydown', esc);
   }, [view, goHome]);
 
-  const onFadeSettled = useCallback((f) => {
-    setFade((cur) => (cur?.key === f.key ? null : cur));
-    if (f.dir === 'open' && f.id === 'board') window.scrollTo(0, scrolls.current.board ?? 0);
-  }, []);
 
   // On the fridge: when nobody is using the screen, drift back to the board,
   // or show the clock screen.
@@ -238,17 +251,17 @@ export function Hive() {
   return (
     <div className="hive" data-icons={look.iconStyle || 'colour'} data-badges={look.badgeStyle || 'count'} style={accent ? { '--accent': accent } : undefined}>
       {boardOpened && (
-        <div className="hive-view board-view" data-app-view="board" hidden={!onBoard && fade?.id !== 'board'}>
+        <div className="hive-view board-view" data-app-view="board" hidden={!onBoard}>
           {phone
             ? <><PullToRefresh><Board onHome={goHome} /></PullToRefresh><Footer /></>
             : <Board onHome={goHome} />}
         </div>
       )}
 
-      {recent.map((id) => <AppFrame key={id} id={id} visible={view === id || fade?.id === id} onHome={goHome} path={paths[id]} />)}
+      {recent.map((id) => <AppFrame key={id} id={id} visible={view === id} onHome={goHome} path={paths[id]} />)}
 
       {/* Kept laid out behind an open app (hidden, not removed), so it's ready the moment the app fades out. */}
-      <div className={`hive-view home-view ${view && !fade ? 'behind' : ''}`} aria-hidden={view && !fade ? 'true' : undefined} inert={view && !fade ? '' : undefined} style={{ '--wall': wall.css }}>
+      <div className={`hive-view home-view ${view ? 'behind' : ''}`} aria-hidden={view ? 'true' : undefined} inert={view ? '' : undefined} style={{ '--wall': wall.css }}>
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
         <WidgetActions.Provider value={act}>
         <Home layout={layout} setLayout={setLayout} data={data} now={now} sig={sig} look={look} badges={badges} dark={wallDark}
@@ -276,7 +289,7 @@ export function Hive() {
           onShowClock={() => { setSheet(null); setResting(true); }} />
       )}
       {!view && iconEdit && <IconEditor id={iconEdit} layout={layout} setLayout={setLayout} onClose={() => setIconEdit(null)} />}
-      {fade && <AppFade key={fade.id} fade={fade} onSettled={onFadeSettled} />}
+      <AppFades ref={fades} custom={layout.custom} onShow={showApp} onHide={leaveApp} />
       {!view && sheet === 'add' && (
         <AddSheet layout={layout} onClose={() => setSheet(null)}
           data={data} now={now} custom={layout.custom}

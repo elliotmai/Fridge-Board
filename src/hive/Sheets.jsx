@@ -3,6 +3,7 @@ import { AUDIENCE, CATALOG, appIds, appLook, appUrl } from '@/config/catalog';
 import { FEEDBACK_URL } from '@/config/app';
 import { useTheme } from '@/context/ThemeContext';
 import { AppIcon } from './Home';
+import { forgetFrame, markFrameReady } from './frameReady';
 import { placedApps, placedWidgets, setStack, unstack } from './layout';
 import { Widget, WIDGETS, widgetIds } from './widgets';
 
@@ -244,6 +245,8 @@ export function AppFrame({ id, visible, onHome, path }) {
   const [pull, setPull] = useState(0);
   const start = useRef(null);
   const src = appUrl(id, path?.path);
+  // A fresh load (reload, or a shortcut to another page) isn't ready until it loads; an app not online yet is ready at once.
+  useEffect(() => { if (a.url) forgetFrame(id); else markFrameReady(id); }, [id, nonce, path?.n, a.url]);
   const onDown = (e) => { start.current = { y: e.clientY, id: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId); };
   const onMove = (e) => { if (start.current?.id === e.pointerId) setPull(Math.max(0, start.current.y - e.clientY)); };
   const onUp = (e) => {
@@ -255,7 +258,9 @@ export function AppFrame({ id, visible, onHome, path }) {
   };
   const k = Math.min(1, pull / 260);
   return (
-    <div className="frame-view" data-app-view={id} hidden={!visible}
+    // Parked, not removed, when not showing: kept laid out and loaded (hidden
+    // with visibility), so opening it again is instant and costs no layout.
+    <div className={`frame-view ${visible ? '' : 'parked'}`} data-app-view={id} aria-hidden={visible ? undefined : 'true'} inert={visible ? undefined : ''}
       style={pull ? { transform: `translateY(${-pull * 0.5}px) scale(${1 - k * 0.22})`, borderRadius: `${16 + k * 24}px`, transition: 'none' } : undefined}>
       <div className="frame-bar" style={{ '--c': a.color }}>
         <button className="frame-home" onClick={onHome} aria-label="Back to the Hive home screen">
@@ -275,6 +280,7 @@ export function AppFrame({ id, visible, onHome, path }) {
       </div>
       {a.url ? (
         <iframe key={`${nonce}:${path?.n || 0}`} className="frame" src={src} title={a.name} data-app={id}
+          onLoad={() => markFrameReady(id)}
           allow="geolocation; camera; microphone; clipboard-read; clipboard-write; fullscreen; web-share" />
       ) : (
         <div className="frame-missing">

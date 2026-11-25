@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CATALOG, GROUPS, appIds, appLook, folderName, opensInTab } from '@/config/catalog';
 import { isWidgetLike, locate, merge, move, pack, placedApps, remove, setPageBreak, setStack, setWidgetSize } from './layout';
 import { Fallback, GLYPHS, UI } from './glyphs';
@@ -97,7 +97,27 @@ export function stackIndex(item, sel, sig) {
  * Keyboard: Tab reaches every tile (its page comes into view), Page Up and
  * Page Down turn pages, arrow keys move the focused tile while editing.
  */
-export function Home({
+export const Home = memo(HomeScreen, sameHome);
+
+/**
+ * Home only re-renders when what it shows changes. Hive re-renders for many
+ * reasons (an app opening, a sheet, the address), and redrawing the whole
+ * grid then would land in the middle of a fade on a slow wall tablet.
+ * Callbacks may be new each time; they only close over Hive state that is
+ * compared here (layout, look) or read through refs.
+ */
+function sameHome(a, b) {
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const x = a[k], y = b[k];
+    if (typeof x === 'function' && typeof y === 'function') continue;
+    if (k === 'now') { if (Math.floor(x / 60000) !== Math.floor(y / 60000)) return false; continue; }
+    if (k === 'look' || k === 'account') { if (JSON.stringify(x) !== JSON.stringify(y)) return false; continue; }
+    if (!Object.is(x, y)) return false;
+  }
+  return true;
+}
+
+function HomeScreen({
   layout, setLayout, data, now, sig, editing, setEditing, look, badges = {}, dark,
   onOpen, onOpenFolder, onAdd, onCustomize, onSearch, onEditIcon, onEditStack, onAddToHome, onSetExternal, onClock, account,
 }) {

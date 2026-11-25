@@ -7,6 +7,8 @@
 body { background: var(--bg); }
 .hive, .hive-layer { font-family: var(--font); color: var(--ink); -webkit-tap-highlight-color: transparent; }
 .hive-view[hidden], .frame-view[hidden] { display: none !important; }
+/* An app frame not showing: still laid out and loaded, just not drawn (and not in the way). */
+.frame-view.parked { visibility: hidden; pointer-events: none; contain: strict; }
 /* Keep the height chain html → #root → .hive → .hive-view → .fb unbroken, so the
    board fits one screen on the fridge (board.css sizes .fb at 100%). */
 .hive, .hive-view { height: 100%; }
@@ -394,11 +396,14 @@ button.day-clock:active { transform: scale(.98); }
 .spot-row.active { background: color-mix(in srgb, var(--honey) 14%, transparent); box-shadow: inset 3px 0 0 var(--honey); }
 .spot-empty { color: var(--muted); margin: var(--s6) var(--s1) 0; }
 
-/* ---------- opening and closing an app: a fade through paper (Launch.jsx) ---------- */
-.app-veil { position: fixed; inset: 0; z-index: 40; pointer-events: none; background: var(--bg); opacity: 0; will-change: opacity; }
-.app-fading { will-change: opacity; transition: none !important; }
-/* Fridge Board is in the page flow; while it fades it sits over the home screen. */
-.hive-view.board-view.app-fading { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: var(--bg); }
+/* ---------- opening and closing an app: fades through a paper-coloured cover (Launch.jsx) ---------- */
+.app-veil { position: fixed; inset: 0; z-index: 40; pointer-events: none; background: var(--bg); opacity: 0; will-change: opacity; display: grid; place-items: center; }
+.app-veil.with-tile { pointer-events: auto; } /* while an app opens, taps don't reach the home screen under the cover */
+/* The app's tile and name, still, on the cover while it loads. */
+.app-veil-tile { display: none; justify-items: center; gap: var(--s3); font-size: var(--t-lg); font-weight: 700; color: var(--ink); }
+.with-tile .app-veil-tile { display: grid; }
+.app-veil-tile .icon { box-shadow: none; }
+.app-veil-tile .badge { display: none; }
 
 /* ---------- sheets, folders ---------- */
 .scrim { position: fixed; inset: 0; z-index: 60; background: var(--scrim); display: grid; place-items: end center; animation: fade var(--d-quick) var(--ease-out); }

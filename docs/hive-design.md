@@ -21,8 +21,9 @@ or timing.
    tablet) get the single `--shadow-float`. No blur, no glass.
 4. **Motion answers a touch.** Nothing moves on its own except the clock and a
    finished timer. (A stack that turns by itself swaps what it shows without
-   animating.) Presses respond in under 100 ms; apps fade through the paper
-   colour (one veil's opacity, ~240ms in, ~200ms out); menus and folders grow from
+   animating.) Presses respond in under 100 ms; apps open through a paper
+   cover: home fades out (170ms), the app loads under it, then the cover
+   fades off (200ms); closing is the reverse; menus and folders grow from
    where they came from; pages follow the finger. No bounce, no jiggle: only
    a hard flick may carry a few pixels past its page, as momentum.
    `prefers-reduced-motion` turns every transition into an instant change.
