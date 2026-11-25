@@ -1,7 +1,11 @@
 import { useState } from 'react';
 
-/** Shown when /api/board refuses the request: the board needs its key. */
-export function LockBanner({ reason, onSave }) {
+/**
+ * Shown when /api/board refuses the request: the board needs its key (or a
+ * signed-in household member). Signed in, nothing is shown in place of your
+ * data, so it only says why.
+ */
+export function LockBanner({ reason, onSave, signedIn }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
   const [wrong, setWrong] = useState(false);
@@ -16,7 +20,7 @@ export function LockBanner({ reason, onSave }) {
   return (
     <div className="lock">
       <div className="lock-row">
-        <span><strong>Showing sample data.</strong> {notSet ? 'Set BOARD_ACCESS_KEY on the Fridge Board site in Netlify to turn on your data.' : 'Enter this board’s key to show your data.'}</span>
+        <span>{signedIn ? <strong>{reason}.</strong> : <strong>Showing sample data.</strong>} {signedIn ? 'Or enter this board’s key.' : notSet ? 'Set BOARD_ACCESS_KEY on the Fridge Board site in Netlify to turn on your data.' : 'Enter this board’s key to show your data.'}</span>
         {!notSet && !open && <button className="lock-btn" onClick={() => setOpen(true)}>Enter key</button>}
       </div>
       {open && (

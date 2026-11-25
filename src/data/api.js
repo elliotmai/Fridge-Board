@@ -1,5 +1,5 @@
 import { APP_KEY } from '@/config/app';
-import { idToken } from '@/hive/account';
+import { hiveSession } from '@/hive/account';
 
 /*
  * The board key (BOARD_ACCESS_KEY on the server) lives on each device. It can be
@@ -23,24 +23,30 @@ export function takeKeyFromUrl() {
 /**
  * Calls one of the board's own /api routes with the key, and as the signed-in
  * Hive user when there is one (for things that are personal, like Google).
- * Never throws.
+ * If the server says the sign-in had expired, refreshes it and asks once more.
+ * Never throws. `signedIn` and `uid` say who the page asked as.
  */
 export async function callApi(path, { method = 'GET', body } = {}) {
-  try {
-    const hive = await idToken();
+  const once = async (fresh) => {
+    const session = await hiveSession({ fresh });
     const res = await fetch(path, {
       method,
       headers: {
         accept: 'application/json', 'x-board-key': getKey(),
-        ...(hive ? { authorization: `Bearer ${hive}` } : {}),
+        ...(session ? { authorization: `Bearer ${session.token}` } : {}),
         ...(body ? { 'content-type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
     const isJson = (res.headers.get('content-type') || '').includes('json');
     const data = isJson ? await res.json().catch(() => null) : null;
-    return { ok: res.ok && isJson, status: res.status, data };
+    return { ok: res.ok && isJson, status: res.status, data, signedIn: !!session, uid: session?.uid || null };
+  };
+  try {
+    const r = await once(false);
+    const expired = r.signedIn && (r.data?.expired || r.data?.viewer?.expired);
+    return expired ? await once(true) : r;
   } catch {
-    return { ok: false, status: 0, data: null }; // offline, or `vite dev` without the functions
+    return { ok: false, status: 0, data: null, signedIn: false, uid: null }; // offline, or `vite dev` without the functions
   }
 }

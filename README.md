@@ -137,8 +137,31 @@ inside frames.
 `netlify/functions/board.mjs` serves `GET /api/board`, and
 `netlify/functions/act.mjs` passes ticks and adds back to the owning app. Both
 run on Netlify, so tokens stay in its environment and never reach the tablet.
-A section that isn't connected shows sample data labelled **Sample**; one whose
-app can't be reached keeps its last good copy, labelled **Not updating**.
+Signed in to Hive, a section shows your data and nothing else: an empty list
+says so ("No chores today"), an app that can't be reached says **Couldn't
+reach** with Retry (or keeps your last good copy, labelled **Not updating**),
+and one that can't be shown yet says why (Google: **Connect Google**, which
+opens Hive → Account). Sample data, labelled **Sample**, only shows to someone
+signed out, or with `?demo` in the address (`src/lib/feed.js`, tested).
+
+The API takes the board key, or a signed-in Hive user who is in a household
+(`boardGate` in `netlify/lib/household.mjs`), so hive.flyingdoublemranch.com
+works on any device you're signed in on, without typing the key there. Each
+`/api/board` call logs one line saying what every source returned.
+
+### Drinks on the fridge
+
+The board's **Drinks** tile (shown when someone is signed in) asks who you
+are, from the household's people, then adds a drink to that person's Drink
+Tracker in one tap: their favourites and recent drinks first, then the drink
+types at the app's usual amounts. Who you are is remembered in that tab for
+20 minutes untouched; **Not you?** switches. `POST /api/drinks/:member`
+(`netlify/functions/drinks.mjs`, rules in `netlify/lib/drinks.mjs`) checks the
+caller is signed in and in a household, and the person is in the same one,
+then inserts one row in `drinks.tree` with the service role, exactly as Drink
+Tracker's own addDrink() writes it (`users/<uid>/drinks/<push id>`: type,
+name, quantity, unit, local date and time). Drink Tracker's RLS is unchanged;
+its stats and BAC are worked out from the drinks, so the new one counts.
 
 | Section | App | Read | Write |
 | --- | --- | --- | --- |

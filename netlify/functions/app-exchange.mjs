@@ -17,6 +17,8 @@
  *       for Firebase project aerologger-ec6a6 that may look up and create
  *       Firebase Auth users (Firebase Authentication Admin). Secret. Until it
  *       is set, this answers 503 and AeroLogger shows its own sign-in.
+ *   PROPERTY_SERVICE_ACCOUNT    the same for Property Care
+ *       (property-maintenance-83a74). Existing accounts only.
  */
 import { verifyPass } from '../lib/hiveAssertion.mjs';
 import { accountForEmail, createAccount, customToken, serviceAccount } from '../lib/firebaseAccounts.mjs';
@@ -32,6 +34,14 @@ export const EXCHANGE_APPS = {
     project: 'aerologger-ec6a6',
     secret: 'AEROLOGGER_SERVICE_ACCOUNT',
   },
+  // Property Care: every account has a role (landlord or resident) chosen at
+  // sign-up, so Hive only signs in people who already have one.
+  property: {
+    origins: ['https://landlord-property-maintenance.netlify.app'],
+    project: 'property-maintenance-83a74',
+    secret: 'PROPERTY_SERVICE_ACCOUNT',
+    newAccounts: false,
+  },
 };
 
 const cors = (app, req) => {
@@ -40,7 +50,7 @@ const cors = (app, req) => {
 };
 
 /** The whole decision, with its dependencies passed in so it can be tested. */
-export async function exchange(pass, id, { publicKey = HIVE_PUBLIC_KEY, sa, find = accountForEmail, create = createAccount, mint = customToken } = {}) {
+export async function exchange(pass, id, { publicKey = HIVE_PUBLIC_KEY, sa, allowNew = true, find = accountForEmail, create = createAccount, mint = customToken } = {}) {
   let claims;
   try {
     claims = verifyPass(pass, id, publicKey);
@@ -52,6 +62,7 @@ export async function exchange(pass, id, { publicKey = HIVE_PUBLIC_KEY, sa, find
   let uid = await find(claims.email, { sa });
   let created = false;
   if (!uid) {
+    if (!allowNew) return json(403, { error: 'No account for this email', code: 'no-account' });
     uid = await create({ email: claims.email, name: claims.name }, { sa });
     created = true;
   }
@@ -80,7 +91,7 @@ export default async (req, context) => {
   try { ({ pass } = await req.json()); } catch { /* fall through */ }
   if (typeof pass !== 'string' || !pass) return reply(json(400, { error: 'Missing pass' }));
   try {
-    return reply(await exchange(pass, id, { sa }));
+    return reply(await exchange(pass, id, { sa, allowNew: app.newAccounts !== false }));
   } catch (e) {
     console.error(`[app-exchange] ${id} failed:`, e.message);
     return reply(json(502, { error: 'Could not sign you in right now' }));

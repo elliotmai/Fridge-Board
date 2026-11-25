@@ -5,6 +5,7 @@ import './index.css';
 import './styles/tokens.css';
 import './styles/board.css';
 import './styles/hive.css';
+import './styles/timers.css';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(

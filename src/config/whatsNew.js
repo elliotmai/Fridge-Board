@@ -9,6 +9,8 @@ export const WHATS_NEW = [
     version: '2026.11.25',
     date: 'November 2026',
     items: [
+      'Signed in, your widgets and board show only your own data: empty is shown as empty, and an app that can’t be reached says so, with Retry. Samples are only for when nobody is signed in.',
+      'Drinks on the fridge: tap Drinks, pick who you are, and add a drink to Drink Tracker in one tap.',
       'Pages follow your finger and glide into place, and icons slide aside as you drag.',
       'Drop a widget on another to make a stack. Swipe it, or let it turn to what matters now: chores in the morning, dinner later.',
       'A clock screen for the fridge: the time, big, with two widget stacks, red at night. Tap the clock on a tablet, or set it to show when the screen is left alone.',

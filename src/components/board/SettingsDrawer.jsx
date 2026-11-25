@@ -40,7 +40,7 @@ export function SettingsDrawer({ opts, setOpts, now, onClose, onReset, onSaveKey
       </form>
       <p className="hint">
         {home ? `Home location comes from ${home.from === 'galaxyfarm' ? 'GalaxyFarm settings' : 'the HOME_LAT and HOME_LON settings'}.` : 'Set the farm location in GalaxyFarm settings to turn on weather and the away rule.'}
-        {' '}Sections marked Sample aren’t connected yet. Ticks on connected sections go straight to their app.
+        {' '}Sections marked Sample show made-up data because nobody is signed in to Hive here. Ticks on connected sections go straight to their app.
       </p>
       <button className="reset" onClick={onReset}>Clear ticks and added items on this device</button>
       <a className="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer">Report a bug or request a feature</a>

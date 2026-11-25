@@ -1,6 +1,7 @@
 import { appLink } from '@/config/apps';
+import { retryBoard } from '@/data/sources';
 import { clock12, daysBetween, md, parseDate, plural, short, startOf, wd } from '@/lib/dates';
-import { Countdown, Freshness, OpenIn } from './bits';
+import { Countdown, Freshness, OpenIn, openAccount } from './bits';
 import { Bed, Car, Cow, Pin, Plane, Right, Tick, Train, Warn } from './Icons';
 
 const KIND_ICON = { flight: Plane, plane: Plane, stay: Bed, drive: Car, car: Car, train: Train, rail: Train };
@@ -115,7 +116,7 @@ function Item({ i, todoDone, onToggle }) {
   }
 }
 
-/** One label naming the sources that aren't live, e.g. "Sample: Google, ZNT". */
+/** Labels naming the sources that aren't live, e.g. "Sample: Google, ZNT" or "Couldn't reach: Wander". */
 function SourceNotes({ status }) {
   const off = [];
   for (const [k, label] of SOURCES) {
@@ -123,12 +124,15 @@ function SourceNotes({ status }) {
     if (st && st.status !== 'live' && !off.some((o) => o.label === label)) off.push({ label, st });
   }
   if (!off.length) return null;
-  const sample = off.filter((o) => o.st.status !== 'stale'), stale = off.filter((o) => o.st.status === 'stale');
+  const of = (st) => off.filter((o) => o.st.status === st);
   const title = off.map((o) => `${o.label}: ${o.st.reason || o.st.status}`).join('\n');
+  const names = (l) => l.map((o) => o.label).join(', ');
   return (
     <>
-      {sample.length > 0 && <span className="fresh" title={title}>Sample: {sample.map((o) => o.label).join(', ')}</span>}
-      {stale.length > 0 && <span className="fresh stale" title={title}>Not updating: {stale.map((o) => o.label).join(', ')}</span>}
+      {of('sample').length > 0 && <span className="fresh" title={title}>Sample: {names(of('sample'))}</span>}
+      {of('stale').length > 0 && <span className="fresh stale" title={title}>Not updating: {names(of('stale'))}</span>}
+      {of('error').length > 0 && <button className="fresh stale" title={title} onClick={retryBoard}>Couldn’t reach {names(of('error'))}. Retry</button>}
+      {of('off').filter((o) => !o.st.connect).length > 0 && <span className="fresh" title={title}>Off: {names(of('off').filter((o) => !o.st.connect))}</span>}
     </>
   );
 }
@@ -183,6 +187,9 @@ export function ComingUp({ tl, todoDone, onToggleTodo, hiddenEvents, phone, stat
         {empty && <p className="empty-note">Nothing coming up in the next two weeks.</p>}
         {/Sign in|Confirm/.test(status.calendar?.reason || '') && status.calendar.status === 'sample' && (
           <p className="tl-foot">{status.calendar.reason.replace('this', 'your own calendar and Google Tasks')}. The ones above are samples.</p>
+        )}
+        {status.calendar?.connect === 'google' && (
+          <p className="tl-foot"><button className="text-btn" onClick={openAccount}>Connect Google Calendar &amp; Tasks</button> in your Hive account to see yours here.</p>
         )}
         {hiddenEvents > 0 && <p className="tl-foot">{plural(hiddenEvents, 'calendar event')} matched a Wander trip, so {hiddenEvents === 1 ? 'it shows' : 'they show'} as the trip.</p>}
       </div>

@@ -7,12 +7,21 @@ import { signPass } from './hiveAssertion.mjs';
 import { env } from './shared.mjs';
 import { verifySupabaseToken } from './supabaseToken.mjs';
 
-export async function hiveUser(req, { verify = verifySupabaseToken } = {}) {
+export async function hiveUser(req, opts) {
+  return (await hiveSession(req, opts)).user;
+}
+
+/**
+ * { user, expired }: the signed-in Hive user (or null), and whether the page
+ * sent a token that had expired, so the board can tell it to refresh rather
+ * than treat the person as signed out.
+ */
+export async function hiveSession(req, { verify = verifySupabaseToken } = {}) {
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return null;
-  try { return await verify(token); } catch (e) {
+  if (!token) return { user: null, expired: false };
+  try { return { user: await verify(token), expired: false }; } catch (e) {
     console.warn('[hive] ignored a bad sign-in token:', e.message);
-    return null;
+    return { user: null, expired: e.message === 'expired' };
   }
 }
 
@@ -36,7 +45,7 @@ export function passHeader(user, app) {
  */
 export function appAuth(user, app, tokenEnv) {
   if (user?.email_verified && env('HIVE_SIGNING_KEY')) return passHeader(user, app);
-  const token = tokenEnv && env(tokenEnv);
+  const token = tokenEnv && !user?.keyless && env(tokenEnv);
   if (token) return { authorization: `Bearer ${token}` };
   throw Object.assign(new Error(user ? 'Confirm your Hive email to see this' : 'Sign in to Hive to see this'), { unconfigured: true });
 }
@@ -49,7 +58,9 @@ export function appAuth(user, app, tokenEnv) {
  */
 export async function asUser(user, app, tokenEnv, run) {
   const headers = appAuth(user, app, tokenEnv);
-  const token = tokenEnv && env(tokenEnv);
+  // `keyless`: let in as a household member without the board key (boardGate),
+  // so never with the site-wide token.
+  const token = tokenEnv && !user?.keyless && env(tokenEnv);
   const retry = /^Hive /.test(headers.authorization) && token ? () => run({ authorization: `Bearer ${token}` }) : null;
   // 400 too: an app that has not learned passes yet reads "Hive …" as a malformed token.
   const refused = (status) => status === 400 || status === 401 || status === 403;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '@/components/board/Board';
+import { OPEN_ACCOUNT } from '@/components/board/bits';
 import { Footer } from '@/components/Footer';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { APP_KEY } from '@/config/app';
@@ -198,6 +199,13 @@ export function Hive() {
     const id = viewRef.current;
     if (id && fades.current && !fades.current.busy()) fades.current.close(id);
     else leaveApp();
+  }, [leaveApp]);
+
+  // "Connect Google" and the like, from a widget or the board: Hive → Account.
+  useEffect(() => {
+    const on = () => { if (viewRef.current) leaveApp(); setFolder(null); setSheet(accountsOn ? 'account' : 'settings'); };
+    window.addEventListener(OPEN_ACCOUNT, on);
+    return () => window.removeEventListener(OPEN_ACCOUNT, on);
   }, [leaveApp]);
 
   // Escape goes home from an app in a frame (Fridge Board keeps Escape for its own cook mode).

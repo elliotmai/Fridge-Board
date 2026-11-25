@@ -186,6 +186,22 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
 .task em { font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .task.overdue em { color: var(--late); font-weight: 700; }
 .empty-note { font-size: 15px; color: var(--muted); padding: 8px; }
+
+/* Drinks: a tile in the header, and the quick-add sheet. */
+.drinks-tile { height: 48px; padding: 0 16px; border-radius: var(--r-sm); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 8px; }
+.drinks-sheet .sh { margin-top: 4px; }
+.drink-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.drink-person { min-height: 72px; border-radius: var(--r-sm); background: var(--sunken); font-size: 20px; font-weight: 700; display: grid; place-content: center; gap: 2px; padding: 8px; }
+.drink-person small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.drink-who { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-weight: 600; }
+.drink-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.drink-chip { min-height: 52px; padding: 0 16px; border-radius: 999px; background: var(--sunken); font-size: 17px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.drink-chip:disabled { opacity: .5; }
+
+/* A section or widget with nothing real to show: why, and Retry or Connect. Never the sample. */
+.unavail { display: grid; gap: 8px; justify-items: start; align-content: center; padding: 8px; color: var(--muted); font-size: 15px; line-height: 1.3; }
+.unavail p { margin: 0; overflow-wrap: anywhere; }
+.unavail-btn { min-height: 40px; padding: 0 16px; border-radius: var(--r-sm); background: var(--sunken); color: var(--ink); font-weight: 700; font-size: 15px; }
 .back-big { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--c); }
 .contact { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 8px; }
 .contact + .contact { border-top: 1px solid color-mix(in srgb, var(--c) 18%, transparent); }

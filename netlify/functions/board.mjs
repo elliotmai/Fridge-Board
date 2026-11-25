@@ -2,9 +2,15 @@
  * GET /api/board — everything the board shows from the other apps, in one call.
  *
  * Runs on Netlify, so each app's token stays in this site's environment and
- * never reaches the tablet. Every source is fetched independently: one that is
- * not configured or fails comes back with a status instead of data, and the
- * board falls back for that section alone.
+ * never reaches the tablet. Every source is fetched independently and comes
+ * back with a status:
+ *   live          its data (possibly empty: the board shows that honestly)
+ *   error         the app couldn't be reached or answered with an error
+ *   unconfigured  it can't be asked (not set up, or needs a sign-in)
+ *   connect       Google isn't connected for this person yet
+ * The board only ever shows sample data to someone signed out (`viewer`).
+ *
+ * Access: the board key, or a signed-in Hive user in a household (boardGate).
  *
  * Environment (Netlify → Project configuration → Environment variables):
  *   BOARD_ACCESS_KEY   required; see netlify/lib/shared.mjs
@@ -25,8 +31,10 @@
  *   GALAXYFARM_URL, KITCHENHUB_URL, LEARNLEAF_URL, OURDEN_URL, WANDER_FUNCTIONS_URL,
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (ZNT, from Hive's Supabase project)
  */
-import { env, getJson, json, requireKey, SourceError, urls } from '../lib/shared.mjs';
-import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { env, getJson, json, SourceError, urls } from '../lib/shared.mjs';
+import { asUser, passHeader } from '../lib/hiveUser.mjs';
+import { admin, adminRead, boardGate } from '../lib/household.mjs';
+import { GOOGLE_NOT_CONNECTED } from '../../src/config/google.js';
 
 // Travel is looked up for every trip starting this soon (or under way): it decides
 // which trips are the owner's own, so a trip without a lookup can't be shown.
@@ -139,7 +147,12 @@ async function google(where, user) {
   let headers;
   try { headers = passHeader(user, 'ourden'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
   const tz = where.tz || 'UTC';
-  const d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000);
+  let d;
+  try { d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000); } catch (e) {
+    // 409: this person hasn't connected Google yet (or Google revoked it).
+    if (e instanceof SourceError && e.status === 409) return { status: 'connect', reason: GOOGLE_NOT_CONNECTED };
+    throw e;
+  }
   return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
 }
 
@@ -230,16 +243,13 @@ async function wander({ tz }, user) {
 
 /**
  * ZNT's breeding sessions, from Hive's Supabase project (schema znt), for the
- * household of whoever is signed in to Hive. The fridge tablet may have nobody
- * signed in: then the only household, if there's exactly one.
+ * household of whoever is signed in to Hive (boardGate looked it up). The
+ * fridge tablet may have nobody signed in: then the only household, if there's
+ * exactly one.
  */
-async function znt({ tz }, user) {
-  const url = env('SUPABASE_URL'), key = env('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !key) return { status: 'unconfigured', reason: 'Supabase is not set up for the board' };
-  const headers = { apikey: key, ...(key.startsWith('sb_') ? {} : { authorization: `Bearer ${key}` }) };
-  const read = (path, schema) => getJson(`${url}/rest/v1/${path}`, { headers: { ...headers, 'accept-profile': schema } });
-  let household = null;
-  if (user?.uid) household = (await read(`household_members?select=household_id&user_id=eq.${encodeURIComponent(user.uid)}&order=joined_at&limit=1`, 'core'))[0]?.household_id || null;
+async function znt({ tz }, household) {
+  if (!admin()) return { status: 'unconfigured', reason: 'Supabase is not set up for the board' };
+  const read = (path, schema) => adminRead(path, schema);
   if (!household) {
     const all = await read('households?select=id&limit=2', 'core');
     if (all.length === 1) household = all[0].id;
@@ -265,11 +275,11 @@ async function settle(name, fn) {
 }
 
 export default async (req) => {
-  const locked = requireKey(req);
-  if (locked) return locked;
+  const gate = await boardGate(req);
+  if (!gate.ok) return gate.response;
+  const { user } = gate;
 
   // GalaxyFarm first: it owns the home location the others need.
-  const user = await hiveUser(req);
   const gf = await settle('galaxyfarm', () => galaxyfarm(user));
   const where = resolveHome(gf);
   const [w, kh, ll, wa, z, g] = await Promise.all([
@@ -277,13 +287,17 @@ export default async (req) => {
     settle('kitchenhub', () => kitchenhub(user)),
     settle('learnleaf', () => learnleaf(user)),
     settle('wander', () => wander(where, user)),
-    settle('znt', () => znt(where, user)),
+    settle('znt', () => znt(where, gate.household)),
     settle('google', () => google(where, user)),
   ]);
+  const sources = { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z, google: g };
+  // One line per request, so the log says what each widget got and why.
+  console.log(`[board] ${user ? 'signed in' : gate.expired ? 'expired sign-in' : 'signed out'}${gate.viaKey ? ', key' : ''}: ${Object.entries(sources).map(([k, v]) => `${k}=${v.status}${v.status === 'live' ? '' : ` (${v.reason})`}`).join(', ')}`);
   return json(200, {
     generatedAt: new Date().toISOString(),
+    viewer: { signedIn: !!user, expired: gate.expired, household: !!gate.household },
     home: where.home ? { ...where.home, tz: where.tz, from: where.from } : null,
-    sources: { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z, google: g },
+    sources,
   }, { 'cache-control': 'private, no-store' });
 };
 

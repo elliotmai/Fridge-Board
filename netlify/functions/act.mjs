@@ -8,10 +8,11 @@
  *   POST /api/todos/google/:list/:id  { done } → Our Den POST /api/board/google/tasks/:list/:id
  *                                    (as the signed-in Hive user, with a pass)
  *
- * Same board key as /api/board; the app tokens never leave this function.
+ * Same access as /api/board (the board key, or a signed-in household member); the app tokens never leave this function.
  */
-import { bearer, json, requireKey, urls } from '../lib/shared.mjs';
-import { asUser, hiveUser, passHeader } from '../lib/hiveUser.mjs';
+import { bearer, json, urls } from '../lib/shared.mjs';
+import { asUser, passHeader } from '../lib/hiveUser.mjs';
+import { boardGate } from '../lib/household.mjs';
 
 async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
@@ -25,8 +26,9 @@ async function forward(url, token, body, { method = 'POST', headers } = {}) {
 }
 
 export default async (req, context) => {
-  const locked = requireKey(req);
-  if (locked) return locked;
+  const gate = await boardGate(req);
+  if (!gate.ok) return gate.response;
+  const { user } = gate;
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return json(400, { error: 'Body must be a JSON object' });
@@ -37,18 +39,17 @@ export default async (req, context) => {
     if (path.startsWith('/api/todos/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
       if (path.startsWith('/api/todos/learnleaf/')) {
-        return await asUser(await hiveUser(req), 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers }));
+        return await asUser(user, 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers }));
       }
       let headers;
-      try { headers = passHeader(await hiveUser(req), 'ourden'); } catch (e) { return json(401, { error: e.message }); }
+      try { headers = passHeader(user, 'ourden'); } catch (e) { return json(401, { error: e.message }); }
       const list = context.params?.list;
       return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
     if (path.startsWith('/api/chores/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
-      return await asUser(await hiveUser(req), 'galaxyfarm', 'GALAXYFARM_TOKEN', (headers) => forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers }));
+      return await asUser(user, 'galaxyfarm', 'GALAXYFARM_TOKEN', (headers) => forward(`${urls.galaxyfarm()}/api/board/v1/chores/${encodeURIComponent(id)}`, null, { done: body.done }, { headers }));
     }
-    const user = await hiveUser(req);
     if (!id) {
       const name = typeof body.name === 'string' ? body.name.trim().slice(0, 200) : '';
       if (!name) return json(400, { error: 'name is required' });

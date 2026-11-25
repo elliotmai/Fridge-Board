@@ -5,10 +5,11 @@ import { HomeIcon, Plane, Sliders, Snow, WX } from './Icons';
 
 const APP_DOTS = { galaxyfarm: 'var(--farm)', kitchenhub: 'var(--kitchen)', learnleaf: 'var(--ahead)', wander: 'var(--ahead)', znt: 'var(--farm)' };
 
-export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, onOpenSettings, onHome, phone }) {
+export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, onOpenSettings, onHome, onDrinks, phone }) {
   const parts = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).match(/^(.*?)\s?([AP]M)?$/i);
-  const W = WX[weather.code] ?? WX.cloud;
-  const today = weather.days[0];
+  // No weather (signed in and it couldn't be had): no forecast, never the sample's.
+  const W = weather ? WX[weather.code] ?? WX.cloud : null;
+  const today = weather?.days?.[0];
   return (
     <>
       <header className="top">
@@ -16,6 +17,9 @@ export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, on
           <div className="time">{parts[1]}{parts[2] && <small>{parts[2].toLowerCase()}</small>}</div>
           <div className="date">{fmt(now, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
         </div>
+        {!weather || !today ? (
+          <div className="wx"><div className="wx-now"><span className="wx-desc"><b>No forecast</b><span>{weatherStatus?.reason || ''}</span></span></div></div>
+        ) : (
         <div className="wx">
           <div className="wx-now">
             <W />
@@ -34,7 +38,9 @@ export function Header({ now, weather, weatherStatus, sitter, onToggleSitter, on
             })}
           </div>
         </div>
+        )}
         <div className="top-end">
+          {onDrinks && <button className="drinks-tile" onClick={onDrinks} aria-label="Add a drink to Drink Tracker"><span aria-hidden="true">🍺</span>Drinks</button>}
           <button className="mode" aria-pressed={sitter} onClick={onToggleSitter}>
             <span className="long">Housesitter mode</span><span className="short">Sitter</span>
             <span className="switch" aria-hidden="true" />

@@ -30,6 +30,11 @@ test('an existing account signs straight in; a new person gets one', async () =>
   assert.deepEqual(await run(pass({ ...me, email: 'new@example.com' })), { status: 200, body: { token: 'token-for-uid-new', created: true, name: 'Me' } });
 });
 
+test('an app closed to new people only signs in existing accounts', async () => {
+  assert.equal((await run(pass({ ...me, email: 'new@example.com' }), { allowNew: false })).status, 403);
+  assert.equal((await run(pass(), { allowNew: false })).status, 200);
+});
+
 test('a pass for another app, a forged pass, or an unverified email gets nothing', async () => {
   assert.equal((await run(pass(me, 'learnleaf'))).status, 401);
   assert.equal((await run(signPass(me, 'aerologger', makeKeys().signingKey))).status, 401);

@@ -110,7 +110,16 @@ export async function createAccount(name, email, password) {
   }));
   // With confirmation on, Supabase returns no session and, for an email that
   // already has an account, a user with no identities.
-  if (data.user && !data.user.identities?.length) throw Object.assign(new Error('exists'), { code: 'user_already_exists' });
+  if (data.user && !data.user.identities?.length) {
+    // Everyone who used an older app already has an account (combined by
+    // email). If this password is theirs, or an old app's, just sign them in.
+    try {
+      await signInWithEmail(email, password);
+      return { needsConfirm: false };
+    } catch {
+      throw Object.assign(new Error('exists'), { code: 'user_already_exists' });
+    }
+  }
   return { needsConfirm: !data.session };
 }
 
@@ -144,7 +153,7 @@ export function authMessage(e) {
   if (code === 'invalid_credentials') return 'That email and password don’t match.';
   if (code === 'carry_over_emailed') return 'Almost there: we emailed you a link to finish signing in. Open it on this device.';
   if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
-  if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already a Hive account with that email. Sign in instead.';
+  if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already an account with that email. Sign in with a password you’ve used in any of the apps, or reset it.';
   if (code === 'weak_password') return 'Use a longer password: at least 6 characters.';
   if (code === 'email_address_invalid' || code === 'validation_failed') return 'That doesn’t look like an email address.';
   if (/rate_limit|over_.*limit/.test(code)) return 'Too many tries. Wait a minute, then try again.';
@@ -173,12 +182,26 @@ export async function signOut() {
  * them (src/data/api.js). Null when nobody is signed in or their email isn't
  * confirmed. Waits for a saved sign-in to load first.
  */
-export async function idToken() {
+export async function idToken(opts) {
+  return (await hiveSession(opts))?.token || null;
+}
+
+/**
+ * { token, uid } for the signed-in, confirmed Hive user, or null. A token that
+ * is about to run out (or `fresh`: the server said it had) is refreshed first:
+ * a tablet left alone can hold one past its hour, and the board would then be
+ * read as nobody.
+ */
+export async function hiveSession({ fresh = false } = {}) {
   if (!accountsOn) return null;
   try {
     const sb = await supabase();
-    const { data } = await sb.auth.getSession();
-    return data.session && confirmed(data.session.user) ? data.session.access_token : null;
+    let { data: { session } } = await sb.auth.getSession();
+    if (session && (fresh || (session.expires_at || 0) * 1000 < Date.now() + 60000)) {
+      const r = await sb.auth.refreshSession();
+      session = r.data?.session || (fresh ? null : session);
+    }
+    return session && confirmed(session.user) ? { token: session.access_token, uid: session.user.id } : null;
   } catch {
     return null;
   }

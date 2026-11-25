@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { callApi, takeKeyFromUrl } from '@/data/api';
-import { loadBoard, REFRESH_MS } from '@/data/sources';
+import { loadBoard, REFRESH_MS, RETRY_EVENT } from '@/data/sources';
 import { useToast } from '@/context/ToastContext';
 import { useStored } from '@/hooks/useStored';
 import { USER_CHANGED } from './account';
@@ -10,7 +10,7 @@ import { USER_CHANGED } from './account';
  *
  * Live ticks go to the app that owns the thing (GalaxyFarm, KitchenHub,
  * LearnLeaf, Google Tasks) and show straight away; the next refresh brings the
- * app's own answer. In sample mode, and for shopping lines KitchenHub can't
+ * app's own answer. In sample mode (signed out only), and for shopping lines KitchenHub can't
  * tick (worked out from the meal plan), ticks stay on this device, in the same
  * storage the board uses, so the two agree.
  *
@@ -41,7 +41,11 @@ export function useLiveBoard() {
     const vis = () => { if (!document.hidden) reload(); };
     document.addEventListener('visibilitychange', vis);
     window.addEventListener(USER_CHANGED, reload);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis); window.removeEventListener(USER_CHANGED, reload); };
+    window.addEventListener(RETRY_EVENT, reload);
+    return () => {
+      clearInterval(id); document.removeEventListener('visibilitychange', vis);
+      window.removeEventListener(USER_CHANGED, reload); window.removeEventListener(RETRY_EVENT, reload);
+    };
   }, [reload]);
 
   const live = (section) => raw?.status[section]?.status === 'live';
