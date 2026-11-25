@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '@/components/board/Board';
 import { Footer } from '@/components/Footer';
 import { PullToRefresh } from '@/components/PullToRefresh';
@@ -15,7 +15,7 @@ import { announce, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
-import { LaunchLayer, reducedMotion } from './Launch';
+import { LaunchLayer } from './Launch';
 import { addApp, addWidget, defaultLayout, locate, normalize, rename, takeOut } from './layout';
 import { DEFAULT_LOOK, WALLPAPERS, accentFor } from './look';
 import { AddSheet, AppFrame, FolderView, HiveSettings, StackSheet } from './Sheets';
@@ -73,7 +73,7 @@ export function Hive() {
   const [folder, setFolder] = useState(null); // { key, rect }
   const [sheet, setSheet] = useState(null); // 'add' | 'settings' | 'account' | 'look' | 'search'
   const [iconEdit, setIconEdit] = useState(null);
-  const [anim, setAnim] = useState(null); // the zoom between an icon and its app
+  const [zoom, setZoom] = useState(null); // the zoom between an icon and its app (Launch.jsx)
   const [paths, setPaths] = useState({}); // app id → { path, n } for shortcuts
   const [recentApps, setRecentApps] = useStored('hive.recent', []);
 
@@ -146,6 +146,17 @@ export function Hive() {
     if (view) setRecentApps((r) => [view, ...r.filter((x) => x !== view)].slice(0, 12));
   }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Leaving an app, however it happens (Home, the home bar, the back gesture):
+  // it shrinks back into its icon. Before paint, so the home screen never
+  // flashes without it.
+  const shown = useRef(view);
+  useLayoutEffect(() => {
+    const was = shown.current;
+    shown.current = view;
+    if (!was || view) return;
+    setZoom((z) => (z?.id === was ? { ...z, dir: 'close', key: Date.now() } : { id: was, dir: 'close', keys: zoomKeys(was), key: Date.now() }));
+  }, [view]);
+
   const navigate = useCallback((id) => {
     if (viewFromHash() === id) return;
     pushed.current = !viewFromHash();
@@ -157,33 +168,47 @@ export function Hive() {
    * Open an app. `from` is the icon it was tapped on (the zoom grows out of
    * it); `path` opens it at a page, for shortcuts and search results.
    */
+  /** Where an app lives on the home screen: its own icon, or the folder it's in. */
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const zoomKeys = (id) => [id, locate(layoutRef.current, id)?.folder?.key].filter(Boolean);
+
   const open = useCallback((id, from, path) => {
     const a = CATALOG[id];
     if (!a) return;
     setFolder(null);
     if (id === 'settings') { setSheet('settings'); return; }
+    const el = from?.isConnected ? from : null;
     // In its own tab: apps that can't be framed, and any the person chose (in a
     // frame, a browser gives the app separate storage, so its own sign-in
-    // doesn't carry over unless the app supports Sign in with Hive).
+    // doesn't carry over unless the app supports Sign in with Hive). The tile
+    // grows first, then the tab opens.
     if (opensInTab(id, look)) {
-      window.open(appUrl(id, path), '_blank', 'noopener'); return;
+      setZoom({ id, dir: 'open', from: el, keys: zoomKeys(id), tab: appUrl(id, path), key: Date.now() });
+      return;
     }
     if (path) setPaths((p) => ({ ...p, [id]: { path, n: (p[id]?.n || 0) + 1 } }));
-    if (reducedMotion() || viewFromHash() === id) { navigate(id); return; }
-    setAnim({ id, dir: 'open', rect: from?.getBoundingClientRect?.() || null, key: Date.now() });
-  }, [navigate, look.inside, look.external]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Mount the app now, so it can grow out of the icon from the first frame.
+    if (id === 'board') setBoardOpened(true);
+    else setRecent((r) => (r.includes(id) ? r : [id, ...r].slice(0, KEEP_FRAMES)));
+    if (viewFromHash() !== id && view !== id) setZoom({ id, dir: 'open', from: el, keys: zoomKeys(id), key: Date.now() });
+    navigate(id);
+  }, [navigate, look.inside, look.external, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goHome = useCallback(() => {
-    const leaving = viewFromHash() || (view === 'board' ? 'board' : null);
     if (pushed.current && viewFromHash()) window.history.back();
     else { window.history.replaceState(null, '', window.location.pathname + window.location.search); setView(null); }
-    if (leaving && !reducedMotion()) setAnim({ id: leaving, dir: 'close', rect: null, key: Date.now() });
-  }, [view]);
+  }, []);
 
-  const onAnimDone = useCallback((a) => {
-    if (a.cleared) { setAnim((cur) => (cur?.key === a.key ? null : cur)); return; }
-    if (a.dir === 'open') navigate(a.id);
-  }, [navigate]);
+  const onZoomSettled = useCallback((z) => {
+    setZoom((cur) => (cur?.id === z.id && cur.dir === z.dir ? null : cur));
+    if (z.dir === 'open' && z.id === 'board') window.scrollTo(0, scrolls.current.board ?? 0);
+  }, []);
+  const onZoomTab = useCallback((z) => {
+    const w = window.open(z.tab, '_blank', 'noopener');
+    if (!w && !window.matchMedia?.('(display-mode: standalone)').matches) window.location.assign(z.tab); // blocked: open it here instead
+    setTimeout(() => setZoom((cur) => (cur?.key === z.key ? { ...cur, dir: 'close', key: Date.now() } : cur)), 250);
+  }, []);
 
   // On the fridge: when nobody is using the screen, drift back to the board,
   // or show the clock screen.
@@ -223,16 +248,17 @@ export function Hive() {
   return (
     <div className="hive" data-icons={look.iconStyle || 'colour'} data-badges={look.badgeStyle || 'count'} style={accent ? { '--accent': accent } : undefined}>
       {boardOpened && (
-        <div className="hive-view" hidden={!onBoard}>
+        <div className="hive-view board-view" data-app-view="board" hidden={!onBoard && zoom?.id !== 'board'}>
           {phone
             ? <><PullToRefresh><Board onHome={goHome} /></PullToRefresh><Footer /></>
             : <Board onHome={goHome} />}
         </div>
       )}
 
-      {recent.map((id) => <AppFrame key={id} id={id} visible={view === id} onHome={goHome} path={paths[id]} />)}
+      {recent.map((id) => <AppFrame key={id} id={id} visible={view === id || (zoom?.id === id && !zoom.tab)} onHome={goHome} path={paths[id]} />)}
 
-      <div className="hive-view home-view" hidden={!!view} style={{ '--wall': wall.css }}>
+      {/* Kept laid out behind an open app (hidden, not removed), so it's ready the moment the app shrinks back into it. */}
+      <div className={`hive-view home-view ${view && !zoom ? 'behind' : ''}`} aria-hidden={view && !zoom ? 'true' : undefined} inert={view && !zoom ? '' : undefined} style={{ '--wall': wall.css }}>
         <div className={`wallpaper ${look.dim ? 'dim' : ''}`} aria-hidden="true" />
         <WidgetActions.Provider value={act}>
         <Home layout={layout} setLayout={setLayout} data={data} now={now} sig={sig} look={look} badges={badges} dark={wallDark}
@@ -260,7 +286,7 @@ export function Hive() {
           onShowClock={() => { setSheet(null); setResting(true); }} />
       )}
       {!view && iconEdit && <IconEditor id={iconEdit} layout={layout} setLayout={setLayout} onClose={() => setIconEdit(null)} />}
-      {anim && <LaunchLayer key={anim.key} anim={anim} custom={layout.custom} onDone={onAnimDone} />}
+      {zoom && <LaunchLayer key={zoom.id} zoom={zoom} custom={layout.custom} onSettled={onZoomSettled} onTab={onZoomTab} />}
       {!view && sheet === 'add' && (
         <AddSheet layout={layout} onClose={() => setSheet(null)}
           data={data} now={now} custom={layout.custom}

@@ -1,3 +1,15 @@
+/* Numerals with an open zero. Atkinson's zero is slashed and reads as Ø across
+   a room, so prominent numbers take their digits (0-9 only, via unicode-range)
+   from Barlow Semi Condensed and everything else from Atkinson. */
+@font-face {
+  font-family: "Hive Numerals"; font-style: normal; font-weight: 400 650; font-display: swap; unicode-range: U+0030-0039;
+  src: url(https://fonts.gstatic.com/s/barlowsemicondensed/v16/wlpigxjLBV1hqnzfr-F8sEYMB0Yybp0mudRfp66_B2sl.woff2) format("woff2");
+}
+@font-face {
+  font-family: "Hive Numerals"; font-style: normal; font-weight: 651 900; font-display: swap; unicode-range: U+0030-0039;
+  src: url(https://fonts.gstatic.com/s/barlowsemicondensed/v16/wlpigxjLBV1hqnzfr-F8sEYMB0Yybp0mudRfw6-_B2sl.woff2) format("woff2");
+}
+
 /* Hive design tokens. The one place colours, type, space, radii and motion are
    chosen; board.css and hive.css only use these. See docs/hive-design.md. */
 :root {
@@ -26,6 +38,8 @@
   --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
   /* The clock only: signage letters with an open zero (Atkinson's zero is slashed, which reads as Ø across a room). */
   --font-clock: "Barlow Semi Condensed", var(--font);
+  /* Big or prominent numbers (counts, temperatures, badges): open-zero digits, Atkinson letters. */
+  --font-num: "Hive Numerals", var(--font);
   --t-xs: 12px;
   --t-sm: 14px;
   --t-md: 16px;

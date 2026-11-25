@@ -255,7 +255,7 @@ export function AppFrame({ id, visible, onHome, path }) {
   };
   const k = Math.min(1, pull / 260);
   return (
-    <div className="frame-view" hidden={!visible}
+    <div className="frame-view" data-app-view={id} hidden={!visible}
       style={pull ? { transform: `translateY(${-pull * 0.5}px) scale(${1 - k * 0.22})`, borderRadius: `${16 + k * 24}px`, transition: 'none' } : undefined}>
       <div className="frame-bar" style={{ '--c': a.color }}>
         <button className="frame-home" onClick={onHome} aria-label="Back to the Hive home screen">

@@ -137,7 +137,9 @@ export function Home({
   useLayoutEffect(() => {
     const el = pager.view.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setBox({ w: e.contentRect.width, h: e.contentRect.height }));
+    // While an app is open the home screen is hidden (size 0): keep the last
+    // size, so its icons are already in place when the app shrinks back into one.
+    const ro = new ResizeObserver(([e]) => { if (e.contentRect.width && e.contentRect.height) setBox({ w: e.contentRect.width, h: e.contentRect.height }); });
     ro.observe(el);
     return () => ro.disconnect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -145,7 +147,7 @@ export function Home({
   useEffect(() => () => press.current?.off(), []);
   useEffect(() => {
     const key = (e) => {
-      if (!homeRef.current?.offsetParent) return; // the home screen isn't showing
+      if (!homeRef.current || homeRef.current.closest('.behind, [hidden]')) return; // the home screen isn't showing
       if (document.querySelector('.hive-layer')) return; // a sheet, menu or search is open: Escape is theirs
       if (e.key === 'Escape' && editingRef.current) setEditing(false);
       const inField = e.target.closest?.('input, textarea, select, .hive-layer');

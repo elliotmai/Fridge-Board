@@ -74,6 +74,7 @@ export function usePager(count, { onSettle, wallpaper } = {}) {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const s = st.current;
+      if (!el.clientWidth) return; // hidden behind an open app: keep the page where it was
       s.w = el.clientWidth;
       stop();
       paint(-Math.min(s.page, countRef.current - 1) * s.w);

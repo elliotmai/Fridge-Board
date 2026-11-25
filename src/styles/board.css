@@ -592,3 +592,6 @@ a.entry h3::after { content: ""; }
   .card { grid-template-columns: 1fr 380px; padding: 40px 48px; }
   .card aside ul, .card aside .lbl { font-size: 21px; }
 }
+
+/* Prominent numbers: open-zero digits (see --font-num in tokens.css). */
+.wx-temp, .zh .count b, .countdown b, .fold b { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
