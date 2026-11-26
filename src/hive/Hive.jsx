@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '@/components/board/Board';
 import { OPEN_ACCOUNT } from '@/components/board/bits';
+import { EGG_COUNT_PATH, OPEN_EGG_COUNT } from '@/lib/eggs';
 import { Footer } from '@/components/Footer';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { APP_KEY } from '@/config/app';
@@ -12,7 +13,7 @@ import { useStored } from '@/hooks/useStored';
 import { useTick } from '@/hooks/useTick';
 import { accountsOn, USER_CHANGED, useHiveUser } from './account';
 import { AccountSheet } from './AccountSheet';
-import { announce, startBridge } from './bridge';
+import { announce, listenForClose, startBridge } from './bridge';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { Home } from './Home';
 import { LaunchLayer, reducedMotion } from './Launch';
@@ -173,6 +174,23 @@ export function Hive() {
     window.addEventListener(OPEN_ACCOUNT, on);
     return () => window.removeEventListener(OPEN_ACCOUNT, on);
   }, [view, goHome]);
+
+  // Ticking off the egg round, on the board or a widget: GalaxyFarm's egg count,
+  // in its frame. It asks to be closed once the count is logged.
+  // Back to where the tick was: the board on the fridge, else the home screen.
+  const eggsFrom = useRef(null);
+  useEffect(() => {
+    // `view`, not the hash: the fridge can start on the board with no hash.
+    const on = () => { eggsFrom.current = view; open('galaxyfarm', null, EGG_COUNT_PATH); };
+    window.addEventListener(OPEN_EGG_COUNT, on);
+    return () => window.removeEventListener(OPEN_EGG_COUNT, on);
+  }, [open, view]);
+  useEffect(() => listenForClose((id) => {
+    if (viewFromHash() !== id) return;
+    const back = eggsFrom.current;
+    eggsFrom.current = null;
+    if (back === 'board') open('board'); else goHome();
+  }), [goHome, open]);
 
   const onAnimDone = useCallback((a) => {
     if (a.cleared) { setAnim((cur) => (cur?.key === a.key ? null : cur)); return; }

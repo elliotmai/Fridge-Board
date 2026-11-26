@@ -8,6 +8,8 @@ import { passFor } from './account';
  *   app → Hive   { type: 'hive:hello' }           "I'm loaded; who's signed in?"
  *   Hive → app   { type: 'hive:pass', pass }      a pass made for that app only
  *   Hive → app   { type: 'hive:signed-out' }      nobody is signed in to Hive
+ *   app → Hive   { type: 'hive:close' }           "I'm finished; take me away"
+ *                                                  (GalaxyFarm's egg count, once logged)
  *
  * Hive answers only a frame it opened, only from that app's own address, and
  * sends the pass only to that address, so another page can't ask for one or
@@ -53,4 +55,20 @@ export function startBridge(isSignedIn) {
 /** Tell every open app the Hive sign-in changed. */
 export function announce(signedIn) {
   document.querySelectorAll('iframe[data-app]').forEach((f) => answer(f, signedIn));
+}
+
+/**
+ * Listen for an app asking to be closed. Only a frame Hive opened, only from
+ * that app's own address: another page can't close what you're looking at.
+ * `onClose(id)` gets the app's id. Returns a function that stops listening.
+ */
+export function listenForClose(onClose) {
+  const onMessage = (e) => {
+    if (e.data?.type !== 'hive:close') return;
+    const frame = frameFor(e.source);
+    if (!frame || e.origin !== originOf(frame.dataset.app)) return;
+    onClose(frame.dataset.app);
+  };
+  window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
 }

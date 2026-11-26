@@ -11,6 +11,7 @@ import { useTick } from '@/hooks/useTick';
 import { DAY, plural } from '@/lib/dates';
 import { dedupeEvents, mergeTodos, timeline } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
+import { openEggCount, opensEggCount } from '@/lib/eggs';
 import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
 import { DrinksSheet } from './DrinksSheet';
@@ -146,6 +147,8 @@ export function Board({ onHome }) {
     const was = done.includes(c.id);
     const okay = await setChore(c, !was);
     if (!was && okay !== false) toast(`${c.title} ticked off`, { duration: 5000, action: { label: 'Undo', onClick: () => setChore(c, false) } });
+    // Ticking off the egg round opens GalaxyFarm's egg count, once it has the tick.
+    if (okay !== false && opensEggCount(c, was, liveChores)) openEggCount();
   };
 
   // KitchenHub has no tick for lines worked out from the meal plan (ids "meal:…"),

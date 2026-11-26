@@ -4,6 +4,7 @@ import { loadBoard, REFRESH_MS, RETRY_EVENT } from '@/data/sources';
 import { useToast } from '@/context/ToastContext';
 import { useStored } from '@/hooks/useStored';
 import { USER_CHANGED } from './account';
+import { openEggCount, opensEggCount } from '@/lib/eggs';
 
 /**
  * The board's feed for the home screen, with ticks from widgets laid over it.
@@ -93,14 +94,20 @@ export function useLiveBoard() {
     return send(`todo:${t.key}`, path, { done: on }, `Couldn't update ${t.name} in ${t.source === 'google' ? 'Google Tasks' : 'LearnLeaf'}`);
   };
 
-  /** Flip, and offer Undo when something was ticked off. */
+  /** Flip, and offer Undo when something was ticked off. True when it landed. */
   const flip = async (set, thing, was, msg) => {
     const ok = await set(thing, !was);
     if (!was && ok !== false) toast(msg, { duration: 5000, action: { label: 'Undo', onClick: () => set(thing, false) } });
+    return ok !== false;
   };
 
   const act = {
-    chore: (c) => flip(setChore, c, c.done, `${c.title} ticked off`),
+    chore: async (c) => {
+      const landed = await flip(setChore, c, c.done, `${c.title} ticked off`);
+      // Ticking off the egg round opens GalaxyFarm's egg count — once GalaxyFarm
+      // has the tick, so a refused one leaves you on the home screen.
+      if (landed && opensEggCount(c, c.done, live('chores'))) openEggCount();
+    },
     item: (i) => flip(setItem, i, i.bought, `${i.name} is in the cart`),
     todo: (t, done) => flip(setTodo, t, done, `${t.name} done`),
     addItem: async (name) => {
