@@ -54,7 +54,8 @@ async function galaxyfarm(user) {
     status: 'live',
     data: {
       property: r.property,
-      chores: r.chores.map((c) => ({ id: c.id, title: c.title, detail: c.detail || '', slot: c.slot, done: !!c.done })),
+      // `eggs` marks the egg round: ticking it opens GalaxyFarm's egg count (src/lib/eggs.js).
+      chores: r.chores.map((c) => ({ id: c.id, title: c.title, detail: c.detail || '', slot: c.slot, done: !!c.done, eggs: !!c.eggs })),
       sitter: {
         contacts: (r.sitter?.contacts || []).map((c) => [c.name, c.role || '', c.phone || '']),
         // `notes` is GalaxyFarm's older flat list. Once it sends `care`, the same things

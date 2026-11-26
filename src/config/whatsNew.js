@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.26',
+    date: 'November 2026',
+    items: ['Tick off collecting the eggs, on the fridge or in the Chores widget, and GalaxyFarm’s egg count opens straight away: count the basket, tap Log, and you’re back where you were.'],
+  },
+  {
     version: '2026.11.25',
     date: 'November 2026',
     items: [

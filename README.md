@@ -173,6 +173,15 @@ its stats and BAC are worked out from the drinks, so the new one counts.
 | Next breeding group | ZNT | Firestore `sessions` (public read) | none |
 | Weather | Open-Meteo | forecast at the GalaxyFarm location | none |
 
+**The egg round.** GalaxyFarm marks the egg-collection chore `eggs: true` in
+`/api/board/v1`. Ticking it off — on the board or in the Chores widget, once
+GalaxyFarm has accepted the tick — opens GalaxyFarm's egg count in its frame at
+`/kiosk/eggs?from=hive` (`src/lib/eggs.js`). When the count is logged the page
+posts `{ type: 'hive:close', v: 1 }`, and Hive goes back to where the tick was:
+the board, or the home screen (`listenForClose` in `src/hive/bridge.js`, which
+only listens to a frame Hive opened, from that app's own address). Sample-mode
+ticks never open it.
+
 ### What goes in Netlify, and what doesn't
 
 Netlify's settings belong to the site: every deploy, and everyone who uses
