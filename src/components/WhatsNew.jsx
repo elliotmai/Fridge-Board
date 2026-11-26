@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { WHATS_NEW } from '@/config/whatsNew';
 import { APP_KEY } from '@/config/app';
 
@@ -42,12 +42,14 @@ export function WhatsNew() {
   const latest = WHATS_NEW[0];
   const [entries, setEntries] = useState(unseenEntries);
 
+  // Seen as soon as it shows, so leaving without tapping it (the wall display,
+  // closing the tab) doesn't bring it back next time.
+  useEffect(() => {
+    if (!entries.length || !latest) return;
+    try { localStorage.setItem(STORAGE_KEY, latest.version); } catch { /* ignore storage failures */ }
+  }, [entries.length, latest]);
+
   function dismiss() {
-    try {
-      localStorage.setItem(STORAGE_KEY, latest.version);
-    } catch {
-      /* ignore storage failures */
-    }
     setEntries([]);
   }
 

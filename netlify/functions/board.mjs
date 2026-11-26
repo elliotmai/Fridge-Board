@@ -148,12 +148,16 @@ async function google(where, user) {
   let headers;
   try { headers = passHeader(user, 'ourden'); } catch (e) { return { status: 'unconfigured', reason: e.message }; }
   const tz = where.tz || 'UTC';
-  let d;
-  try { d = await getJson(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers }, 12000); } catch (e) {
-    // 409: this person hasn't connected Google yet (or Google revoked it).
-    if (e instanceof SourceError && e.status === 409) return { status: 'connect', reason: GOOGLE_NOT_CONNECTED };
-    throw e;
+  const res = await fetch(`${urls.ourden()}/api/board/google?tz=${encodeURIComponent(tz)}`, { headers, signal: AbortSignal.timeout(12000) });
+  // 409: this person hasn't connected Google yet (or Google revoked it).
+  if (res.status === 409) return { status: 'connect', reason: GOOGLE_NOT_CONNECTED };
+  // Anything else: keep Our Den's reason (Google's own words, e.g. an API turned
+  // off), so the log and the widget say what's wrong rather than just "502".
+  if (!res.ok) {
+    const why = (await res.json().catch(() => ({}))).error;
+    throw new SourceError(`Our Den answered ${res.status}${why ? `: ${String(why).slice(0, 200)}` : ''}`, res.status);
   }
+  const d = await res.json();
   return { status: 'live', data: { events: d.events || [], tasks: d.tasks || [] } };
 }
 

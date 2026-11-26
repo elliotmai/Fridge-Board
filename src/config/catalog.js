@@ -14,8 +14,9 @@ import { APPS } from './apps.js';
  *   native    built into Hive itself instead of opened in a frame.
  *   shortcuts quick actions in the long-press menu: [{ label, path }], opened
  *             at that path inside the app.
- *   frame     false = always opens in its own tab. Cattle Graph and Our Den
- *             send X-Frame-Options: DENY, so a frame would stay blank.
+ *   frame     false = always opens in its own tab: for an app that refuses
+ *             to be shown inside another site. None do today; each app's
+ *             frame-ancestors lists Hive (checked 2026-11-25).
  *
  * Apps with no `frame` key open inside Hive, with "Open in its own tab" always
  * one tap away. Each app's own sign-in still applies until the shared Hive
@@ -26,13 +27,14 @@ export const CATALOG = {
   settings: { name: 'Settings', color: '#8e8e93', glyph: 'gear', audience: 'anyone', native: true, blurb: 'Your Hive account, wallpaper, and how the home screen looks.' },
   // hive: signs you in with your Hive account (a pass), inside Hive and on its
   // own address. Its sign-in cookie is fine in Hive's frame: the same site.
-  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, hive: true, color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
+  galaxyfarm: { name: 'GalaxyFarm', url: APPS.galaxyfarm.url, hive: true, start: '/admin', color: '#3d6b2f', glyph: 'barn', audience: 'household', blurb: 'Cattle, flocks, chores and the housesitter guide.',
     shortcuts: [{ label: 'Chores', path: APPS.galaxyfarm.paths.chores }, { label: 'Housesitter guide', path: APPS.galaxyfarm.paths.housesitter }] },
   znt: { name: 'ZNT', url: APPS.znt.url, color: '#7a4e1d', glyph: 'cow', audience: 'household', blurb: 'Breeding groups, heat tracking and feeding.' },
   cattlegraph: { name: 'Cattle Graph', url: 'https://cattle.flyingdoublemranch.com', color: '#5a4632', glyph: 'graph', audience: 'household', blurb: 'Pedigrees across every breed association.' },
   kitchenhub: { name: 'KitchenHub', url: APPS.kitchenhub.url, color: '#9c3a5c', glyph: 'pot', audience: 'anyone', blurb: 'What is in the fridge, meal plans and shopping.',
-    shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
-  letseat: { name: "Let's Eat", url: 'https://letseat.flyingdoublemranch.com', color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Recipes, holiday meals and shopping lists.' },
+    shortcuts: [{ label: 'Shopping list', path: APPS.kitchenhub.paths.shopping }, { label: 'Meal plan', path: APPS.kitchenhub.paths.mealPlan }, { label: 'Events', path: APPS.kitchenhub.paths.events }, { label: 'What’s in the fridge', path: APPS.kitchenhub.paths.inventory }] },
+  // Let's Eat is part of KitchenHub now: the tile opens KitchenHub's events.
+  letseat: { name: "Let's Eat", url: `${APPS.kitchenhub.url}${APPS.kitchenhub.paths.events}`, color: '#c2553a', glyph: 'fork', audience: 'anyone', blurb: 'Holiday meals and shopping by store, in KitchenHub.' },
   pool: { name: 'Pool Heater', url: 'https://pool.flyingdoublemranch.com', color: '#1f7fa6', glyph: 'wave', audience: 'household', blurb: 'Live pool and heater temperatures.' },
   // hive: existing Property Care accounts sign in with Hive (inside Hive and on its own address).
   property: { name: 'Property Care', url: 'https://landlord-property-maintenance.netlify.app', hive: true, color: '#56606b', glyph: 'wrench', audience: 'anyone', blurb: 'Work orders for landlords and residents.' },
@@ -86,10 +88,14 @@ export function appLook(id, custom = {}) {
   return { name: c.name || a.name || id, color: c.color || a.color || '#777', glyph: c.glyph || a.glyph };
 }
 
-/** Where a shortcut path goes: an absolute URL as is, else under the app's own address. */
+/**
+ * Where a shortcut path goes: an absolute URL as is, else under the app's own
+ * address. With no path, the app's `start` page (its owner view), if it has one.
+ */
 export function appUrl(id, path = '') {
   const a = CATALOG[id];
   if (!a?.url) return null;
+  path = path || a.start || '';
   if (/^https?:\/\//.test(path)) return path;
   try { return new URL(path || '', a.url.endsWith('/') ? a.url : `${a.url}/`).href.replace(/\/$/, path ? '' : '/'); } catch { return a.url; }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { followEmailLink } from './emailLink';
+import { hasPending } from './googleReturn';
 import { SESSION_COOKIE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, sessionCookieOptions } from '@/config/supabase';
 
 /**
@@ -30,6 +31,8 @@ export function supabase() {
     });
     await adoptOldSession(sb);
     await followEmailLink(sb);
+    // Back from Connect Google (googleConnect.js): hand Google's tokens to the server.
+    if (hasPending(sessionStorage)) import('./googleConnect').then((m) => m.finishGoogleConnect(sb)).catch(() => {});
     return sb;
   });
   return loading;
@@ -150,6 +153,7 @@ export async function setNewPassword(password) {
 export function authMessage(e) {
   const code = e?.code || '';
   const text = String(e?.message || '');
+  if (code === 'empty_name') return 'Type a name first.';
   if (code === 'invalid_credentials') return 'That email and password don’t match.';
   if (code === 'carry_over_emailed') return 'Almost there: we emailed you a link to finish signing in. Open it on this device.';
   if (code === 'email_not_confirmed') return 'Confirm your email first: open the link we sent you.';
@@ -250,6 +254,22 @@ export async function myHousehold() {
   return { id: h.data.id, name: h.data.name, role: members.find((x) => x.me)?.role || 'member', members };
 }
 
+/**
+ * My name as housemates see it, everywhere in Hive and the apps: the profile
+ * (what household lists read) and the sign-in's own metadata (what `user.name`
+ * reads). Only the name: the database lets nobody change anything else.
+ */
+export async function setMyName(name) {
+  const clean = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  if (!clean) throw Object.assign(new Error('empty'), { code: 'empty_name' });
+  const sb = await supabase();
+  const me = (await sb.auth.getUser()).data.user?.id;
+  if (!me) throw Object.assign(new Error('signed out'), { code: 'signed_out' });
+  must(await sb.schema('core').from('profiles').update({ display_name: clean }).eq('id', me));
+  must(await sb.auth.updateUser({ data: { display_name: clean } }));
+  return clean;
+}
+
 export async function createHousehold(name) {
   const sb = await supabase();
   return must(await sb.schema('core').rpc('create_household', { name: name.trim() }));
@@ -266,6 +286,30 @@ export async function newInviteCode(householdId) {
   return must(await sb.schema('core').rpc('reset_invite', { hid: householdId }));
 }
 
+/** Owner: take someone out of the household (or yourself, to leave). */
+export async function removeMember(householdId, userId) {
+  const sb = await supabase();
+  must(await sb.schema('core').rpc('remove_member', { hid: householdId, who: userId }));
+}
+
+/** Owner: move a member to event partner (KitchenHub events only, every event). */
+export async function makeEventPartner(householdId, userId, canEdit = true) {
+  const sb = await supabase();
+  must(await sb.schema('kitchen').rpc('make_event_partner', { hid: householdId, who: userId, edit: canEdit }));
+}
+
+/** The household's event partners: [{ user_id, name, email, can_edit }]. */
+export async function eventPartners(householdId) {
+  const sb = await supabase();
+  return must(await sb.schema('kitchen').rpc('household_partners', { hid: householdId })) || [];
+}
+
+/** Owner: stop someone being an event partner. */
+export async function removeEventPartner(householdId, userId) {
+  const sb = await supabase();
+  must(await sb.schema('kitchen').rpc('remove_event_partner', { hid: householdId, who: userId }));
+}
+
 export async function joinHousehold(code) {
   const sb = await supabase();
   const r = await sb.schema('core').rpc('join_household', { invite: code.trim() });
@@ -276,5 +320,7 @@ export async function joinHousehold(code) {
 /** Plain-English message for a household error. */
 export function householdMessage(e) {
   if (e?.code === 'bad_invite') return 'That code doesn’t work. It may be used up or more than a week old.';
+  if (e?.code === 'P0001' && e.message) return e.message.charAt(0).toUpperCase() + e.message.slice(1) + '.';
+  if (e?.code === '42501') return 'Only the household’s owner can do that.';
   return authMessage(e);
 }

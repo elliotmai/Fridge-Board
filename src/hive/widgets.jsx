@@ -12,6 +12,35 @@ import { useWidgetActions } from './live';
 
 export { useLiveBoard } from './live';
 
+/**
+ * A few facts about the household's day, for stacks that turn by themselves
+ * and the line under the clock (smart.js decides what they mean).
+ */
+export function signals(data, now) {
+  const hour = now.getHours();
+  if (!data) return { hour, choresLeft: 0, toBuy: 0, due: 0, overdue: 0, nextEvent: null, dinner: null, trip: null, breedDays: null, wx: null };
+  const done = new Set(data.todosDone || []);
+  const todos = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now).filter((t) => !done.has(t.key));
+  const soon = (dedupeEvents(data.events || [], data.trips).shown || [])
+    .filter((e) => !e.allDay && new Date(e.start) > now - 30 * 60000)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+  const ts = tripState(data.trips, data.home, now, OPTS);
+  const trip = ts.shown.find((t) => t.current) || ts.shown[0] || null;
+  const b = nextBreeding(data.sessions, ts, now, { ...OPTS, breedWindow: 365 });
+  return {
+    hour,
+    choresLeft: data.chores.filter((c) => !c.done).length,
+    toBuy: data.shopping.filter((i) => !i.bought).length,
+    due: todos.filter((t) => t.n != null && t.n <= 0).length,
+    overdue: todos.filter((t) => t.n != null && t.n < 0).length,
+    nextEvent: soon ? { title: soon.title, mins: Math.round((new Date(soon.start) - now) / 60000), at: clock(new Date(soon.start)).toLowerCase().replace(' ', '\u202f') } : null,
+    dinner: data.meals.find((m) => m.type === 'Dinner' && m.d === 0)?.name || null,
+    trip: trip && { name: trip.name, dest: trip.dest?.split(',')[0], until: trip.until, current: trip.current },
+    breedDays: b ? daysBetween(startOf(now), b.cidr) : null,
+    wx: data.weather ? { now: data.weather.now, desc: data.weather.desc } : null,
+  };
+}
+
 const OPTS = { window: 30, breedWindow: 30, awayMiles: 75 };
 
 /**

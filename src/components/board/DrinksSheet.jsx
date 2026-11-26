@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-import { APP_KEY } from '@/config/app';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
 import { callApi } from '@/data/api';
 
@@ -8,21 +7,11 @@ import { callApi } from '@/data/api';
  * adds a drink to that person's Drink Tracker (netlify/functions/drinks.mjs
  * checks you're signed in, and that they're in your household).
  *
- * Who you are is kept for this board session in this tab (sessionStorage),
- * and forgotten after a while untouched, so the next person at the fridge
- * isn't logged as you. "Not you?" switches straight away.
+ * It asks who you are every time it opens, so the next person at the fridge
+ * is never logged as you. While it's open you can add several drinks for the
+ * same person, or switch with "Not you?".
  */
-const WHO = `${APP_KEY}.drinks.who`;
-const FORGET_MS = 20 * 60 * 1000;
 const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } };
-
-function readWho() {
-  try {
-    const w = JSON.parse(sessionStorage.getItem(WHO) || 'null');
-    return w && Date.now() - w.at < FORGET_MS ? w : null;
-  } catch { return null; }
-}
-function saveWho(w) { try { w ? sessionStorage.setItem(WHO, JSON.stringify({ ...w, at: Date.now() })) : sessionStorage.removeItem(WHO); } catch { /* ignore */ } }
 
 const EMOJI = { Beer: '🍺', Wine: '🍷', Cocktail: '🍸', Spirit: '🥃', Other: '🍹' };
 const label = (d) => `${d.name || d.type} · ${d.quantity} oz`;
@@ -31,16 +20,24 @@ export function DrinksSheet({ onClose }) {
   const { toast } = useToast();
   const [people, setPeople] = useState(null); // null: loading
   const [error, setError] = useState('');
-  const [who, setWho] = useState(readWho);
+  const [who, setWho] = useState(null);
   const [opts, setOpts] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
+  // Search: every drink they've logged, then the plain types; any part of the name or type.
+  const found = useMemo(() => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length || !opts?.all) return [];
+    const plain = (opts.types || []).map((t) => ({ type: t.type, name: '', quantity: t.quantity }));
+    return [...opts.all, ...plain]
+      .filter((d) => { const s = `${d.name} ${d.type}`.toLowerCase(); return words.every((w) => s.includes(w)); })
+      .slice(0, 8);
+  }, [q, opts]);
 
   useEffect(() => {
     callApi('/api/drinks').then((r) => {
       if (!r.ok) { setError(r.data?.error || 'Couldn’t reach Drink Tracker'); setPeople([]); return; }
       setPeople(r.data.people);
-      // The remembered person must still be in the household.
-      setWho((w) => (w && r.data.people.some((p) => p.id === w.id) ? w : null));
     });
   }, []);
 
@@ -51,8 +48,14 @@ export function DrinksSheet({ onClose }) {
   }, []);
   useEffect(() => { if (who) loadOpts(who); }, [who?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const choose = (p) => { const w = { id: p.id, name: p.name }; saveWho(w); setWho(w); };
-  const notMe = () => { saveWho(null); setWho(null); setOpts(null); };
+  const choose = (p) => setWho({ id: p.id, name: p.name });
+  const notMe = () => { setWho(null); setOpts(null); setQ(''); };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const add = async (d) => {
     if (busy) return;
@@ -60,7 +63,6 @@ export function DrinksSheet({ onClose }) {
     const r = await callApi(`/api/drinks/${encodeURIComponent(who.id)}`, { method: 'POST', body: { type: d.type, name: d.name || '', quantity: d.quantity, tz: tz() } });
     setBusy(false);
     if (!r.ok) { toast(r.data?.error || 'Couldn’t add that drink', { type: 'error', duration: 5000 }); return; }
-    saveWho(who); // still you: keep remembering
     setOpts((o) => (o ? { ...o, today: (o.today || 0) + 1 } : o));
     toast(`${d.name || d.type} added for ${who.name}. Fix or remove it in Drink Tracker.`, { duration: 5000 });
   };
@@ -76,6 +78,7 @@ export function DrinksSheet({ onClose }) {
       <div className="scrim" onClick={onClose} />
       <div className="sheet drinks-sheet" role="dialog" aria-modal="true" aria-labelledby="drinksTitle">
         <div className="grab" />
+        <button className="sheet-close" onClick={onClose} aria-label="Close">×</button>
         <span className="when">Drink Tracker</span>
         <h3 id="drinksTitle">{who ? `Add a drink for ${who.name}` : 'Who’s having a drink?'}</h3>
 
@@ -96,9 +99,16 @@ export function DrinksSheet({ onClose }) {
             </div>
             {!opts && <p className="sub">Loading…</p>}
             {opts?.error && <p className="sub">{opts.error}</p>}
-            {opts?.favorites?.length > 0 && <><div className="sh">Favourites</div><div className="drink-chips">{opts.favorites.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
-            {opts?.recent?.length > 0 && <><div className="sh">Recent</div><div className="drink-chips">{opts.recent.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
-            {opts?.types && <><div className="sh">Quick add</div><div className="drink-chips">{opts.types.map((d) => <Chip key={d.type} d={{ type: d.type, name: '', quantity: d.quantity }} />)}</div></>}
+            {opts && !opts.error && (
+              <input className="drink-search" type="search" value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder={`Search ${who.name}’s drinks`} aria-label={`Search ${who.name}’s drinks`} />
+            )}
+            {q.trim() && (found.length
+              ? <div className="drink-chips">{found.map((d) => <Chip key={label(d)} d={d} />)}</div>
+              : <p className="sub">Nothing called “{q.trim()}” yet. Add it in Drink Tracker.</p>)}
+            {!q.trim() && opts?.favorites?.length > 0 && <><div className="sh">Top 3</div><div className="drink-chips">{opts.favorites.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
+            {!q.trim() && opts?.recent?.length > 0 && <><div className="sh">Recent</div><div className="drink-chips">{opts.recent.map((d) => <Chip key={label(d)} d={d} />)}</div></>}
+            {!q.trim() && opts?.types && <><div className="sh">Quick add</div><div className="drink-chips">{opts.types.map((d) => <Chip key={d.type} d={{ type: d.type, name: '', quantity: d.quantity }} />)}</div></>}
           </>
         )}
 

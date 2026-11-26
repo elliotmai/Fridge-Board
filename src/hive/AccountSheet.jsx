@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { GOOGLE_CONNECT_URL } from '@/config/google';
+import { forgetJoinCode, joinLink, pendingJoinCode } from './joinCode';
+import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
-  authMessage, createAccount, createHousehold, householdMessage, inviteCode, newInviteCode, joinHousehold, myHousehold,
-  resendConfirmation, resetPassword, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
+  authMessage, createAccount, createHousehold, eventPartners, householdMessage, makeEventPartner, removeEventPartner, removeMember, inviteCode, newInviteCode, joinHousehold, myHousehold,
+  resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
 /**
@@ -24,7 +25,8 @@ export function AccountSheet({ user, recovering, onClose }) {
     <div className="scrim hive-layer" onClick={onClose}>
       <div className="sheet-panel account" role="dialog" aria-modal="true" aria-label="Hive account" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><h2>Hive account</h2><button className="pill" onClick={onClose}>Close</button></div>
-        {recovering && user ? <NewPassword /> : !user ? <SignedOut onDone={onClose} /> : <SignedIn user={user} />}
+        {!user && pendingJoinCode() && <p className="auth-msg" role="status">You&rsquo;ve been invited to a household. Sign in or create an account, then join it here.</p>}
+        {recovering && user ? <NewPassword /> : !user ? <SignedOut onDone={pendingJoinCode() ? () => {} : onClose} /> : <SignedIn user={user} />}
       </div>
     </div>
   );
@@ -119,17 +121,73 @@ function NewPassword() {
 }
 
 function SignedIn({ user }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name || '');
+  const [shown, setShown] = useState(user.name || '');
+  const [round, setRound] = useState(0); // reloads the household list after a rename
+  const { busy, run, Msg } = useRun();
+  const save = async (e) => {
+    e.preventDefault();
+    const saved = await run(() => setMyName(name));
+    if (saved) { setShown(saved); setName(saved); setEditing(false); setRound((n) => n + 1); }
+  };
+  return (
+    <>
+      {editing ? (
+        <form className="auth-form" onSubmit={save}>
+          <label>Your name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoComplete="name" autoFocus required /></label>
+          <div className="row-actions">
+            <button className="pill strong" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+            <button className="pill" type="button" disabled={busy} onClick={() => { setName(shown); setEditing(false); }}>Cancel</button>
+          </div>
+          <small className="sheet-note">What your household sees in Hive, the fridge board and the apps.</small>
+        </form>
+      ) : (
+        <div className="set-row">
+          <span><b>{shown || 'Add your name'}</b><small>{user.email}</small></span>
+          <span className="row-actions">
+            <button className="pill" onClick={() => setEditing(true)}>{shown ? 'Edit name' : 'Add name'}</button>
+            <button className="pill" onClick={() => signOut()}>Sign out</button>
+          </span>
+        </div>
+      )}
+      <Msg />
+      <GoogleRow />
+      <Household key={round} />
+    </>
+  );
+}
+
+/**
+ * Google Calendar & Tasks: connect in one tap (googleConnect.js). What it says
+ * comes from the server, which checks with Google each time the sheet opens.
+ */
+function GoogleRow() {
+  const [s, setS] = useState(undefined); // undefined: checking
+  const [note, setNote] = useState(() => takeGoogleResult());
+  const { busy, run, Msg } = useRun();
+  const check = useCallback(() => { setS(undefined); googleStatus().then(setS).catch((e) => setS({ connected: false, failed: true, reason: e.message })); }, []);
+  useEffect(() => {
+    check();
+    const on = () => { setNote(takeGoogleResult()); check(); };
+    window.addEventListener(GOOGLE_CHANGED, on);
+    return () => window.removeEventListener(GOOGLE_CHANGED, on);
+  }, [check]);
+  const problems = s?.connected ? [['Calendar', s.calendar], ['Tasks', s.tasks]].filter(([, v]) => v !== undefined && v !== true) : [];
+  const line = s === undefined ? 'Checking with Google…'
+    : s.connected && !problems.length ? 'Connected: your calendar and tasks are on your board and widgets.'
+      : s.connected ? problems.map(([n, why]) => `Connected, but Google won’t share ${n}: ${why}`).join(' ')
+        : s.failed ? `Couldn’t check: ${s.reason}` : 'On your board and widgets. Connect once; it stays connected.';
   return (
     <>
       <div className="set-row">
-        <span><b>{user.name || 'Signed in'}</b><small>{user.email}</small></span>
-        <button className="pill" onClick={() => signOut()}>Sign out</button>
+        <span><b>Google Calendar &amp; Tasks</b><small role="status">{line}</small></span>
+        <button className="pill" disabled={busy || s === undefined} onClick={() => run(() => connectGoogle(), (e) => (e.code === 'signed_out' ? e.message : authMessage(e)))}>
+          {busy ? 'Opening Google…' : s?.connected ? 'Reconnect' : 'Connect'}
+        </button>
       </div>
-      <div className="set-row">
-        <span><b>Google Calendar &amp; Tasks</b><small>On your board and widgets. Connect once; it stays connected.</small></span>
-        <a className="pill" href={GOOGLE_CONNECT_URL} target="_blank" rel="noopener noreferrer">Connect</a>
-      </div>
-      <Household />
+      {note && <p className={`auth-msg ${note.ok ? '' : 'bad'}`} role={note.ok ? 'status' : 'alert'}>{note.message}</p>}
+      <Msg />
     </>
   );
 }
@@ -138,11 +196,46 @@ function SignedIn({ user }) {
 function Household() {
   const [h, setH] = useState(undefined); // undefined: loading; null: none
   const [name, setName] = useState('Our household');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(pendingJoinCode);
   const [invite, setInvite] = useState('');
+  const [joining, setJoining] = useState(() => Boolean(pendingJoinCode()));
+  const [copied, setCopied] = useState(false);
   const { busy, run, Msg } = useRun();
-  const load = useCallback(() => myHousehold().then(setH).catch(() => setH(null)), []);
+  const [partners, setPartners] = useState([]);
+  const [confirm, setConfirm] = useState(null); // { id, kind: 'remove' | 'partner', name }
+  const load = useCallback(() => myHousehold().then((x) => {
+    setH(x);
+    if (x) eventPartners(x.id).then(setPartners).catch(() => setPartners([]));
+  }).catch(() => setH(null)), []);
+  const doConfirm = async () => {
+    const c = confirm;
+    await run(() => (c.kind === 'remove' ? removeMember(h.id, c.id) : makeEventPartner(h.id, c.id, true)), householdMessage);
+    setConfirm(null);
+    load();
+  };
   useEffect(() => { load(); }, [load]);
+
+  const join = async (e) => {
+    e.preventDefault();
+    const ok = await run(() => joinHousehold(code), householdMessage);
+    if (ok) { forgetJoinCode(); setCode(''); setJoining(false); load(); }
+  };
+  const share = async () => {
+    const link = joinLink(invite);
+    const text = `Join our household in Hive: ${link} (or enter the code ${invite} in Hive, Account).`;
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Join our household in Hive', text, url: link }); return; }
+      await navigator.clipboard.writeText(link);
+      setCopied(true); setTimeout(() => setCopied(false), 2500);
+    } catch { /* cancelled */ }
+  };
+  const me = h?.members?.find((m) => m.me);
+  const JoinForm = ({ cta }) => (
+    <form className="auth-form" onSubmit={join}>
+      <label>Household code<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" placeholder="e.g. 7F3K9Q2B" required /></label>
+      <button className="pill strong wide" type="submit" disabled={busy}>{cta}</button>
+    </form>
+  );
 
   if (h === undefined) return <p className="sheet-note">Loading your household…</p>;
 
@@ -151,15 +244,12 @@ function Household() {
       <>
         <h3 className="sheet-sub">Household</h3>
         <p className="sheet-note">The people you share Hive with: shopping, meals, chores, the farm and trips. Personal things, like your journal, stay yours.</p>
+        {code && <><JoinForm cta="Join this household" /><div className="or"><span>or start your own</span></div></>}
         <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createHousehold(name), householdMessage)) load(); }}>
           <label>Name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
           <button className="pill strong wide" type="submit" disabled={busy}>Start a household</button>
         </form>
-        <div className="or"><span>or join one</span></div>
-        <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => joinHousehold(code), householdMessage)) load(); }}>
-          <label>Invite code<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" required /></label>
-          <button className="pill wide" type="submit" disabled={busy}>Join</button>
-        </form>
+        {!code && <><div className="or"><span>or join one with its code</span></div><JoinForm cta="Join" /></>}
         <Msg />
       </>
     );
@@ -169,17 +259,69 @@ function Household() {
     <>
       <h3 className="sheet-sub">{h.name}</h3>
       {h.members.map((m) => (
-        <div className="set-row" key={m.id}><span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ', owner' : ''}</small></span></div>
+        <div className="set-row" key={m.id}>
+          <span><b>{m.name}{m.me ? ' (you)' : ''}</b><small>{m.email}{m.role === 'owner' ? ', owner' : ''}</small></span>
+          {h.role === 'owner' && !m.me && (
+            confirm?.id === m.id ? (
+              <span className="row-actions">
+                <button className="pill strong" disabled={busy} onClick={doConfirm}>{confirm.kind === 'remove' ? `Remove ${m.name}` : 'Make partner'}</button>
+                <button className="pill" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button>
+              </span>
+            ) : (
+              <span className="row-actions">
+                <button className="pill" disabled={busy} onClick={() => setConfirm({ id: m.id, kind: 'partner', name: m.name })}>Event partner</button>
+                <button className="pill" disabled={busy} onClick={() => setConfirm({ id: m.id, kind: 'remove', name: m.name })}>Remove</button>
+              </span>
+            )
+          )}
+        </div>
       ))}
+      {confirm && (
+        <p className="sheet-note" role="status">
+          {confirm.kind === 'remove'
+            ? `${confirm.name} leaves the household: shopping, meals, chores, the farm and trips. Their own things stay theirs.`
+            : `${confirm.name} leaves the household but keeps planning every KitchenHub event with you, and nothing else.`}
+        </p>
+      )}
+      {partners.length > 0 && (
+        <>
+          <h3 className="sheet-sub">Event partners</h3>
+          <p className="sheet-note">They plan every KitchenHub event with your household, and see nothing else.</p>
+          {partners.map((p) => (
+            <div className="set-row" key={p.user_id}>
+              <span><b>{p.name}</b><small>{p.email}{p.can_edit ? '' : ', view only'}</small></span>
+              {h.role === 'owner' && (
+                <button className="pill" disabled={busy} onClick={async () => { await run(() => removeEventPartner(h.id, p.user_id), householdMessage); load(); }}>Remove</button>
+              )}
+            </div>
+          ))}
+        </>
+      )}
       {h.role === 'owner' && (
         invite ? (
           <>
-            <p className="auth-msg" role="status">Household code: <b>{invite}</b>. Anyone who enters it in their Hive account (or in Let&rsquo;s Eat) joins. It doesn&rsquo;t expire; make a new one to stop this one working.</p>
+            <p className="auth-msg" role="status">Household code: <b>{invite}</b>. They can open the link, or enter the code in Hive under Account. It doesn&rsquo;t expire; make a new one to stop this one working.</p>
+            <button className="pill strong wide" onClick={share}>{copied ? 'Link copied' : 'Share invite link'}</button>
             <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => newInviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Make a new code</button>
           </>
         ) : (
           <button className="pill wide" disabled={busy} onClick={async () => { const c = await run(() => inviteCode(h.id), householdMessage); if (c) setInvite(c); }}>Show household code</button>
         )
+      )}
+      {joining ? (
+        <>
+          <h3 className="sheet-sub">Join another household</h3>
+          <p className="sheet-note">You&rsquo;ll move from {h.name} to the household whose code this is. Your own things, like your journal, come with you.</p>
+          <JoinForm cta="Join with this code" />
+          <button className="pill wide" disabled={busy} onClick={() => { forgetJoinCode(); setCode(''); setJoining(false); }}>Cancel</button>
+        </>
+      ) : (
+        <span className="row-actions">
+          <button className="pill" onClick={() => setJoining(true)}>Have a household code?</button>
+          {h.role !== 'owner' && me && (
+            <button className="pill" disabled={busy} onClick={async () => { await run(() => removeMember(h.id, me.id), householdMessage); load(); }}>Leave household</button>
+          )}
+        </span>
       )}
       <Msg />
     </>

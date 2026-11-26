@@ -20,9 +20,13 @@ or timing.
    Only things that float over everything (menus, the drag ghost, sheets on a
    tablet) get the single `--shadow-float`. No blur, no glass.
 4. **Motion answers a touch.** Nothing moves on its own except the clock and a
-   finished timer. Presses respond in under 100 ms; things that open grow from
-   where they came from. No overshoot, no jiggle. `prefers-reduced-motion`
-   turns every transition into an instant change.
+   finished timer. (A stack that turns by itself swaps what it shows without
+   animating.) Presses respond in under 100 ms; apps open through a paper
+   cover: home fades out (170ms), the app loads under it, then the cover
+   fades off (200ms); closing is the reverse; menus and folders grow from
+   where they came from; pages follow the finger. No bounce, no jiggle: only
+   a hard flick may carry a few pixels past its page, as momentum.
+   `prefers-reduced-motion` turns every transition into an instant change.
 5. **Plain words, sentence case.** No all-caps labels, no tracked eyebrows.
 
 ## Type
@@ -31,6 +35,10 @@ or timing.
 one family, weights 400 to 800. It was drawn for low-vision readers: open
 counters, distinct 1/l/I and 0/O, which is what a wall display needs. Numbers
 are tabular everywhere.
+
+The clock alone uses **Barlow Semi Condensed** 700 (`--font-clock`): signage
+letters, like a road sign, with an open zero. Atkinson's zero is slashed,
+which across a kitchen reads as Ø in "10:05".
 
 | Token | Size | Use |
 | --- | --- | --- |
@@ -62,6 +70,16 @@ Section labels are 14px/600 in `--muted`, sentence case.
 | `--late` | `#B3261E` | `#FF8F80` | Late, overdue, destructive |
 | `--warn` | `#7F5200` | `#E9B65C` | Not updating, use soon |
 
+`--accent` is Hive's chrome colour (the dock shelf, folder tiles, the current
+page dot, tinted icons). It is honey unless "Colour from wallpaper" is on,
+when it comes from the wallpaper (each has one in `look.js`) or is picked out
+of the person's photo. It only ever tints chrome, never text.
+
+Icon styles: **Colour** (each app's own tile), **Dark** (a dark tile, the
+symbol in the app's colour, so colour still finds the app), **Tinted** (tile
+and symbol in the accent). The clock screen is always dark, and at night dim
+red on black.
+
 Badges are ink on paper-white (`--badge-bg`, `--badge-fg`), not alarm red: a
 count of chores is information, not an emergency.
 
@@ -85,9 +103,15 @@ layout, where the whole board must fit one screen).
 | `--d-press` | 90ms | Press-in on any button |
 | `--d-quick` | 160ms | Colour and state changes, checks |
 | `--d-move` | 240ms | Menus, folders, sheets in |
-| `--d-zoom` | 340ms | An app growing out of its icon |
 | `--ease-out` | cubic-bezier(.2, 0, 0, 1) | Things arriving |
 | `--ease-in` | cubic-bezier(.4, 0, 1, 1) | Things leaving |
+
+| `--d-settle` | 300ms | A tile sliding into its new place (FLIP), a dropped icon settling |
+
+Pages and stacks don't use durations: pages ride a critically damped spring
+(response 0.42s, `pager.js`) from wherever the finger let go, so a flick and a
+slow drag both land naturally and can be caught mid-flight. Only `transform`
+and `opacity` animate.
 
 Press feedback is a 0.96 scale and a darker tone, never a bounce. Edit mode
 shows a dashed outline around each tile and the remove buttons; icons hold
@@ -96,4 +120,5 @@ still.
 ## Focus
 
 Every focusable element shows a 3px `--honey` outline, 2px out, on
-`:focus-visible`. Honey on paper and on dark both clear 3:1.
+`:focus-visible`. A focused app icon also lifts (grows 8% and floats), like a
+focused poster on a TV. Honey on paper and on dark both clear 3:1.
