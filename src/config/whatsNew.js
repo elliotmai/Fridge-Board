@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.27',
+    date: 'November 2026',
+    items: ['The fridge tablet can be the household’s own screen, signed in as the household instead of as one of you: an owner taps Account, Add a household screen, and types the code on the tablet. It shows the kitchen, the farm and chores, and nobody’s own calendar, tasks, trips or drinks. Owners can remove it any time.'],
+  },
+  {
     version: '2026.11.26',
     date: 'November 2026',
     items: ['Tick off collecting the eggs, on the fridge or in the Chores widget, and GalaxyFarm’s egg count opens straight away: count the basket, tap Log, and you’re back where you were.'],

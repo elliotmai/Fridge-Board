@@ -13,3 +13,7 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 
 -- Made by Supabase when a project is created.
 create or replace function public.rls_auto_enable() returns void language sql security definer as $$ select $$;
+
+-- Columns the household screen functions read (household_people_emails).
+alter table auth.users add column if not exists email_confirmed_at timestamptz;
+alter table auth.users add column if not exists is_anonymous boolean default false;

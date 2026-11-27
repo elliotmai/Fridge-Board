@@ -6,6 +6,7 @@
 import { signPass } from './hiveAssertion.mjs';
 import { env } from './shared.mjs';
 import { verifySupabaseToken } from './supabaseToken.mjs';
+import { isScreen, screenPass } from './screens.mjs';
 
 export async function hiveUser(req, opts) {
   return (await hiveSession(req, opts)).user;
@@ -31,8 +32,13 @@ export async function hiveSession(req, { verify = verifySupabaseToken } = {}) {
  */
 export function passHeader(user, app) {
   if (!user) throw Object.assign(new Error('Sign in to Hive to see this'), { unconfigured: true });
-  if (!user.email || !user.email_verified) throw Object.assign(new Error('Confirm your Hive email to see this'), { unconfigured: true });
   const key = env('HIVE_SIGNING_KEY');
+  // A household screen: only household apps, as the household (netlify/lib/screens.mjs).
+  if (isScreen(user)) {
+    if (!key) throw Object.assign(new Error('Hive sign-in is not set up'), { unconfigured: true });
+    return { authorization: `Hive ${screenPass(user, app, key)}` };
+  }
+  if (!user.email || !user.email_verified) throw Object.assign(new Error('Confirm your Hive email to see this'), { unconfigured: true });
   if (!key) throw Object.assign(new Error('Hive sign-in is not set up'), { unconfigured: true });
   return { authorization: `Hive ${signPass(user, app, key)}` };
 }
@@ -44,10 +50,13 @@ export function passHeader(user, app) {
  * `unconfigured` when neither is available.
  */
 export function appAuth(user, app, tokenEnv) {
-  if (user?.email_verified && env('HIVE_SIGNING_KEY')) return passHeader(user, app);
   const token = tokenEnv && !user?.keyless && env(tokenEnv);
+  if (isScreen(user) && env('HIVE_SIGNING_KEY')) {
+    // A screen with the board key may still use the old token where it has no pass.
+    try { return passHeader(user, app); } catch (e) { if (!token || !e.screenRefused) throw e; }
+  } else if (user?.email_verified && env('HIVE_SIGNING_KEY')) return passHeader(user, app);
   if (token) return { authorization: `Bearer ${token}` };
-  throw Object.assign(new Error(user ? 'Confirm your Hive email to see this' : 'Sign in to Hive to see this'), { unconfigured: true });
+  throw Object.assign(new Error(isScreen(user) ? 'Hive sign-in is not set up' : user ? 'Confirm your Hive email to see this' : 'Sign in to Hive to see this'), { unconfigured: true });
 }
 
 /**

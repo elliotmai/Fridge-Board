@@ -55,6 +55,9 @@ const shape = (u) => (u ? {
   uid: u.id, email: u.email,
   name: u.user_metadata?.display_name || u.user_metadata?.full_name || u.user_metadata?.name || null,
   verified: confirmed(u),
+  // A household screen (the fridge tablet signed in as the household): its
+  // household id, set only by Hive's server (netlify/lib/screens.mjs).
+  screen: u.app_metadata?.hive_screen || null,
 } : null);
 
 /**
@@ -247,11 +250,56 @@ export async function myHousehold() {
   const ids = (m.data || []).map((x) => x.user_id);
   const { data: people } = ids.length ? await core.from('profiles').select('id, email, display_name').in('id', ids) : { data: [] };
   const me = (await sb.auth.getUser()).data.user?.id;
-  const members = (m.data || []).map((x) => {
+  const all = (m.data || []).map((x) => {
     const p = people?.find((y) => y.id === x.user_id) || {};
     return { id: x.user_id, role: x.role, email: p.email || '', name: p.display_name || p.email || 'Someone', me: x.user_id === me };
   });
-  return { id: h.data.id, name: h.data.name, role: members.find((x) => x.me)?.role || 'member', members };
+  const members = all.filter((x) => x.role !== 'screen');
+  const screens = all.filter((x) => x.role === 'screen').map((x) => ({ id: x.id, name: x.name, me: x.me }));
+  return { id: h.data.id, name: h.data.name, role: all.find((x) => x.me)?.role || 'member', members, screens };
+}
+
+/* ----------------------------------------------------- household screens -- */
+
+/**
+ * Owner: a one-time code (8 characters, 10 minutes) that makes a device this
+ * household's screen: signed in as the household, not as a person
+ * (netlify/lib/screens.mjs). { code, expiresAt }.
+ */
+export async function screenCode(householdId, name) {
+  const sb = await supabase();
+  const rows = must(await sb.schema('core').rpc('create_screen_code', { hid: householdId, screen_name: String(name || '').trim() }));
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return { code: r.code, expiresAt: new Date(r.expires_at) };
+}
+
+/** The code shown in two halves, as people read it out: ABCD-EF23. */
+export const showCode = (c) => (c && c.length === 8 ? `${c.slice(0, 4)}-${c.slice(4)}` : c || '');
+
+/**
+ * On the device that will be the screen: trade the owner's code for the
+ * household's sign-in. Whoever was signed in here is signed out first (here
+ * only, not on their other devices).
+ */
+export async function pairAsScreen(code) {
+  const res = await fetch('/api/hive/screens/claim', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }),
+  }).catch(() => null);
+  if (!res) throw new Error('network error');
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(body.error || 'That code doesn’t work.'), { code: 'screen_code', shown: body.error });
+  const sb = await supabase();
+  await sb.auth.signOut({ scope: 'local' }).catch(() => {});
+  must(await sb.auth.verifyOtp({ token_hash: body.token, type: 'magiclink' }));
+  return body.name;
+}
+
+/** Owner: remove one of the household's screens. Its sign-in ends everywhere. */
+export async function removeScreen(id) {
+  const token = await idToken();
+  const res = await fetch(`/api/hive/screens/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(body.error || 'Couldn’t remove it'), { code: 'screen_code', shown: body.error });
 }
 
 /**
@@ -319,6 +367,7 @@ export async function joinHousehold(code) {
 
 /** Plain-English message for a household error. */
 export function householdMessage(e) {
+  if (e?.code === 'screen_code' && e.shown) return e.shown;
   if (e?.code === 'bad_invite') return 'That code doesn’t work. It may be used up or more than a week old.';
   if (e?.code === 'P0001' && e.message) return e.message.charAt(0).toUpperCase() + e.message.slice(1) + '.';
   if (e?.code === '42501') return 'Only the household’s owner can do that.';
