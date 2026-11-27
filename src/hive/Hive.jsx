@@ -16,7 +16,8 @@ import { connectGoogle } from './googleConnect';
 import { connectRequest } from './googleReturn';
 import { AccountSheet } from './AccountSheet';
 import { rememberJoinCode } from './joinCode';
-import { announce, listenForClose, startBridge } from './bridge';
+import { announce, listenForBusy, listenForClose, startBridge } from './bridge';
+import { isBusy, markBusy } from './busy';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
@@ -28,6 +29,7 @@ import { Spotlight } from './Spotlight';
 import { WidgetActions } from './live';
 import { WIDGETS, signals, useLiveBoard, widgetIds } from './widgets';
 import { homeView, showView, viewIn } from './nav';
+import { TABLET_QUERY } from './device';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -35,13 +37,14 @@ const IDLE_APP_MS = 15 * 60 * 1000;
 
 /**
  * A device that already used Fridge Board (it has the board key) and isn't a
- * phone is the fridge tablet: it keeps opening straight to the board.
+ * phone is the fridge tablet: it keeps opening straight to the board. Tablet,
+ * not width, so the fridge's Fire counts whichever way up it starts.
  */
 function firstSettings() {
   let hadBoard = false;
   try { hadBoard = !!localStorage.getItem(`${APP_KEY}.boardKey`); } catch { /* ignore */ }
-  const wide = window.matchMedia?.('(min-width: 760px)').matches;
-  return { start: hadBoard && wide ? 'board' : 'home', idle: hadBoard && wide ? 'board' : 'off' };
+  const tablet = window.matchMedia?.(TABLET_QUERY).matches;
+  return { start: hadBoard && tablet ? 'board' : 'home', idle: hadBoard && tablet ? 'board' : 'off' };
 }
 
 /**
@@ -265,14 +268,18 @@ export function Hive() {
 
 
   // On the fridge: when nobody is using the screen, drift back to the board,
-  // or show the clock screen.
+  // or show the clock screen. An app that says it's in use (KitchenHub's cook
+  // mode; taps in its frame never reach this page) counts as somebody there.
   const touched = useRef(Date.now());
+  const busy = useRef({});
+  useEffect(() => listenForBusy((id, on) => { busy.current = markBusy(busy.current, id, on); }), []);
   useEffect(() => {
     if (idle === 'off' || resting) return;
     const touch = () => (touched.current = Date.now());
     ['pointerdown', 'keydown'].forEach((e) => document.addEventListener(e, touch, true));
     const id = setInterval(() => {
       if (idle === 'board' && view === 'board') return;
+      if (isBusy(busy.current, view)) { touched.current = Date.now(); return; }
       const limit = view ? IDLE_APP_MS : IDLE_HOME_MS;
       if (Date.now() - touched.current < limit) return;
       touched.current = Date.now();

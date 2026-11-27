@@ -8,7 +8,14 @@ export const WHATS_NEW = [
   {
     version: '2026.11.27',
     date: 'November 2026',
-    items: ['The fridge tablet can be the household’s own screen, signed in as the household instead of as one of you: an owner taps Account, Add a household screen, and types the code on the tablet. It shows the kitchen, the farm and chores, and nobody’s own calendar, tasks, trips or drinks. Owners can remove it any time.'],
+    items: [
+      'The fridge tablet can be the household’s own screen, signed in as the household instead of as one of you: an owner taps Account, Add a household screen, and types the code on the tablet. It shows the kitchen, the farm and chores, and nobody’s own calendar, tasks, trips or drinks. Owners can remove it any time.',
+      'Turn the fridge tablet upright and Fridge Board still fits one screen: the kitchen across the top, chores and coming up side by side below. It stays the fridge tablet either way up.',
+      'On an iPhone, apps opened in Hive stay clear of the home bar at the bottom, and Hive and its apps no longer zoom in when you pinch, double-tap or tap into a box.',
+      'Fridge Board on a phone fits the screen’s width again, with nothing cut off at the right.',
+      'Drinks on the fridge opens faster: everyone’s drinks are ready by the time you tap your name.',
+      'Cooking from KitchenHub’s cook mode on the fridge? Hive leaves the recipe up for as long as you cook, instead of going back to Fridge Board after 15 minutes.',
+    ],
   },
   {
     version: '2026.11.26',

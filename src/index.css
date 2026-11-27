@@ -12,6 +12,11 @@ body,
   height: 100%;
 }
 
+/* Scroll and swipe, never zoom: no pinch, no double-tap (with gesturestart in index.html for Safari). */
+html {
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
   /* Fill the mobile viewport including the browser chrome area */

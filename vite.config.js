@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Older tablet and phone browsers (an older Fire's Silk, an old Samsung) lack
+  // `inset`; esbuild writes it out as top/right/bottom/left for them.
+  build: { cssTarget: ['chrome61', 'safari12'] },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -83,7 +83,7 @@ export function Shopping({ items, quick, bought, onToggle, onAdd, onClear, folds
         {phone && <OpenIn app="kitchenhub" path="shopping" />}
       </div>
       <form className="add" onSubmit={submit}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add an item" autoComplete="off" aria-label="Add an item" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add item" autoComplete="off" aria-label="Add an item" />
         <button aria-label="Add"><Plus /></button>
       </form>
       {offers.length > 0 && (
