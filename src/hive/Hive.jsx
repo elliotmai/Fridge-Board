@@ -16,7 +16,8 @@ import { connectGoogle } from './googleConnect';
 import { connectRequest } from './googleReturn';
 import { AccountSheet } from './AccountSheet';
 import { rememberJoinCode } from './joinCode';
-import { announce, listenForClose, startBridge } from './bridge';
+import { announce, listenForBusy, listenForClose, startBridge } from './bridge';
+import { isBusy, markBusy } from './busy';
 import { AppearanceSheet, IconEditor } from './Customize';
 import { ClockScreen } from './ClockScreen';
 import { Home } from './Home';
@@ -265,14 +266,18 @@ export function Hive() {
 
 
   // On the fridge: when nobody is using the screen, drift back to the board,
-  // or show the clock screen.
+  // or show the clock screen. An app that says it's in use (KitchenHub's cook
+  // mode; taps in its frame never reach this page) counts as somebody there.
   const touched = useRef(Date.now());
+  const busy = useRef({});
+  useEffect(() => listenForBusy((id, on) => { busy.current = markBusy(busy.current, id, on); }), []);
   useEffect(() => {
     if (idle === 'off' || resting) return;
     const touch = () => (touched.current = Date.now());
     ['pointerdown', 'keydown'].forEach((e) => document.addEventListener(e, touch, true));
     const id = setInterval(() => {
       if (idle === 'board' && view === 'board') return;
+      if (isBusy(busy.current, view)) { touched.current = Date.now(); return; }
       const limit = view ? IDLE_APP_MS : IDLE_HOME_MS;
       if (Date.now() - touched.current < limit) return;
       touched.current = Date.now();
