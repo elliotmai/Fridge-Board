@@ -270,6 +270,7 @@ export function HiveSettings({ settings, setSettings, onResetLayout, onClose, ac
                 <b>{account.user?.verified ? account.user.name || 'Hive account' : 'Hive account'}</b>
                 <small>{!account.user ? 'Sign in once, and apps that support Hive sign you in by themselves.'
                   : !account.user.verified ? `Confirm ${account.user.email} to finish.`
+                  : account.user.screen ? 'Household screen: signed in as the household'
                   : account.user.email}</small>
               </span>
               <button className={`pill ${account.user?.verified ? '' : 'strong'}`} onClick={account.open} disabled={!account.ready}>

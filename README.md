@@ -117,6 +117,34 @@ has it). To replace the key pair: `node scripts/hive-keys.mjs`, then update
 Household-only apps can set `HIVE_NEW_ACCOUNTS=off`, so only people who already
 have an account get in.
 
+## Household screens
+
+The fridge tablet can be signed in as the household instead of as a person
+(`supabase/migrations/20261127000000_household_screens.sql`,
+`netlify/lib/screens.mjs`).
+
+1. An owner, in their own Hive: Account → **Add a household screen**, names
+   it, and gets an 8-character code (10 minutes, one use).
+2. On the tablet: Account → **Set up this device as a household screen**,
+   and the code. `POST /api/hive/screens/claim` claims it, makes the screen's
+   own Supabase account (no password; `app_metadata.hive_screen` = the
+   household, which only the server can set) with role `screen` in
+   `core.household_members`, and signs the tablet in.
+3. Owners see the household's screens in Account and can remove one
+   (`DELETE /api/hive/screens/:id`): its account is deleted and the board
+   refuses it on its next request.
+
+What a screen sees: everything the household shares (KitchenHub, ZNT, Pool,
+timers: anything behind `core.is_member`), and nothing personal (every
+`auth.uid()` table). It can't own, invite, start or join a household
+(`core.screen_guard`). Passes: KitchenHub gets one for the screen account
+(KitchenHub finds the household from it); GalaxyFarm gets a **household
+pass** (`kind: 'household'`, no email, the household's people's confirmed
+emails in `members`), which GalaxyFarm maps to the farm an owner among them
+owns; every other app is refused, so no app ever makes an account for a
+screen. Calendars, tasks, trips and drinks come to the screen per person in
+the Both view (next).
+
 ## Roadmap
 
 1. **Home screen** with folders, dock, widgets and the board as an app. *(done)*

@@ -23,7 +23,11 @@ async function projectKeys(url = SUPABASE_URL) {
 
 const b64url = (part) => Buffer.from(part, 'base64url');
 
-/** Returns { uid, email, email_verified, name } for a valid token; throws otherwise. */
+/**
+ * Returns { uid, email, email_verified, name, screen } for a valid token;
+ * throws otherwise. `screen` is the household id when the account is a
+ * household screen (app_metadata, which only the server can set), else null.
+ */
 export async function verifySupabaseToken(token, { url = SUPABASE_URL, keys = () => projectKeys(url), now = Date.now() } = {}) {
   const parts = String(token).split('.');
   if (parts.length !== 3) throw new Error('malformed token');
@@ -46,5 +50,6 @@ export async function verifySupabaseToken(token, { url = SUPABASE_URL, keys = ()
     email: claims.email || null,
     email_verified: Boolean(claims.email) && meta.email_verified !== false,
     name: meta.display_name || meta.full_name || meta.name || null,
+    screen: typeof claims.app_metadata?.hive_screen === 'string' ? claims.app_metadata.hive_screen : null,
   };
 }

@@ -14,6 +14,8 @@ import { CATALOG } from '../../src/config/catalog.js';
 import { PASS_SECONDS, signPass } from '../lib/hiveAssertion.mjs';
 import { env, json, isAppOrigin } from '../lib/shared.mjs';
 import { verifySupabaseToken } from '../lib/supabaseToken.mjs';
+import { admin } from '../lib/household.mjs';
+import { isScreen, screenPass, withMembers } from '../lib/screens.mjs';
 
 export const config = { path: '/api/hive/pass' };
 
@@ -51,6 +53,15 @@ async function handle(req) {
   } catch (e) {
     console.warn('[hive-pass] refused:', e.message);
     return json(401, { error: 'Unauthorized' });
+  }
+  // A household screen: household apps only, as the household (netlify/lib/screens.mjs).
+  if (isScreen(user)) {
+    try {
+      return json(200, { pass: screenPass(await withMembers(user, admin()), app, signingKey), expiresIn: PASS_SECONDS });
+    } catch (e) {
+      if (e.screenRefused) return json(403, { error: e.message, screen: true });
+      throw e;
+    }
   }
   // Apps match accounts by email, so only a confirmed email gets a pass.
   if (!user.email || !user.email_verified) return json(403, { error: 'Your Hive account needs a verified email' });

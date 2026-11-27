@@ -28,6 +28,8 @@ import { signPass } from '../lib/hiveAssertion.mjs';
 import { env } from '../lib/shared.mjs';
 import { verifySupabaseToken } from '../lib/supabaseToken.mjs';
 import { passApps } from './hive-pass.mjs';
+import { admin } from '../lib/household.mjs';
+import { isScreen, screenPass, withMembers } from '../lib/screens.mjs';
 
 export const config = { path: '/api/hive/hop' };
 
@@ -94,6 +96,11 @@ export default async (req) => {
   if (!key) return back(to, null);
   let user = null, cookies = [];
   try { ({ user, cookies } = await userFromCookie(req)); } catch (e) { console.warn('[hive-hop] no session:', e.message); }
+  if (isScreen(user)) {
+    let pass = null;
+    try { pass = screenPass(await withMembers(user, admin()), app, key); } catch (e) { if (!e.screenRefused) console.warn('[hive-hop] screen pass failed:', e.message); }
+    return back(to, pass, cookies);
+  }
   if (!user?.email || !user.email_verified) return back(to, null, cookies);
   return back(to, signPass(user, app, key), cookies);
 };

@@ -9,6 +9,7 @@
  */
 import { hiveSession } from './hiveUser.mjs';
 import { env, getJson, json, keyMatches } from './shared.mjs';
+import { isScreen, withMembers } from './screens.mjs';
 
 /** { url, headers } for the service role, or null when it isn't set up. */
 export function admin() {
@@ -30,9 +31,9 @@ export async function householdOf(uid, read = adminRead) {
   return rows[0]?.household_id || null;
 }
 
-/** Everyone in a household: [{ id, name, email, role }], as myHousehold() shows them in Hive. */
+/** Everyone in a household: [{ id, name, email, role }], as myHousehold() shows them in Hive. People only, never its screens. */
 export async function householdMembers(hid, read = adminRead) {
-  const m = await read(`household_members?select=user_id,role,joined_at&household_id=eq.${encodeURIComponent(hid)}&order=joined_at`, 'core');
+  const m = await read(`household_members?select=user_id,role,joined_at&household_id=eq.${encodeURIComponent(hid)}&role=neq.screen&order=joined_at`, 'core');
   const ids = m.map((x) => x.user_id);
   const people = ids.length ? await read(`profiles?select=id,email,display_name&id=in.(${ids.map(encodeURIComponent).join(',')})`, 'core') : [];
   return m.map((x) => {
@@ -50,19 +51,26 @@ export async function householdMembers(hid, read = adminRead) {
  * `expired` is true when the page sent a sign-in token that had run out, so it
  * can refresh and ask again instead of quietly being treated as signed out.
  */
-export async function boardGate(req, { session = hiveSession, household = householdOf } = {}) {
-  const { user, expired } = await session(req);
+export async function boardGate(req, { session = hiveSession, household = householdOf, members = (u) => withMembers(u, admin()) } = {}) {
+  let { user, expired } = await session(req);
   let hid = null;
   if (user) {
     try { hid = await household(user.uid); } catch (e) { console.warn('[hive] household lookup failed:', e.message); }
+  }
+  // A household screen: only while it is still in its household (an owner may
+  // have removed it); with its people's emails, for household passes.
+  let removed = false;
+  if (isScreen(user)) {
+    if (hid !== user.screen) { user = null; hid = null; removed = true; } else user = await members(user);
   }
   const viaKey = keyMatches(req);
   // In through the household alone (no key), the site-wide app tokens are not
   // theirs to use: anyone can sign up and start a household, so they only
   // ever see apps as themselves (asUser skips the fallback: `keyless`).
   if (viaKey || (user && hid)) return { ok: true, user: user && !viaKey ? { ...user, keyless: true } : user, household: hid, expired, viaKey };
-  const reason = !env('BOARD_ACCESS_KEY') && !user ? 'Set BOARD_ACCESS_KEY on the Fridge Board site'
+  const reason = removed ? 'This household screen was removed. Pair it again from Hive, Account'
+    : !env('BOARD_ACCESS_KEY') && !user ? 'Set BOARD_ACCESS_KEY on the Fridge Board site'
     : user ? 'Join a household in Hive (Settings, Account) to see the board'
       : expired ? 'Your Hive sign-in expired' : 'Enter the board key';
-  return { ok: false, response: json(401, { error: 'locked', reason, signedIn: !!user, expired }) };
+  return { ok: false, response: json(401, { error: 'locked', reason, signedIn: !!user, expired, removed }) };
 }

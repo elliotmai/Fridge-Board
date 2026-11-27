@@ -19,7 +19,12 @@ const good = { iss: `${URL}/auth/v1`, aud: 'authenticated', sub: 'u-1', email: '
 const check = (t) => verifySupabaseToken(t, { url: URL, keys, now });
 
 test('a good token gives the person', async () => {
-  assert.deepEqual(await check(token(good)), { uid: 'u-1', email: 'me@example.com', email_verified: true, name: 'Me' });
+  assert.deepEqual(await check(token(good)), { uid: 'u-1', email: 'me@example.com', email_verified: true, name: 'Me', screen: null });
+});
+
+test('a household screen is marked by the server-only app_metadata', async () => {
+  assert.equal((await check(token({ ...good, app_metadata: { hive_screen: 'h-1' } }))).screen, 'h-1');
+  assert.equal((await check(token({ ...good, user_metadata: { hive_screen: 'h-1' } }))).screen, null, 'not by anything a person can set');
 });
 
 test('bad tokens are refused', async () => {
