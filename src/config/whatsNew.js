@@ -8,7 +8,10 @@ export const WHATS_NEW = [
   {
     version: '2026.11.27',
     date: 'November 2026',
-    items: ['Drinks on the fridge opens faster: everyone’s drinks are ready by the time you tap your name.'],
+    items: [
+      'Drinks on the fridge opens faster: everyone’s drinks are ready by the time you tap your name.',
+      'Cooking from KitchenHub’s cook mode on the fridge? Hive leaves the recipe up for as long as you cook, instead of going back to Fridge Board after 15 minutes.',
+    ],
   },
   {
     version: '2026.11.26',
