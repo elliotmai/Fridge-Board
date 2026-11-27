@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.27',
+    date: 'November 2026',
+    items: ['Drinks on the fridge opens faster: everyone’s drinks are ready by the time you tap your name.'],
+  },
+  {
     version: '2026.11.26',
     date: 'November 2026',
     items: ['Tick off collecting the eggs, on the fridge or in the Chores widget, and GalaxyFarm’s egg count opens straight away: count the basket, tap Log, and you’re back where you were.'],

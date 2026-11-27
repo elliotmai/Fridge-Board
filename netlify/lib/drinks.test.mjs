@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDrink, handleDrinks, localDateTime, pushId, quickOptions, safeZone } from './drinks.mjs';
+import { buildDrink, handleDrinks, localDateTime, pushId, quickOptions, safeZone, unverifiedSub } from './drinks.mjs';
 
 const NOW = new Date('2026-11-26T02:30:00Z'); // 8:30 pm on the 25th in Chicago
 const ME = 'u-me', PARTNER = 'u-partner', STRANGER = 'u-stranger';
@@ -136,4 +136,69 @@ test('quick options: top 3 by count, 3 recent not in the top, everything for sea
   assert.deepEqual(o.favorites.map((d) => d.name || d.type), ['Miller Lite', 'Lychee Soju', 'Wine']);
   assert.deepEqual(o.recent.map((d) => d.name), ['Margarita', 'Yuengling', 'Rye']);
   assert.deepEqual(o.all.map((d) => d.name || d.type), ['Miller Lite', 'Lychee Soju', 'Wine', 'Yuengling']);
+});
+
+// Speed: the household lookup and a member's drink reads start while the
+// sign-in token is still being checked, without ever answering on them early.
+const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-222222222222', C = '33333333-3333-4333-8333-333333333333';
+const tok = (sub, exp = Math.floor(Date.now() / 1000) + 600) => `h.${Buffer.from(JSON.stringify({ sub, exp })).toString('base64url')}.s`;
+const authed = (path, sub) => new Request(`http://x${path}`, { headers: { authorization: `Bearer ${tok(sub)}` } });
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function slow({ verified = A, hop = 40 } = {}) {
+  const calls = [];
+  return {
+    calls,
+    session: async () => { await wait(hop); return { user: verified ? { uid: verified } : null }; },
+    household: async (uid) => { calls.push(`household:${uid}`); await wait(hop); return uid === A || uid === B ? 'h1' : null; },
+    members: async () => { await wait(hop * 2); return [{ id: A, name: 'A' }, { id: B, name: 'B' }]; },
+    read: async (path) => { calls.push(`read:${path.slice(0, 40)}`); await wait(hop); return []; },
+    insert: async () => {},
+    now: () => NOW,
+    tz: 'America/Chicago',
+  };
+}
+
+test('unverifiedSub reads the claimed uuid of a live token, and nothing else', () => {
+  assert.equal(unverifiedSub(authed('/api/drinks', A)), A);
+  assert.equal(unverifiedSub(new Request('http://x', { headers: { authorization: `Bearer ${tok(A, 1)}` } })), null);
+  assert.equal(unverifiedSub(new Request('http://x', { headers: { authorization: 'Bearer junk' } })), null);
+  assert.equal(unverifiedSub(new Request('http://x')), null);
+  assert.equal(unverifiedSub(authed('/api/drinks', 'not-a-uuid')), null);
+});
+
+test('a member’s options take about as long as the slowest lookup, not all of them in a row', async () => {
+  const d = slow();
+  const t = Date.now();
+  const r = await handleDrinks(authed(`/api/drinks/${B}?tz=America/Chicago`, A), B, d);
+  const ms = Date.now() - t;
+  assert.equal(r.status, 200);
+  // In a row: verify 40 + household 40 + members 80 + reads 40 = 200.
+  assert.ok(ms < 170, `took ${ms}ms`);
+});
+
+test('a token claiming someone else: their early lookup is not used', async () => {
+  const d = slow({ verified: C }); // the token says A, but verifies as C (in no household)
+  const r = await handleDrinks(authed(`/api/drinks/${B}`, A), B, d);
+  assert.equal(r.status, 403);
+  assert.ok(d.calls.includes(`household:${C}`));
+});
+
+test('an early read for someone outside the household is never sent back', async () => {
+  const d = slow();
+  const r = await handleDrinks(authed(`/api/drinks/${C}`, A), C, d);
+  assert.equal(r.status, 403);
+  assert.deepEqual(Object.keys(await r.json()), ['error']);
+});
+
+test('a token that fails to verify gets the same 401, early lookups or not', async () => {
+  const r = await handleDrinks(authed(`/api/drinks/${B}`, A), B, slow({ verified: null }));
+  assert.equal(r.status, 401);
+});
+
+test('a failed early lookup only fails the request if it was needed', async () => {
+  const d = slow({ verified: C });
+  d.read = async () => { throw new Error('boom'); };
+  const r = await handleDrinks(authed(`/api/drinks/${B}`, A), B, d);
+  assert.equal(r.status, 403); // C isn't in a household; the failed read for B is never used
 });
