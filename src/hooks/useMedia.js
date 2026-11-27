@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PHONE_QUERY } from '@/hive/device';
 
 export function useMedia(query) {
   const [match, setMatch] = useState(() => window.matchMedia?.(query).matches ?? false);
@@ -10,6 +11,7 @@ export function useMedia(query) {
   return match;
 }
 
-/** Phones get the stacked layout with links out to each app. Tablets in landscape,
- *  including an 8-inch Fire (about 853 to 962 points wide), get the full board. */
-export const useIsPhone = () => useMedia('(max-width: 759px)');
+/** Phones get the stacked layout with links out to each app. Tablets, including the
+ *  fridge's 8-inch Fire either way up, get the full board (the rule: src/hive/device.js).
+ *  Live: turning the tablet re-lays it out. */
+export const useIsPhone = () => useMedia(PHONE_QUERY);

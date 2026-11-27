@@ -6,6 +6,15 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.27',
+    date: 'November 2026',
+    items: [
+      'Turn the fridge tablet upright and Fridge Board still fits one screen: the kitchen across the top, chores and coming up side by side below. It stays the fridge tablet either way up.',
+      'On an iPhone, apps opened in Hive stay clear of the home bar at the bottom, and Hive and its apps no longer zoom in when you pinch, double-tap or tap into a box.',
+      'Fridge Board on a phone fits the screen’s width again, with nothing cut off at the right.',
+    ],
+  },
+  {
     version: '2026.11.26',
     date: 'November 2026',
     items: ['Tick off collecting the eggs, on the fridge or in the Chores widget, and GalaxyFarm’s egg count opens straight away: count the basket, tap Log, and you’re back where you were.'],

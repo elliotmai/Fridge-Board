@@ -8,6 +8,7 @@ import { prefersReducedMotion, usePager, velocity } from './pager';
 import { glance, smartPick } from './smart';
 import { StackView } from './Stack';
 import { Widget, WIDGETS } from './widgets';
+import { useIsPhone } from '@/hooks/useMedia';
 
 const HOLD_MS = 420; // press and hold: menu (or edit mode on empty space)
 const MERGE_MS = 420; // rest on an icon's middle this long to make a folder (or a stack)
@@ -126,6 +127,7 @@ function HomeScreen({
   const [drag, setDrag] = useState(null); // { key, w, h, mergeKey }
   const [menu, setMenu] = useState(null); // { item, zone, rect }
   const [box, setBox] = useState({ w: 0, h: 0 });
+  const phone = useIsPhone(); // tapping the clock shows the clock screen on a tablet, either way up
   const [stackSel, setStackSel] = useState({}); // stack key → { i, at, dir }
   const press = useRef(null);
   const suppress = useRef(false);
@@ -618,7 +620,7 @@ function HomeScreen({
           </>
         ) : (
           <>
-            <DayClock now={now} wide={wide} onClock={box.w >= 760 ? onClock : null}
+            <DayClock now={now} wide={wide} onClock={phone ? null : onClock}
               line={line} lineColor={line && appLook(WIDGETS[line.w].app, custom).color} onLine={() => openWidget(line.w, null)} />
             <span className="grow" />
             {wantsSignIn && (

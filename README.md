@@ -32,8 +32,10 @@ they are) and page packing are tested in `layout.test.js`. Why these features:
 
 ### The fridge tablet
 
-A screen 760px or wider that already had the board key is treated as the fridge
-tablet: it opens straight to Fridge Board and drifts back to it when left alone
+A tablet that already had the board key is treated as the fridge tablet. A
+tablet is a screen 760px wide, or at least 500px both ways, so the fridge's
+Fire HD 8 counts sideways (about 854x534) and upright (about 534x854) and a phone
+never does (`src/hive/device.js`, tested in `device.test.js`). The fridge tablet: it opens straight to Fridge Board and drifts back to it when left alone
 (2 minutes on the home screen, 15 in another app). The grid button in the board's
 header goes to the home screen. Both are switchable in Hive settings ("Open
 to" and "When left alone" can also be the clock screen). Local
@@ -44,7 +46,7 @@ settings through the rename.
 
 | Where | What happens |
 | --- | --- |
-| **Fridge tablet** (760px and wider) | Everything on one screen. Tick chores and shopping items, cook from step cards with timers, all in place. Returns to the top of the board after 2 minutes untouched. |
+| **Fridge tablet** (any tablet, either way up) | Everything on one screen. Upright, the kitchen goes across the top with chores and coming up side by side below; turning the tablet re-lays it out. Tick chores and shopping items, cook from step cards with timers, all in place. Returns to the top of the board after 2 minutes untouched. |
 | **Phone** | Sections stack. Each section, trip and recipe links through to the app that owns it. |
 
 ## Apps

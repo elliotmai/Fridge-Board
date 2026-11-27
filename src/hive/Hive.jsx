@@ -28,6 +28,7 @@ import { Spotlight } from './Spotlight';
 import { WidgetActions } from './live';
 import { WIDGETS, signals, useLiveBoard, widgetIds } from './widgets';
 import { homeView, showView, viewIn } from './nav';
+import { TABLET_QUERY } from './device';
 
 const KEEP_FRAMES = 3; // recently used apps stay loaded, so switching back is instant
 const IDLE_HOME_MS = 2 * 60 * 1000;
@@ -35,13 +36,14 @@ const IDLE_APP_MS = 15 * 60 * 1000;
 
 /**
  * A device that already used Fridge Board (it has the board key) and isn't a
- * phone is the fridge tablet: it keeps opening straight to the board.
+ * phone is the fridge tablet: it keeps opening straight to the board. Tablet,
+ * not width, so the fridge's Fire counts whichever way up it starts.
  */
 function firstSettings() {
   let hadBoard = false;
   try { hadBoard = !!localStorage.getItem(`${APP_KEY}.boardKey`); } catch { /* ignore */ }
-  const wide = window.matchMedia?.('(min-width: 760px)').matches;
-  return { start: hadBoard && wide ? 'board' : 'home', idle: hadBoard && wide ? 'board' : 'off' };
+  const tablet = window.matchMedia?.(TABLET_QUERY).matches;
+  return { start: hadBoard && tablet ? 'board' : 'home', idle: hadBoard && tablet ? 'board' : 'off' };
 }
 
 /**

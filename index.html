@@ -16,6 +16,11 @@
         if (mq.addEventListener) mq.addEventListener('change', set); else if (mq.addListener) mq.addListener(set);
       })();
     </script>
+    <script>
+      // Safari ignores user-scalable=no, so stop its pinch here; index.css turns off
+      // pinch elsewhere and double-tap zoom (touch-action). Apps in frames do their own.
+      document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+    </script>
     <!-- Full mobile viewport, non-zoomable, respects notches/safe areas -->
     <meta
       name="viewport"
