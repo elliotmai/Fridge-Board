@@ -6,6 +6,11 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.27',
+    date: 'November 2026',
+    items: ['Cooking from KitchenHub’s cook mode on the fridge? Hive leaves the recipe up for as long as you cook, instead of going back to Fridge Board after 15 minutes.'],
+  },
+  {
     version: '2026.11.26',
     date: 'November 2026',
     items: ['Tick off collecting the eggs, on the fridge or in the Chores widget, and GalaxyFarm’s egg count opens straight away: count the basket, tap Log, and you’re back where you were.'],
