@@ -112,11 +112,22 @@ export function quickOptions(distinct, recent, { top = 3, latest = 3, all = 400 
  */
 export async function handleDrinks(req, member, deps) {
   const send = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  // Speed: the lookups below don't wait on each other more than they must.
+  // Who the token claims to be (read without checking it) starts the household
+  // lookup, and a member's drink reads start, while the token is still being
+  // verified. Nothing from them is used or sent until the checks below pass,
+  // and a token that turns out to be someone else's is looked up again.
+  const claimed = unverifiedSub(req);
+  const lookup = (uid) => deps.household(uid).then(async (hid) => ({ hid, people: hid ? await deps.members(hid) : [] }));
+  const early = claimed ? settle(lookup(claimed)) : null;
+  const wantsOptions = member && req.method === 'GET';
+  const tz = wantsOptions ? safeZone(new URL(req.url).searchParams.get('tz'), deps.tz) : null;
+  const reads = wantsOptions && claimed && UUID.test(member) ? settle(readOptions(member, tz, deps)) : null;
+
   const { user } = await deps.session(req);
   if (!user) return send(401, { error: 'Sign in to Hive on this board to add drinks' });
-  const hid = await deps.household(user.uid);
+  const { hid, people } = await (early && user.uid === claimed ? early.then(unsettle) : lookup(user.uid));
   if (!hid) return send(403, { error: 'Join a household in Hive to add drinks for it' });
-  const people = await deps.members(hid);
 
   if (!member) {
     if (req.method !== 'GET') return send(405, { error: 'method_not_allowed' });
@@ -124,18 +135,8 @@ export async function handleDrinks(req, member, deps) {
   }
   const target = people.find((p) => p.id === member);
   if (!target) return send(403, { error: 'That person isn’t in your household' });
-  const uid = encodeURIComponent(target.id);
 
-  if (req.method === 'GET') {
-    const tz = safeZone(new URL(req.url).searchParams.get('tz'), deps.tz);
-    const today = localDateTime(deps.now(), tz).date;
-    const [distinct, recent, todays] = await Promise.all([
-      deps.read(`tree?select=value&key=eq.users/${uid}/distinctDrinks`, 'drinks'),
-      deps.read(`tree?select=value&root=eq.users/${uid}&path=cs.{drinks}&order=key.desc&limit=20`, 'drinks'),
-      deps.read(`tree?select=key&root=eq.users/${uid}&path=cs.{drinks}&value->>date=eq.${today}`, 'drinks'),
-    ]);
-    return send(200, { ...quickOptions(distinct[0]?.value, recent.map((r) => r.value)), today: todays.length });
-  }
+  if (req.method === 'GET') return send(200, reads ? await reads.then(unsettle) : await readOptions(target.id, tz, deps));
 
   if (req.method !== 'POST') return send(405, { error: 'method_not_allowed' });
   const body = await req.json().catch(() => null);
@@ -146,3 +147,33 @@ export async function handleDrinks(req, member, deps) {
   console.log(`[drinks] ${user.uid} added a drink for ${target.id === user.uid ? 'themselves' : target.id} (${drink.type})`);
   return send(200, { ok: true, id, drink, for: { id: target.id, name: target.name } });
 }
+
+/** A person's one-tap options and today's count (GET /api/drinks/:member). */
+async function readOptions(member, tz, deps) {
+  const uid = encodeURIComponent(member);
+  const today = localDateTime(deps.now(), tz).date;
+  const [distinct, recent, todays] = await Promise.all([
+    deps.read(`tree?select=value&key=eq.users/${uid}/distinctDrinks`, 'drinks'),
+    deps.read(`tree?select=value&root=eq.users/${uid}&path=cs.{drinks}&order=key.desc&limit=20`, 'drinks'),
+    deps.read(`tree?select=key&root=eq.users/${uid}&path=cs.{drinks}&value->>date=eq.${today}`, 'drinks'),
+  ]);
+  return { ...quickOptions(distinct[0]?.value, recent.map((r) => r.value)), today: todays.length };
+}
+
+/**
+ * The `sub` a bearer token claims, without checking it: only ever used to
+ * start a lookup early, never to decide anything.
+ */
+export function unverifiedSub(req, now = Date.now()) {
+  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try {
+    const { sub, exp } = JSON.parse(Buffer.from(token.split('.')[1] || '', 'base64url').toString('utf8'));
+    return typeof sub === 'string' && UUID.test(sub) && exp * 1000 > now ? sub : null;
+  } catch { return null; }
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Started early but maybe never awaited: hold the outcome so a failure isn't
+// an unhandled rejection, and rethrow it only if it's used.
+const settle = (p) => p.then((value) => ({ value }), (error) => ({ error }));
+const unsettle = (r) => { if (r.error) throw r.error; return r.value; };

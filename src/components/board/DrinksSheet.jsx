@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
 import { callApi } from '@/data/api';
+import { hiveSession } from '@/hive/account';
 
 /*
  * Drinks on the fridge: pick who you are from the household, then one tap
@@ -10,7 +11,13 @@ import { callApi } from '@/data/api';
  * It asks who you are every time it opens, so the next person at the fridge
  * is never logged as you. While it's open you can add several drinks for the
  * same person, or switch with "Not you?".
+ *
+ * Speed: everyone's drinks start loading as soon as the sheet opens (yours
+ * alongside the list of people, the others once it arrives), so picking a
+ * name shows their drinks straight away instead of starting a second wait.
+ * After adding a drink for someone, picking them again loads them afresh.
  */
+const PREFETCH_MAX = 8;
 const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } };
 
 const EMOJI = { Beer: '🍺', Wine: '🍷', Cocktail: '🍸', Spirit: '🥃', Other: '🍹' };
@@ -34,19 +41,43 @@ export function DrinksSheet({ onClose }) {
       .slice(0, 8);
   }, [q, opts]);
 
+  // Each person's options: the request (shared, so nothing is asked twice) and,
+  // once it's back, the answer, so a pick can show it without a Loading flash.
+  const asked = useRef(new Map());
+  const answered = useRef(new Map());
+  const fetchOpts = useCallback((id) => {
+    let p = asked.current.get(id);
+    if (!p) {
+      p = callApi(`/api/drinks/${encodeURIComponent(id)}?tz=${encodeURIComponent(tz())}`)
+        .then((r) => (r.ok ? r.data : { error: r.data?.error || 'Couldn’t reach Drink Tracker' }));
+      asked.current.set(id, p);
+      p.then((o) => {
+        if (asked.current.get(id) !== p) return;
+        if (o.error) asked.current.delete(id); // try again next time they're picked
+        else answered.current.set(id, o);
+      });
+    }
+    return p;
+  }, []);
+  const forget = (id) => { asked.current.delete(id); answered.current.delete(id); };
+
   useEffect(() => {
+    // Yours first, alongside the list: it's usually you at the fridge.
+    hiveSession().then((s) => { if (s?.uid) fetchOpts(s.uid); });
     callApi('/api/drinks').then((r) => {
       if (!r.ok) { setError(r.data?.error || 'Couldn’t reach Drink Tracker'); setPeople([]); return; }
       setPeople(r.data.people);
+      r.data.people.slice(0, PREFETCH_MAX).forEach((p) => fetchOpts(p.id));
     });
-  }, []);
+  }, [fetchOpts]);
 
-  const loadOpts = useCallback(async (w) => {
-    setOpts(null);
-    const r = await callApi(`/api/drinks/${encodeURIComponent(w.id)}?tz=${encodeURIComponent(tz())}`);
-    setOpts(r.ok ? r.data : { error: r.data?.error || 'Couldn’t reach Drink Tracker' });
-  }, []);
-  useEffect(() => { if (who) loadOpts(who); }, [who?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!who) return undefined;
+    let live = true;
+    setOpts(answered.current.get(who.id) || null);
+    fetchOpts(who.id).then((o) => { if (live) setOpts(o); });
+    return () => { live = false; };
+  }, [who?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p) => setWho({ id: p.id, name: p.name });
   const notMe = () => { setWho(null); setOpts(null); setQ(''); };
@@ -63,6 +94,7 @@ export function DrinksSheet({ onClose }) {
     const r = await callApi(`/api/drinks/${encodeURIComponent(who.id)}`, { method: 'POST', body: { type: d.type, name: d.name || '', quantity: d.quantity, tz: tz() } });
     setBusy(false);
     if (!r.ok) { toast(r.data?.error || 'Couldn’t add that drink', { type: 'error', duration: 5000 }); return; }
+    forget(who.id); // picked again later, they load afresh with this drink in
     setOpts((o) => (o ? { ...o, today: (o.today || 0) + 1 } : o));
     toast(`${d.name || d.type} added for ${who.name}. Fix or remove it in Drink Tracker.`, { duration: 5000 });
   };
