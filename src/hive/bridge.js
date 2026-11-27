@@ -11,6 +11,9 @@ import { passFor } from './account';
  *   Hive → app   { type: 'hive:signed-out' }      nobody is signed in to Hive
  *   app → Hive   { type: 'hive:close' }           "I'm finished; take me away"
  *                                                  (GalaxyFarm's egg count, once logged)
+ *   app → Hive   { type: 'hive:busy', busy }      "someone is using me; don't go back to the
+ *                                                  board" (KitchenHub's cook mode; repeated
+ *                                                  every minute, busy: false when it ends)
  *
  * Hive answers only a frame it opened, only from that app's own address, and
  * sends the pass only to that address, so another page can't ask for one or
@@ -70,6 +73,22 @@ export function listenForClose(onClose) {
     const frame = frameFor(e.source);
     if (!frame || e.origin !== originOf(frame.dataset.app)) return;
     onClose(frame.dataset.app);
+  };
+  window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
+}
+
+/**
+ * Listen for an app saying it is in use, or no longer. Only a frame Hive
+ * opened, only from that app's own address. `onBusy(id, busy)`. Returns a
+ * function that stops listening.
+ */
+export function listenForBusy(onBusy) {
+  const onMessage = (e) => {
+    if (e.data?.type !== 'hive:busy') return;
+    const frame = frameFor(e.source);
+    if (!frame || e.origin !== originOf(frame.dataset.app)) return;
+    onBusy(frame.dataset.app, e.data.busy !== false);
   };
   window.addEventListener('message', onMessage);
   return () => window.removeEventListener('message', onMessage);
