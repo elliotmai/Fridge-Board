@@ -428,7 +428,7 @@ button.day:active { background: color-mix(in srgb, var(--kitchen) 10%, transpare
   .soon span { font-size: 12px; padding: 3px 8px; }
 
   .add { gap: 6px; }
-  .add input { height: 40px; font-size: 16px; padding: 0 10px; } /* under 16px, iOS zooms in on focus */
+  .add input { height: 40px; font-size: 16px; padding: 0 8px; } /* under 16px, iOS zooms in on focus; 8px so "Add item" fits the Fire sideways */
   .add button { width: 40px; height: 40px; }
   .add button svg { width: 18px; height: 18px; }
   .quick { gap: 4px; }
