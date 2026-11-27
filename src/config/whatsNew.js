@@ -12,6 +12,7 @@ export const WHATS_NEW = [
       'Turn the fridge tablet upright and Fridge Board still fits one screen: the kitchen across the top, chores and coming up side by side below. It stays the fridge tablet either way up.',
       'On an iPhone, apps opened in Hive stay clear of the home bar at the bottom, and Hive and its apps no longer zoom in when you pinch, double-tap or tap into a box.',
       'Fridge Board on a phone fits the screen’s width again, with nothing cut off at the right.',
+      'Cooking from KitchenHub’s cook mode on the fridge? Hive leaves the recipe up for as long as you cook, instead of going back to Fridge Board after 15 minutes.',
     ],
   },
   {
