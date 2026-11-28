@@ -11,10 +11,13 @@ import { useTick } from '@/hooks/useTick';
 import { DAY, plural } from '@/lib/dates';
 import { dedupeEvents, mergeTodos, timeline } from '@/lib/agenda';
 import { nextBreeding, tripState } from '@/lib/derive';
+import { viewFor } from '@/lib/faceSwitch';
+import { useFaceSwitch } from '@/hive/useFaceSwitch';
 import { openEggCount, opensEggCount } from '@/lib/eggs';
 import { ComingUp, SitterGuide, SitterPanel } from './Ahead';
 import { CookMode } from './CookMode';
 import { DrinksSheet } from './DrinksSheet';
+import { FacePill } from './Faces';
 import { Farm } from './Farm';
 import { AwayBanner, Header } from './Header';
 import { Meals, Shopping } from './Kitchen';
@@ -47,6 +50,9 @@ export function Board({ onHome }) {
   const [drawer, setDrawer] = useState(false);
   const [drinks, setDrinks] = useState(false);
   const [cook, setCook] = useState(null);
+  // On a household screen: who's looking (src/hive/useFaceSwitch.js), or null for Both.
+  const [teaching, setTeaching] = useState(false);
+  const faces = useFaceSwitch(data?.screen?.people || null, { hold: teaching });
   // KitchenHub's timers, shared with every screen in the household
   // (src/context/KitchenTimers.jsx). Here they are keyed the board's way:
   // '<recipe>:<page>' for a step's timer, 'timer:<id>' for any other.
@@ -111,10 +117,12 @@ export function Board({ onHome }) {
   const closeCook = useCallback(() => setCook(null), []);
 
   if (!data) return <div className="fb" />;
+  // One person's view when they're the one looking; everyone's (Both) otherwise.
+  const shown = viewFor(data, faces.person);
 
   const liveChores = data.status.chores.status === 'live';
   const liveShop = data.status.shopping.status === 'live';
-  const ts = tripState(data.trips, data.home, now, opts);
+  const ts = tripState(shown.trips, data.home, now, opts);
   const breeding = nextBreeding(data.sessions, ts, now, opts);
   const sitter = opts.sitter || (opts.autoSitter && !!ts.away);
   const fold = (k) => setFolds((f) => toggleIn(f, k));
@@ -206,7 +214,7 @@ export function Board({ onHome }) {
   const saveKey = async (k) => { setKey(k); const d = await reload(); if (!d.locked) toast('Board unlocked'); return !d.locked; };
   // To do: LearnLeaf + Google Tasks in one list. Ticks go to the app that owns
   // the task; in sample mode they stay on this device.
-  const todos = mergeTodos({ learnleaf: data.tasks, subjects: data.subjects, google: data.gtasks }, now);
+  const todos = mergeTodos({ learnleaf: shown.tasks, subjects: data.subjects, google: shown.gtasks }, now);
   const liveTodo = (t) => (t.source === 'google' ? data.status.gtasks : data.status.tasks).status === 'live';
   const todoKey = (t) => `todo:${t.key}`;
   const todoDone = todos.filter((t) => (liveTodo(t) ? overrides[todoKey(t)] ?? false : localTodos.includes(t.key))).map((t) => t.key);
@@ -225,7 +233,7 @@ export function Board({ onHome }) {
 
   // Coming up: tasks, calendar, trips and breeding in one list by day. Calendar
   // events that are really a Wander trip show once, as the trip.
-  const { shown: calEvents, hidden: tripEvents } = dedupeEvents(data.events, data.trips);
+  const { shown: calEvents, hidden: tripEvents } = dedupeEvents(shown.events, shown.trips);
   const tl = timeline({ todos, events: calEvents, trips: ts.all, breeding }, now, { horizon: 14 });
 
   const peekMeal = peek != null && data.meals.find((m) => m.d === peek && m.type === 'Dinner');
@@ -257,8 +265,10 @@ export function Board({ onHome }) {
         <CookMode cook={cook} recipe={data.recipes[cook.id]} timers={timers} now={tick} onGo={goStep} onClose={closeCook}
           onToggleTimer={toggleTimer} onJump={jumpToTimer} onGather={(n) => setCook((c) => ({ ...c, gathered: toggleIn(c.gathered, n) }))} />
       )}
-      {drinks && <DrinksSheet onClose={() => setDrinks(false)} />}
-      {drawer && <SettingsDrawer opts={opts} setOpts={setOpts} now={now} onClose={() => setDrawer(false)} onReset={reset} onSaveKey={saveKey} home={data.home} />}
+      {drinks && <DrinksSheet onClose={() => setDrinks(false)} start={faces.person?.id} />}
+      <FacePill faces={faces} />
+      {drawer && <SettingsDrawer opts={opts} setOpts={setOpts} now={now} onClose={() => setDrawer(false)} onReset={reset} onSaveKey={saveKey} home={data.home}
+        screenPeople={data.screen?.people} facesOn={faces.on} onTeaching={setTeaching} />}
     </div>
   );
 }
