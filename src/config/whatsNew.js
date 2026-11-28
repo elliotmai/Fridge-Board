@@ -9,6 +9,7 @@ export const WHATS_NEW = [
     version: '2026.11.28',
     date: 'November 2026',
     items: [
+      'The household screen can switch to whoever is looking at it: teach it your face in the board’s settings, turn on Switch to whoever is looking, and it shows just your calendar, tasks and trips while you’re the one there, and Drinks starts on you. Two of you, nobody, or not sure: Both. It all happens on the tablet, no picture is ever saved or sent, and a light in the corner shows whenever the camera is on, with Off for an hour.',
       'The household screen on the fridge shows Both: each of you can choose, in Account, On the household screen, to show your calendar and Google Tasks, LearnLeaf tasks or trips there. They’re shown together, each with your initial, and ticking a task off on the fridge ticks it off for whoever it belongs to. Nothing of yours is shown until you turn it on.',
     ],
   },

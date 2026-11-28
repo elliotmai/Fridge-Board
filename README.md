@@ -158,7 +158,31 @@ are on shows once, with both initials, and every row carries `who` / `whoName`,
 shown as an initial badge on the board. Ids are tagged `<uid>~<id>`, so a tick
 on the fridge goes back (`/api/todos/...`) as the person it belongs to, and
 only for something they share. `viewer.screen.people` lists the household's
-people for the board (and, next, face switching).
+people for the board and face switching.
+
+### Face switching
+
+On a household screen, the board can show one person's view while they're
+the one looking at it (`src/lib/faceSwitch.js` decides; `src/hive/faces.js`
+and `useFaceSwitch.js` run the camera). Board settings → **Face switching**:
+each person teaches it their face (6 good looks), then **Switch to whoever is
+looking** turns it on.
+
+- On the tablet only. face-api (MIT, `@vladmandic/face-api`) and its three
+  weights are served by Hive itself from `/face-models`
+  (`scripts/face-models.mjs` copies them at `predev`/`prebuild`; not
+  committed, not precached), loaded only on a screen that uses it. Frames are
+  looked at and dropped; the only thing kept is each taught person's face
+  signatures (128 numbers each) in this tablet's IndexedDB, until they're
+  forgotten. Turning it off forgets every face.
+- Sure or Both. One face, recognised in 3 of the last 4 looks (about one a
+  second, distance under 0.5 and clearly closer than anyone else), switches
+  to that person. Two faces is Both at once; nobody or unsure is Both 20
+  seconds after they were last recognised.
+- One person's view (`viewFor`) keeps their rows (`who`) and everything
+  shared; Drinks starts on them.
+- A light in the corner shows whenever the camera is on, with **Off for an
+  hour**. The camera stops when the board is hidden.
 
 ## Roadmap
 

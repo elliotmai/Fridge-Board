@@ -4,8 +4,9 @@ import { getKey } from '@/data/api';
 import { useTheme } from '@/context/ThemeContext';
 import { md } from '@/lib/dates';
 import { Close } from './Icons';
+import { FaceSettings } from './Faces';
 
-export function SettingsDrawer({ opts, setOpts, now, onClose, onReset, onSaveKey, home }) {
+export function SettingsDrawer({ opts, setOpts, now, onClose, onReset, onSaveKey, home, screenPeople, facesOn, onTeaching }) {
   const { theme, setTheme } = useTheme();
   const [key, setKeyText] = useState(getKey());
   const [keyMsg, setKeyMsg] = useState('');
@@ -30,6 +31,7 @@ export function SettingsDrawer({ opts, setOpts, now, onClose, onReset, onSaveKey
       <label className="toggle-row">Turn on housesitter mode while away
         <input type="checkbox" checked={opts.autoSitter} onChange={set('autoSitter')} />
       </label>
+      <FaceSettings people={screenPeople} on={facesOn} onTeaching={onTeaching} />
       <label className="field">Theme
         <select value={theme} onChange={(e) => setTheme(e.target.value)}><option value="light">Light</option><option value="dark">Dark</option></select>
       </label>

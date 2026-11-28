@@ -29,3 +29,6 @@ dev-dist
 
 # Netlify CLI local state
 .netlify
+
+# face-api weights, copied from node_modules at build (scripts/face-models.mjs)
+public/face-models

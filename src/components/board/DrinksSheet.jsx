@@ -23,7 +23,7 @@ const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone
 const EMOJI = { Beer: '🍺', Wine: '🍷', Cocktail: '🍸', Spirit: '🥃', Other: '🍹' };
 const label = (d) => `${d.name || d.type} · ${d.quantity} oz`;
 
-export function DrinksSheet({ onClose }) {
+export function DrinksSheet({ onClose, start }) {
   const { toast } = useToast();
   const [people, setPeople] = useState(null); // null: loading
   const [error, setError] = useState('');
@@ -67,9 +67,12 @@ export function DrinksSheet({ onClose }) {
     callApi('/api/drinks').then((r) => {
       if (!r.ok) { setError(r.data?.error || 'Couldn’t reach Drink Tracker'); setPeople([]); return; }
       setPeople(r.data.people);
+      // On a household screen, whoever the camera sees is picked already ("Not me" undoes it).
+      const seen = start && r.data.people.find((p) => p.id === start);
+      if (seen) setWho({ id: seen.id, name: seen.name });
       r.data.people.slice(0, PREFETCH_MAX).forEach((p) => fetchOpts(p.id));
     });
-  }, [fetchOpts]);
+  }, [fetchOpts]); // eslint-disable-line react-hooks/exhaustive-deps -- `start` only for the first pick
 
   useEffect(() => {
     if (!who) return undefined;

@@ -9,11 +9,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --test src/hive/*.test.js src/lib/*.test.js netlify/lib/*.test.mjs"
+    "test": "node --test src/hive/*.test.js src/lib/*.test.js netlify/lib/*.test.mjs",
+    "predev": "node scripts/face-models.mjs",
+    "prebuild": "node scripts/face-models.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.2",
+    "@vladmandic/face-api": "1.7.15",
     "firebase": "^11.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

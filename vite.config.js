@@ -43,6 +43,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Face switching's model loads only on a household screen that uses it.
+        globIgnores: ['**/face-api*', 'face-models/**'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         // Apps served at Hive's own address (/apps/<id>/, netlify.toml) bring
