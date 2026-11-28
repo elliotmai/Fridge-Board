@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { forgetJoinCode, joinLink, pendingJoinCode } from './joinCode';
 import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
-  authMessage, createAccount, createHousehold, eventPartners, householdMessage, makeEventPartner, removeEventPartner, removeMember, inviteCode, newInviteCode, joinHousehold, myHousehold,
+  authMessage, brainKeys, makeBrainKey, revokeBrainKey, createAccount, createHousehold, eventPartners, householdMessage, makeEventPartner, removeEventPartner, removeMember, inviteCode, newInviteCode, joinHousehold, myHousehold,
   pairAsScreen, removeScreen, screenCode, setScreenShare, showCode, resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
@@ -158,6 +158,65 @@ function SignedIn({ user }) {
       <GoogleRow />
       <Household key={round} />
       <ShareOnScreen user={user} />
+      <BrainKeys />
+    </>
+  );
+}
+
+/**
+ * Hive Brain keys: each computer, cloud environment or agent that reports
+ * what it is doing gets its own. Shown once when made; revoke one and only
+ * that reporter stops.
+ */
+function BrainKeys() {
+  const [keys, setKeys] = useState(undefined); // undefined: loading
+  const [adding, setAdding] = useState(false);
+  const [label, setLabel] = useState('My computer');
+  const [made, setMade] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [confirm, setConfirm] = useState(null);
+  const { busy, run, Msg } = useRun();
+  const load = useCallback(() => { brainKeys().then(setKeys).catch(() => setKeys([])); }, []);
+  useEffect(load, [load]);
+  const command = made ? `muster hooks install --key ${made}` : '';
+  const copy = async () => { try { await navigator.clipboard.writeText(command); setCopied(true); } catch { setCopied(false); } };
+  const when = (t) => (t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null);
+  return (
+    <>
+      <h3 className="sheet-sub">Brain keys</h3>
+      <p className="sheet-note">Each computer or agent that tells Hive Brain what it&rsquo;s working on gets its own key. A key can only add what you&rsquo;re doing; it can&rsquo;t read anything.</p>
+      {keys?.map((k) => (
+        <div className="set-row" key={k.hash}>
+          <span><b>{k.label}</b><small>{k.last_used_at ? `Last reported ${when(k.last_used_at)}` : `Made ${when(k.created_at)}, not used yet`}</small></span>
+          {confirm === k.hash ? (
+            <span className="row-actions">
+              <button className="pill strong" disabled={busy} onClick={async () => { await run(() => revokeBrainKey(k.hash)); setConfirm(null); load(); }}>Revoke</button>
+              <button className="pill" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button>
+            </span>
+          ) : <button className="pill" disabled={busy} onClick={() => setConfirm(k.hash)}>Revoke</button>}
+        </div>
+      ))}
+      {confirm && <p className="sheet-note" role="status">That computer or agent stops reporting straight away. Everything it already reported stays.</p>}
+      {made ? (
+        <>
+          <p className="auth-msg" role="status">Copy this now; it won&rsquo;t be shown again. On the computer, run:</p>
+          <code className="code-big" style={{ wordBreak: 'break-all', userSelect: 'all' }}>{command}</code>
+          <div className="row-actions">
+            <button className="pill strong" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+            <button className="pill" onClick={() => { setMade(null); setAdding(false); setCopied(false); load(); }}>Done</button>
+          </div>
+          <small className="sheet-note">For cloud sessions, add the key as MUSTER_BRAIN_KEY in the cloud environment&rsquo;s variables instead.</small>
+        </>
+      ) : adding ? (
+        <form className="auth-form" onSubmit={async (e) => { e.preventDefault(); const k = await run(() => makeBrainKey(label)); if (k) setMade(k); }}>
+          <label>What it&rsquo;s for<input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} required /></label>
+          <button className="pill strong wide" type="submit" disabled={busy}>Make a key</button>
+          <button type="button" className="link-btn" onClick={() => setAdding(false)}>Cancel</button>
+        </form>
+      ) : (
+        <button className="pill wide" onClick={() => setAdding(true)}>Make a brain key</button>
+      )}
+      <Msg />
     </>
   );
 }

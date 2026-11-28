@@ -296,6 +296,30 @@ export async function pairAsScreen(code) {
   return body.name;
 }
 
+/**
+ * Hive Brain keys: one per computer, cloud environment or agent that reports
+ * what it is doing (muster hooks install --key …). The key is shown once;
+ * only its SHA-256 is kept, in core.api_tokens under app 'brain'.
+ */
+export async function brainKeys() {
+  const sb = await supabase();
+  return must(await sb.schema('core').from('api_tokens')
+    .select('hash,label,created_at,last_used_at').eq('app', 'brain').is('revoked_at', null)
+    .order('created_at', { ascending: false }));
+}
+
+/** Make a brain key. Returns the key itself, the only time anyone sees it. */
+export async function makeBrainKey(label) {
+  const sb = await supabase();
+  return must(await sb.schema('brain').rpc('create_key', { label: String(label || '').trim() }));
+}
+
+/** Revoke a brain key: that one reporter stops, nothing else changes. */
+export async function revokeBrainKey(hash) {
+  const sb = await supabase();
+  must(await sb.schema('core').from('api_tokens').update({ revoked_at: new Date().toISOString() }).eq('hash', hash).eq('app', 'brain'));
+}
+
 /** Owner: remove one of the household's screens. Its sign-in ends everywhere. */
 export async function removeScreen(id) {
   const token = await idToken();
