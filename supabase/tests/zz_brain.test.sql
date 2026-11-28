@@ -30,6 +30,14 @@ select set_config('request.jwt.claim.sub', 'b0b0b0b0-0000-0000-0000-000000000003
 select core.create_household('Elsewhere');
 insert into bkeys select 'stranger', brain.create_key(null);
 
+-- An anonymous session can't make a key.
+select set_config('request.jwt.claims', '{"is_anonymous": true}', false);
+do $$ begin
+  perform brain.create_key('anon');
+  raise exception 'anonymous sessions can''t make keys';
+exception when insufficient_privilege then null; end $$;
+select set_config('request.jwt.claims', '', false);
+
 -- People can't report directly; only the server can.
 do $$ begin
   perform brain.report('x', '{}');
