@@ -3,7 +3,7 @@ import { forgetJoinCode, joinLink, pendingJoinCode } from './joinCode';
 import { connectGoogle, GOOGLE_CHANGED, googleStatus, takeGoogleResult } from './googleConnect';
 import {
   authMessage, createAccount, createHousehold, eventPartners, householdMessage, makeEventPartner, removeEventPartner, removeMember, inviteCode, newInviteCode, joinHousehold, myHousehold,
-  pairAsScreen, removeScreen, screenCode, showCode, resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
+  pairAsScreen, removeScreen, screenCode, setScreenShare, showCode, resendConfirmation, resetPassword, setMyName, setNewPassword, signInWithEmail, signInWithGoogle, signOut,
 } from './account';
 
 /**
@@ -157,6 +157,40 @@ function SignedIn({ user }) {
       <Msg />
       <GoogleRow />
       <Household key={round} />
+      <ShareOnScreen user={user} />
+    </>
+  );
+}
+
+const SHARES = [
+  ['google', 'Calendar and Google Tasks'],
+  ['learnleaf', 'LearnLeaf tasks'],
+  ['wander', 'Trips from Wander'],
+];
+
+/**
+ * What of mine the household screen (the fridge tablet) shows in its Both
+ * view, beside everyone else's. Off until I turn it on; anyone in the kitchen
+ * can see the screen, so it's each person's own choice.
+ */
+function ShareOnScreen({ user }) {
+  const [share, setShare] = useState(user.share || {});
+  const { busy, run, Msg } = useRun();
+  const flip = async (key) => {
+    const next = await run(() => setScreenShare(key, !share[key]));
+    if (next) setShare(next);
+  };
+  return (
+    <>
+      <h3 className="sheet-sub">On the household screen</h3>
+      {SHARES.map(([key, label]) => (
+        <div className="set-row" key={key}>
+          <span><b>{label}</b><small>{share[key] ? 'Shown, with your initial' : 'Not shown'}</small></span>
+          <button className="pill" role="switch" aria-checked={!!share[key]} disabled={busy} onClick={() => flip(key)}>{share[key] ? 'Hide' : 'Show'}</button>
+        </div>
+      ))}
+      <small className="sheet-note">The fridge tablet, signed in as the household, shows everyone who turns these on together. Anyone in the kitchen can see it. Drinks are always there to add to.</small>
+      <Msg />
     </>
   );
 }

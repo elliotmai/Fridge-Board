@@ -138,3 +138,14 @@ test('a trip close to home shows only its activities, and nothing if none are yo
   assert.equal(tl.days[0].away, null);
   assert.deepEqual(tl.later, []);
 });
+
+test('on a household screen, each to-do keeps whose it is', () => {
+  const rows = mergeTodos({
+    learnleaf: [{ id: 'u1~a', name: 'Essay', subject: 'u1~s', due: day(0), who: 'E', whoName: 'Eli' }],
+    subjects: { 'u1~s': ['English', '#333'] },
+    google: [{ id: 'g', list: 'u2~L', title: 'Vet', due: null, who: 'K', whoName: 'Kat' }, { id: 'h', list: 'L', title: 'Mine', due: null }],
+  }, NOW);
+  assert.deepEqual(rows.map((r) => [r.who, r.whoName]), [['E', 'Eli'], ['K', 'Kat'], [undefined, undefined]]);
+  assert.equal(rows[0].tag, 'English');
+  assert.equal(rows[1].list, 'u2~L', 'the tagged list goes back with a tick');
+});

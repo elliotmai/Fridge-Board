@@ -33,7 +33,8 @@
  */
 import { env, getJson, json, SourceError, urls } from '../lib/shared.mjs';
 import { asUser, passHeader } from '../lib/hiveUser.mjs';
-import { admin, adminRead, boardGate } from '../lib/household.mjs';
+import { admin, adminRead, boardGate, screenPeople } from '../lib/household.mjs';
+import { bothView, isScreen, mergeGoogle, mergeLearnleaf, mergeWander } from '../lib/screens.mjs';
 import { GOOGLE_NOT_CONNECTED } from '../../src/config/google.js';
 
 // Travel is looked up for every trip starting this soon (or under way): it decides
@@ -283,6 +284,10 @@ export default async (req) => {
   const gate = await boardGate(req);
   if (!gate.ok) return gate.response;
   const { user } = gate;
+  // A household screen shows Both: each person's calendar, tasks and trips, if
+  // they turned that on (Hive, Account, On the household screen).
+  const people = isScreen(user) ? await screenPeople(gate.household).catch((e) => { console.error('[board] household people:', e.message); return []; }) : null;
+  const personal = (app, one, merge) => (people ? bothView(people, app, one, merge) : one(user));
 
   // GalaxyFarm first: it owns the home location the others need.
   const gf = await settle('galaxyfarm', () => galaxyfarm(user));
@@ -290,17 +295,21 @@ export default async (req) => {
   const [w, kh, ll, wa, z, g] = await Promise.all([
     settle('weather', () => weather(where)),
     settle('kitchenhub', () => kitchenhub(user)),
-    settle('learnleaf', () => learnleaf(user)),
-    settle('wander', () => wander(where, user)),
+    settle('learnleaf', () => personal('learnleaf', learnleaf, mergeLearnleaf)),
+    settle('wander', () => personal('wander', (u) => wander(where, u), mergeWander)),
     settle('znt', () => znt(where, gate.household)),
-    settle('google', () => google(where, user)),
+    settle('google', () => personal('google', (u) => google(where, u), mergeGoogle)),
   ]);
   const sources = { galaxyfarm: gf, weather: w, kitchenhub: kh, learnleaf: ll, wander: wa, znt: z, google: g };
   // One line per request, so the log says what each widget got and why.
-  console.log(`[board] ${user ? 'signed in' : gate.expired ? 'expired sign-in' : 'signed out'}${gate.viaKey ? ', key' : ''}: ${Object.entries(sources).map(([k, v]) => `${k}=${v.status}${v.status === 'live' ? '' : ` (${v.reason})`}`).join(', ')}`);
+  console.log(`[board] ${people ? `screen (${people.length} people)` : user ? 'signed in' : gate.expired ? 'expired sign-in' : 'signed out'}${gate.viaKey ? ', key' : ''}: ${Object.entries(sources).map(([k, v]) => `${k}=${v.status}${v.status === 'live' ? '' : ` (${v.reason})`}`).join(', ')}`);
   return json(200, {
     generatedAt: new Date().toISOString(),
-    viewer: { signedIn: !!user, expired: gate.expired, household: !!gate.household },
+    viewer: {
+      signedIn: !!user, expired: gate.expired, household: !!gate.household,
+      // On a screen: the household's people, for Both's legend (and, later, face switching).
+      ...(people ? { screen: { people: people.map((p) => ({ id: p.uid, name: p.name, initial: p.initial, share: p.share })) } } : {}),
+    },
     home: where.home ? { ...where.home, tz: where.tz, from: where.from } : null,
     sources,
   }, { 'cache-control': 'private, no-store' });
