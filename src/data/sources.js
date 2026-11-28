@@ -73,6 +73,8 @@ export async function loadBoard() {
   return {
     locked: demo ? null : locked,
     signedIn: signedIn && !demo,
+    // On a household screen: its people (Both view, face switching).
+    screen: demo ? null : feed?.viewer?.screen || null,
     home,
     weather: weather.data,
     tasks: learnleaf.data.tasks,

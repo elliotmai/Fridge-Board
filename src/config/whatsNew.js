@@ -6,6 +6,13 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.28',
+    date: 'November 2026',
+    items: [
+      'The household screen on the fridge shows Both: each of you can choose, in Account, On the household screen, to show your calendar and Google Tasks, LearnLeaf tasks or trips there. They’re shown together, each with your initial, and ticking a task off on the fridge ticks it off for whoever it belongs to. Nothing of yours is shown until you turn it on.',
+    ],
+  },
+  {
     version: '2026.11.27',
     date: 'November 2026',
     items: [

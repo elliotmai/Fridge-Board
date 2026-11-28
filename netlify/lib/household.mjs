@@ -9,7 +9,7 @@
  */
 import { hiveSession } from './hiveUser.mjs';
 import { env, getJson, json, keyMatches } from './shared.mjs';
-import { isScreen, withMembers } from './screens.mjs';
+import { householdPeople, isScreen, withMembers } from './screens.mjs';
 
 /** { url, headers } for the service role, or null when it isn't set up. */
 export function admin() {
@@ -40,6 +40,20 @@ export async function householdMembers(hid, read = adminRead) {
     const p = people.find((y) => y.id === x.user_id) || {};
     return { id: x.user_id, role: x.role, email: p.email || '', name: p.display_name || (p.email ? p.email.split('@')[0] : 'Someone') };
   });
+}
+
+/**
+ * A screen's household people for the Both view (netlify/lib/screens.mjs
+ * householdPeople): each with their confirmed email and what they share.
+ */
+export async function screenPeople(hid, { members = householdMembers, getUser = adminUser } = {}) {
+  return householdPeople(await members(hid), getUser);
+}
+
+/** One auth user, as the service role (for user_metadata and the confirmed email). */
+export async function adminUser(id, a = admin()) {
+  if (!a) throw Object.assign(new Error('Supabase is not set up for the board'), { unconfigured: true });
+  return getJson(`${a.url}/auth/v1/admin/users/${encodeURIComponent(id)}`, { headers: a.headers });
 }
 
 /**

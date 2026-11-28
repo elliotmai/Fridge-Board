@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeKeys, verifyPass } from './hiveAssertion.mjs';
 import { appAuth, passHeader } from './hiveUser.mjs';
 import { boardGate } from './household.mjs';
-import { claimScreen, looksLikeCode, normaliseCode, removeScreen, screenPass, SCREEN_EMAIL_DOMAIN, withMembers } from './screens.mjs';
+import { bothView, claimScreen, householdPeople, initialsFor, looksLikeCode, mergeGoogle, mergeLearnleaf, mergeWander, normaliseCode, personFor, removeScreen, screenPass, SCREEN_EMAIL_DOMAIN, tagId, untagId, withMembers } from './screens.mjs';
 
 const HID = '11111111-2222-3333-4444-555555555555';
 const SCREEN = { uid: '99999999-0000-0000-0000-000000000001', email: `screen-x@${SCREEN_EMAIL_DOMAIN}`, email_verified: true, name: 'Kitchen screen', screen: HID };
@@ -120,4 +120,76 @@ test('only an owner of its household removes a screen', async () => {
   assert.ok(!f.calls.some((c) => c.method === 'DELETE'));
   assert.equal(await removeScreen(SCREEN, SCREEN.uid, mk(true)), false, 'a screen can’t remove screens');
   assert.equal(await removeScreen(owner, 'not-a-uuid', mk(true)), false);
+});
+
+/* ---------------------------------------------------------- Both view --- */
+const ELI = { uid: 'u-eli', name: 'Eli', email: 'eli@example.com', email_verified: true, initial: 'E', share: { google: true, learnleaf: true, wander: true } };
+const KAT = { uid: 'u-kat', name: 'Kat', email: 'kat@example.com', email_verified: true, initial: 'K', share: { google: true, learnleaf: false, wander: true } };
+
+test('people get short initials, two letters only where they clash', () => {
+  assert.deepEqual(initialsFor([{ name: 'Eli' }, { name: 'Kat' }]), ['E', 'K']);
+  assert.deepEqual(initialsFor([{ name: 'Eli' }, { name: 'emma' }]), ['El', 'Em']);
+});
+
+test('what each person shares comes from their own sign-in, off by default', async () => {
+  const users = { a: { email: 'A@x.com', email_confirmed_at: 'now', user_metadata: { hive_screen_share: { google: true, wander: 'yes' } } }, b: { email: 'b@x.com' } };
+  const people = await householdPeople([{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bo' }, { id: 'c', name: 'Cy', email: 'c@x.com' }], async (id) => {
+    if (!users[id]) throw new Error('gone');
+    return users[id];
+  });
+  assert.deepEqual(people[0].share, { google: true, learnleaf: false, wander: false }, 'only a real true counts');
+  assert.equal(people[0].email, 'a@x.com');
+  assert.equal(people[1].email_verified, false);
+  assert.deepEqual(people[2].share, { google: false, learnleaf: false, wander: false }, 'unreadable: shares nothing');
+});
+
+test('tagged ids lead back to their person, only for what they share', () => {
+  assert.deepEqual(untagId(tagId('u-eli', 'list~1')), { uid: 'u-eli', id: 'list~1' });
+  assert.equal(untagId('plain'), null);
+  assert.equal(personFor([ELI, KAT], 'u-eli~t1', 'learnleaf').id, 't1');
+  assert.equal(personFor([ELI, KAT], 'u-kat~t1', 'learnleaf'), null, 'Kat doesn’t share LearnLeaf');
+  assert.equal(personFor([ELI, KAT], 'u-zed~t1', 'google'), null);
+  assert.equal(personFor([{ ...ELI, email_verified: false }], 'u-eli~t1', 'google'), null);
+});
+
+test('Both merges calendars, tasks and trips with whose they are', () => {
+  const g = mergeGoogle([
+    { person: ELI, data: { events: [{ id: 'e1', iCalUID: 'shared', title: 'Dinner' }, { id: 'e2', title: 'Vet' }], tasks: [{ id: 't', list: 'L', title: 'Feed' }] } },
+    { person: KAT, data: { events: [{ id: 'x9', iCalUID: 'shared', title: 'Dinner' }], tasks: [] } },
+  ]);
+  assert.equal(g.events.length, 2, 'a shared event once');
+  assert.deepEqual([g.events[0].who, g.events[0].whoName], ['E+K', 'Eli and Kat']);
+  assert.equal(g.events[1].who, 'E');
+  assert.deepEqual([g.tasks[0].list, g.tasks[0].who], ['u-eli~L', 'E']);
+
+  const l = mergeLearnleaf([{ person: ELI, data: { tasks: [{ id: '1', subject: 's' }], subjects: { s: ['Math', '#f00'] } } }]);
+  assert.equal(l.tasks[0].id, 'u-eli~1');
+  assert.deepEqual(l.subjects[l.tasks[0].subject], ['Math', '#f00']);
+
+  const w = mergeWander([
+    { person: ELI, data: { trips: [{ id: 'tr', name: 'Lisbon', items: [{ date: '2026-12-02', time: '9:00 AM' }] }] } },
+    { person: KAT, data: { trips: [{ id: 'tr', name: 'Lisbon', items: [{ date: '2026-12-01' }] }] } },
+  ]);
+  assert.equal(w.trips.length, 1);
+  assert.equal(w.trips[0].who, 'E+K');
+  assert.deepEqual(w.trips[0].items.map((i) => i.who), ['K', 'E'], 'each person’s travel, in date order');
+});
+
+test('Both asks only people who share, as themselves, and says who is missing', async () => {
+  const asked = [];
+  const one = async (u) => { asked.push(u); return u.uid === 'u-kat' ? { status: 'error', reason: 'down' } : { status: 'live', data: { tasks: [{ id: '1' }], subjects: {} } }; };
+  const r = await bothView([ELI, KAT], 'google', one, mergeLearnleaf);
+  assert.equal(r.status, 'live');
+  assert.deepEqual(r.missing, ['Kat']);
+  assert.ok(asked.every((u) => u.keyless), 'never with the site-wide tokens');
+  asked.length = 0;
+  await bothView([ELI, KAT], 'learnleaf', one, mergeLearnleaf);
+  assert.deepEqual(asked.map((u) => u.uid), ['u-eli'], 'Kat doesn’t share LearnLeaf');
+  const none = await bothView([KAT], 'learnleaf', one, mergeLearnleaf);
+  assert.equal(none.status, 'unconfigured');
+  assert.match(none.reason, /On the household screen/);
+  const conn = await bothView([ELI], 'google', async () => ({ status: 'connect' }), mergeGoogle);
+  assert.deepEqual(conn, { status: 'unconfigured', reason: 'Eli hasn’t connected Google in Hive yet' });
+  const thrown = await bothView([ELI], 'wander', async () => { throw new Error('boom'); }, mergeWander);
+  assert.equal(thrown.status, 'error');
 });

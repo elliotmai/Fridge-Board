@@ -58,6 +58,8 @@ const shape = (u) => (u ? {
   // A household screen (the fridge tablet signed in as the household): its
   // household id, set only by Hive's server (netlify/lib/screens.mjs).
   screen: u.app_metadata?.hive_screen || null,
+  // What this person shows on the household screen's Both view: { google, learnleaf, wander }.
+  share: u.user_metadata?.hive_screen_share || {},
 } : null);
 
 /**
@@ -300,6 +302,20 @@ export async function removeScreen(id) {
   const res = await fetch(`/api/hive/screens/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(body.error || 'Couldn’t remove it'), { code: 'screen_code', shown: body.error });
+}
+
+/**
+ * Show (or stop showing) my calendar and Google Tasks, LearnLeaf tasks or
+ * trips on my household's screen. Mine to set, so it lives on my own sign-in
+ * (user_metadata); the board's server reads it before reading anything of mine.
+ */
+export async function setScreenShare(key, on) {
+  const sb = await supabase();
+  const u = (await sb.auth.getUser()).data.user;
+  if (!u) throw Object.assign(new Error('signed out'), { code: 'signed_out' });
+  const next = { ...(u.user_metadata?.hive_screen_share || {}), [key]: Boolean(on) };
+  must(await sb.auth.updateUser({ data: { hive_screen_share: next } }));
+  return next;
 }
 
 /**

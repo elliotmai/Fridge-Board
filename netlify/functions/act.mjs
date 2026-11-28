@@ -12,7 +12,8 @@
  */
 import { bearer, json, urls } from '../lib/shared.mjs';
 import { asUser, passHeader } from '../lib/hiveUser.mjs';
-import { boardGate } from '../lib/household.mjs';
+import { boardGate, screenPeople } from '../lib/household.mjs';
+import { asPerson, isScreen, personFor } from '../lib/screens.mjs';
 
 async function forward(url, token, body, { method = 'POST', headers } = {}) {
   const res = await fetch(url, {
@@ -34,16 +35,24 @@ export default async (req, context) => {
   if (!body || typeof body !== 'object') return json(400, { error: 'Body must be a JSON object' });
 
   const path = new URL(req.url).pathname;
-  const id = context.params?.id;
+  let id = context.params?.id;
   try {
     if (path.startsWith('/api/todos/')) {
       if (typeof body.done !== 'boolean') return json(400, { error: 'done must be true or false' });
-      if (path.startsWith('/api/todos/learnleaf/')) {
-        return await asUser(user, 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers }));
+      const app = path.startsWith('/api/todos/learnleaf/') ? 'learnleaf' : 'google';
+      let as = user, list = context.params?.list;
+      // On a household screen, a to-do is someone's: its id says whose (`<uid>~<id>`).
+      if (isScreen(user)) {
+        const hit = personFor(await screenPeople(gate.household), app === 'learnleaf' ? id : list, app);
+        if (!hit) return json(403, { error: 'That isn’t shown on this screen' });
+        as = asPerson(hit.person);
+        if (app === 'learnleaf') id = hit.id; else list = hit.id;
+      }
+      if (app === 'learnleaf') {
+        return await asUser(as, 'learnleaf', 'LEARNLEAF_TOKEN', (headers) => forward(`${urls.learnleaf()}/api/tasks/${encodeURIComponent(id)}`, null, { taskStatus: body.done ? 'Completed' : 'Not Started' }, { method: 'PATCH', headers }));
       }
       let headers;
-      try { headers = passHeader(user, 'ourden'); } catch (e) { return json(401, { error: e.message }); }
-      const list = context.params?.list;
+      try { headers = passHeader(as, 'ourden'); } catch (e) { return json(401, { error: e.message }); }
       return await forward(`${urls.ourden()}/api/board/google/tasks/${encodeURIComponent(list)}/${encodeURIComponent(id)}`, null, { done: body.done }, { headers });
     }
     if (path.startsWith('/api/chores/')) {

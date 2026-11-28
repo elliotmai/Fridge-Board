@@ -142,8 +142,23 @@ timers: anything behind `core.is_member`), and nothing personal (every
 pass** (`kind: 'household'`, no email, the household's people's confirmed
 emails in `members`), which GalaxyFarm maps to the farm an owner among them
 owns; every other app is refused, so no app ever makes an account for a
-screen. Calendars, tasks, trips and drinks come to the screen per person in
-the Both view (next).
+screen. Drinks lists everyone in the household, as it does for anyone.
+
+### Both view
+
+Calendars, Google Tasks, LearnLeaf tasks and trips come to a screen per
+person, and only from people who turn them on in their own Hive (Account →
+**On the household screen**, saved as `user_metadata.hive_screen_share`
+`{ google, learnleaf, wander }`, off by default). For a screen, `/api/board`
+loads the household's people (`screenPeople`: confirmed email and shares, via
+the admin API) and asks each app once per sharing person, with that person's
+own pass and never the site-wide tokens (`bothView`). The results merge
+(`mergeGoogle`, `mergeLearnleaf`, `mergeWander`): an event or trip both of you
+are on shows once, with both initials, and every row carries `who` / `whoName`,
+shown as an initial badge on the board. Ids are tagged `<uid>~<id>`, so a tick
+on the fridge goes back (`/api/todos/...`) as the person it belongs to, and
+only for something they share. `viewer.screen.people` lists the household's
+people for the board (and, next, face switching).
 
 ## Roadmap
 

@@ -72,23 +72,28 @@ const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'num
 const dayName = (d, n) => (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${wd(d)} ${short(d)}`);
 const SOURCES = [['tasks', 'LearnLeaf'], ['gtasks', 'Google'], ['trips', 'Wander'], ['breeding', 'ZNT']];
 
+/** On a household screen: whose this is, as their initial ("E", or "E+K" for both). */
+function Who({ of }) {
+  return of?.who ? <b className="who" title={of.whoName} aria-label={of.whoName}>{of.who}</b> : null;
+}
+
 /** One to-do row: tick box, name, where it's from, and when it's due. */
 function Todo({ t, done, onToggle, when }) {
   return (
     <button className={`todo ${t.n != null && t.n < 0 ? 'overdue' : ''} ${done ? 'is-done' : ''}`} role="checkbox" aria-checked={done} onClick={() => onToggle(t)}>
       <span className="tbox" aria-hidden="true"><Tick /></span>
-      <span className="tname">{t.name}<small><i style={{ background: t.color }} />{t.tag}</small></span>
+      <span className="tname">{t.name}<small><Who of={t} /><i style={{ background: t.color }} />{t.tag}</small></span>
       {when && <em>{when}</em>}
     </button>
   );
 }
 
 /** A non-task line: time or icon on the left, what it is on the right. */
-function Line({ left, icon: Icon, tone, title, sub, children }) {
+function Line({ left, icon: Icon, tone, title, sub, who, children }) {
   return (
     <div className={`tl-line ${tone || ''}`}>
       <em>{Icon ? <Icon /> : left}</em>
-      <span><b>{title}</b>{sub && <small>{sub}</small>}{children}</span>
+      <span><b>{title}<Who of={who} /></b>{sub && <small>{sub}</small>}{children}</span>
     </div>
   );
 }
@@ -97,15 +102,15 @@ function Item({ i, todoDone, onToggle }) {
   const t = i.trip, b = i.breeding;
   switch (i.kind) {
     case 'task': return <Todo t={i.task} done={todoDone.includes(i.task.key)} onToggle={onToggle} when={i.task.time ? clock12(i.task.time) : ''} />;
-    case 'event': return <Line left={i.event.allDay ? 'All day' : i.continued ? 'cont.' : timeOf(i.event.start)} title={i.event.title} sub={!i.continued && i.event.location} />;
-    case 'trip-start': return <Line icon={Plane} tone="trip" title={`Leave for ${t.name}`} sub={`${t.dest}, ${plural(daysBetween(parseDate(t.startDate), parseDate(t.endDate)), 'night')}`} />;
-    case 'trip-now': return <Line icon={Plane} tone="trip" title={`Away: ${t.name}`} sub={`${t.dest}, back ${md(parseDate(t.endDate))}`} />;
-    case 'trip-end': return <Line icon={Plane} tone="trip" title={`Back from ${t.name}`} />;
+    case 'event': return <Line left={i.event.allDay ? 'All day' : i.continued ? 'cont.' : timeOf(i.event.start)} title={i.event.title} sub={!i.continued && i.event.location} who={i.event} />;
+    case 'trip-start': return <Line icon={Plane} tone="trip" title={`Leave for ${t.name}`} who={t} sub={`${t.dest}, ${plural(daysBetween(parseDate(t.startDate), parseDate(t.endDate)), 'night')}`} />;
+    case 'trip-now': return <Line icon={Plane} tone="trip" title={`Away: ${t.name}`} who={t} sub={`${t.dest}, back ${md(parseDate(t.endDate))}`} />;
+    case 'trip-end': return <Line icon={Plane} tone="trip" title={`Back from ${t.name}`} who={t} />;
     case 'leg': {
       const l = i.leg;
-      return <Line icon={KIND_ICON[l.kind] || Pin} tone="trip" title={[l.title || KIND_LABEL[l.kind] || 'Travel', l.route].filter(Boolean).join('  ')} sub={[l.time, l.arrive && `to ${l.arrive}`].filter(Boolean).join(' ')} />;
+      return <Line icon={KIND_ICON[l.kind] || Pin} tone="trip" who={l} title={[l.title || KIND_LABEL[l.kind] || 'Travel', l.route].filter(Boolean).join('  ')} sub={[l.time, l.arrive && `to ${l.arrive}`].filter(Boolean).join(' ')} />;
     }
-    case 'stay': return <Line icon={Bed} tone="trip" title={i.leg.title || 'Stay'} sub={i.leg.until ? `Check in, until ${dayLabel(i.leg.until)}` : 'Check in'} />;
+    case 'stay': return <Line icon={Bed} tone="trip" who={i.leg} title={i.leg.title || 'Stay'} sub={i.leg.until ? `Check in, until ${dayLabel(i.leg.until)}` : 'Check in'} />;
     case 'breed': return (
       <Line icon={Cow} tone="breed" title={`${b.name}: ${i.label}`} sub={i.step === 'cidr' && b.groups.length ? `${b.head} head: ${b.groups.map((g) => `${g[0]} ${g[1]}`).join(', ')}` : ''}>
         {i.step === 'cidr' && b.clash.map((c) => <span className="clash" key={c}><Warn />{c}</span>)}

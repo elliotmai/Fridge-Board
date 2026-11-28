@@ -13,6 +13,9 @@ const WEEK = 7;
  * Dated tasks due within a week (or overdue) come first, soonest first.
  * Google tasks with no date follow, since many Google tasks never get one.
  */
+/** On a household screen, whose it is (`who`: an initial, `whoName`); nothing otherwise. */
+const whoOf = (t) => (t.who ? { who: t.who, whoName: t.whoName || '' } : {});
+
 export function mergeTodos({ learnleaf = [], subjects = {}, google = [] }, now) {
   const today = startOf(now);
   const dated = [];
@@ -20,10 +23,10 @@ export function mergeTodos({ learnleaf = [], subjects = {}, google = [] }, now) 
   for (const t of learnleaf) {
     if (!t.due) continue;
     const [subject, color] = subjects[t.subject] ?? ['No subject', 'var(--muted)'];
-    dated.push({ key: `ll:${t.id}`, source: 'learnleaf', id: t.id, name: t.name, due: parseDate(t.due), time: t.time || '', color, tag: subject });
+    dated.push({ key: `ll:${t.id}`, source: 'learnleaf', id: t.id, name: t.name, due: parseDate(t.due), time: t.time || '', color, tag: subject, ...whoOf(t) });
   }
   for (const t of google) {
-    const row = { key: `g:${t.list}:${t.id}`, source: 'google', id: t.id, list: t.list, name: t.title, time: '', color: 'var(--ahead)', tag: t.listTitle || 'Google Tasks' };
+    const row = { key: `g:${t.list}:${t.id}`, source: 'google', id: t.id, list: t.list, name: t.title, time: '', color: 'var(--ahead)', tag: t.listTitle || 'Google Tasks', ...whoOf(t) };
     if (t.due) dated.push({ ...row, due: parseDate(t.due) });
     else undated.push({ ...row, due: null, n: null });
   }
