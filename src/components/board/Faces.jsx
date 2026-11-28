@@ -39,7 +39,13 @@ export function FaceSettings({ people, on, onTeaching }) {
   useEffect(() => { refresh(); }, []);
   useEffect(() => { onTeaching?.(!!teaching); }, [teaching, onTeaching]);
   useEffect(() => () => onTeaching?.(false), [onTeaching]); // closed mid-teach
-  if (!people?.length) return null;
+  if (!people?.length) {
+    return (
+      <p className="field">Face switching
+        <small>On the fridge tablet: pair it as the household screen first (Hive settings, Hive account, Set up this device as a household screen). Then Face switching shows here.</small>
+      </p>
+    );
+  }
   if (!hasCamera()) return <p className="field">Face switching needs a camera this browser can use.</p>;
   const changed = () => { refresh(); window.dispatchEvent(new Event(FACES_CHANGED)); };
   const turnOff = async () => { await forgetAllFaces(); setFacesOn(false); changed(); };
