@@ -81,3 +81,17 @@ export async function openCamera(video = document.createElement('video')) {
   await video.play();
   return { video, stop: () => { stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; } };
 }
+
+/**
+ * What stopped the camera, in words, with the browser's own reason so it can
+ * be looked up. In Fully Kiosk, NotAllowed usually means Web Content
+ * Settings, Enable Webcam Access is off; NotReadable that something else
+ * (Fully's motion detection) has the camera.
+ */
+export function cameraTrouble(e) {
+  const why = e?.name ? ` (${e.name})` : '';
+  if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') return `The browser won’t let Hive use the camera${why}. In Fully Kiosk: Web Content Settings, Enable Webcam Access, then reload.`;
+  if (e?.name === 'NotReadableError' || e?.name === 'AbortError') return `Something else is using the camera${why}, like Fully’s motion detection. Turn that off, then try again.`;
+  if (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError') return `No front camera found${why}.`;
+  return `Couldn’t start the camera or the face model${why}.`;
+}

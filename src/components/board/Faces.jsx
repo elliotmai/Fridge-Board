@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { TEACH_LOOKS } from '@/lib/faceSwitch';
-import { facesIn, forgetAllFaces, forgetFace, hasCamera, knownFaces, loadModel, openCamera, saveFace } from '@/hive/faces';
+import { cameraTrouble, facesIn, forgetAllFaces, forgetFace, hasCamera, knownFaces, loadModel, openCamera, saveFace } from '@/hive/faces';
 import { FACES_CHANGED, setFacesOn } from '@/hive/useFaceSwitch';
 
 const HOUR = 60 * 60 * 1000;
+
+
 const clock = (t) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 /**
@@ -113,7 +115,7 @@ function Teach({ person, onDone }) {
         cam.stop(); cam = null;
         done.current();
       } catch (e) {
-        if (live) setMsg(e.name === 'NotAllowedError' ? 'Allow the camera for Hive on this tablet, then try again' : 'Couldn’t start the camera or the face model');
+        if (live) setMsg(cameraTrouble(e));
       }
     })();
     return () => { live = false; cam?.stop(); };

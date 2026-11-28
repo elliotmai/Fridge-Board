@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { bestMatch, createSwitcher } from '@/lib/faceSwitch';
-import { facesIn, hasCamera, knownFaces, openCamera } from './faces';
+import { cameraTrouble, facesIn, hasCamera, knownFaces, openCamera } from './faces';
 
 /** One look every this often while the camera is on. */
 const LOOK_MS = 900;
@@ -74,7 +74,7 @@ export function useFaceSwitch(people, { hold = false } = {}) {
         };
         look();
       } catch (e) {
-        if (live) setError(e.name === 'NotAllowedError' ? 'The camera isn’t allowed for Hive on this tablet' : 'Couldn’t start the camera');
+        if (live) setError(cameraTrouble(e));
       }
     })();
     return () => { live = false; clearTimeout(timer); cam?.stop(); setCamera(false); setViewId(null); };
